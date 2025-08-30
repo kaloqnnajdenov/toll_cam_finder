@@ -20,3 +20,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/toll_segments.geojson
+    - assets/data/toll_cameras_points.geojson
