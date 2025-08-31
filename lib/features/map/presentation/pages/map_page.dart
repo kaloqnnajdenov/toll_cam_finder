@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-// NOTE: rootBundle import no longer needed here after refactor
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,7 +8,6 @@ import 'package:toll_cam_finder/core/constants.dart';
 
 import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
-import '../../services/map_controller.dart';
 import '../../services/camera_utils.dart'; // <-- NEW
 
 class MapPage extends StatefulWidget {
@@ -24,7 +21,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final _mapController = MapController();
   final _permissionService = PermissionService();
   final _locationService = LocationService();
-  final _mapService = MapControllerFacade();
 
   // ------------------ map + user state ------------------
   LatLng _center = AppConstants.initialCenter;
@@ -100,7 +96,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _center = firstFix;
     setState(() {});
 
-    if (_mapReady) _mapService.move(_mapController, _center, 16);
+    if (_mapReady) _mapController.move(_center, AppConstants.zoomWhenFocused);
 
     _posSub?.cancel();
     _posSub = _locationService.getPositionStream().listen((p) {
@@ -109,7 +105,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
       if (_followUser) {
         final followPoint = _animatedLatLng ?? next;
-        _mapService.move(_mapController, followPoint, _currentZoom);
+        _mapController.move(followPoint, _currentZoom);
       }
     });
   }
@@ -139,8 +135,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       ..forward();
   }
 
+  // ------------------ reset view button ------------------
   void _onResetView() {
-    final target = _animatedLatLng ?? _userLatLng ?? _center;
+    LatLng target;
+    if (_animatedLatLng != null) {
+      target = _animatedLatLng!;
+    } else if (_userLatLng != null) {
+      target = _userLatLng!;
+    } else {
+      target = _center;
+    }
+
     _followUser = true;
 
     double zoom = _currentZoom;
@@ -148,7 +153,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       zoom = AppConstants.zoomWhenFocused;
     }
 
-    _mapService.move(_mapController, target, zoom);
+    _mapController.move(target, zoom);
   }
 
   // ------------------ load + filter cameras via CameraUtils ------------------
@@ -186,8 +191,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           onMapReady: () {
             _mapReady = true;
             if (_userLatLng != null) {
-              _mapService.move(_mapController, _userLatLng!, 16);
-              _currentZoom = 16;
+               _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
+              _currentZoom = AppConstants.zoomWhenFocused;
             }
             _updateVisibleCameras();
           },
@@ -196,7 +201,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           // Replace with your offline tiles when ready
           TileLayer(
             urlTemplate: AppConstants.mapURL,
-            userAgentPackageName: 'com.yourcompany.yourapp',
+            userAgentPackageName: AppConstants.userAgentPackageName,
           ),
 
           // ---------- TOLL CAMERAS ----------
@@ -231,7 +236,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   height: 32,
                   alignment: Alignment.center,
                   child: const Icon(
-                    Icons.videocam, // camera-like icon; swap for custom asset if desired
+                    Icons
+                        .videocam, // camera-like icon; swap for custom asset if desired
                     size: 24,
                     color: Colors.deepOrangeAccent,
                   ),
