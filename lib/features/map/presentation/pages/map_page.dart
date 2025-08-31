@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/toll_cameras_overlay.dart';
 
 import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
@@ -181,6 +183,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final markerPoint = _animatedLatLng ?? _userLatLng;
+    final cameraState = TollCamerasState(
+      error: _cameras.error,
+      isLoading: _cameras.isLoading,
+      visibleCameras: _cameras.visibleCameras,
+    );
 
     return Scaffold(
       body: FlutterMap(
@@ -191,88 +198,19 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           onMapReady: () {
             _mapReady = true;
             if (_userLatLng != null) {
-               _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
+              _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
               _currentZoom = AppConstants.zoomWhenFocused;
             }
             _updateVisibleCameras();
           },
         ),
         children: [
-          // Replace with your offline tiles when ready
           TileLayer(
             urlTemplate: AppConstants.mapURL,
             userAgentPackageName: AppConstants.userAgentPackageName,
           ),
-
-          // ---------- TOLL CAMERAS ----------
-          if (_cameras.error != null)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                margin: const EdgeInsets.only(top: 30),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  _cameras.error!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            )
-          else if (!_cameras.isLoading)
-            MarkerLayer(
-              markers: _cameras.visibleCameras.map((p) {
-                return Marker(
-                  point: p,
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons
-                        .videocam, // camera-like icon; swap for custom asset if desired
-                    size: 24,
-                    color: Colors.deepOrangeAccent,
-                  ),
-                );
-              }).toList(),
-            ),
-
-          // ---------- BLUE DOT ----------
-          if (markerPoint != null)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: markerPoint,
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue.withOpacity(0.25),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          TollCamerasOverlay(cameras: cameraState),
+          BlueDotMarker(point: markerPoint),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -280,7 +218,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         icon: Icon(
           _followUser ? Icons.my_location : Icons.my_location_outlined,
         ),
-        label: Text(_followUser ? 'Following' : 'Reset view'),
+        label: Text("Recenter"),
       ),
     );
   }
