@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:geolocator/geolocator.dart';
+import 'package:toll_cam_finder/core/constants.dart';
 
 class LocationService {
   Future<Position> getCurrentPosition() {
@@ -16,7 +17,7 @@ class LocationService {
       settings =  AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 0,                    // don't gate by meters
-        intervalDuration: Duration(milliseconds: 300), // request 1s interval
+        intervalDuration: Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
         // Uncomment if you use the FusedLocationProvider fallback:
         // forceLocationManager: false,
       );

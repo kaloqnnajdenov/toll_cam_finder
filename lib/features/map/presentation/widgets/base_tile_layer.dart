@@ -8,7 +8,7 @@ class BaseTileLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TileLayer(
-      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      urlTemplate: AppConstants.mapURL,
       userAgentPackageName: AppConstants.userAgentPackageName,
     );
   }
