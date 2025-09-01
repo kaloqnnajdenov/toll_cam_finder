@@ -1,0 +1,319 @@
+// speed_estimator.dart
+import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
+
+/// Drop-in, robust speed estimator:
+/// - 2-state KF on [velocity, acceleration]
+/// - dt-scaled process noise (white-jerk model)
+/// - covariance fading (forgetting) + floors
+/// - sequential fusion of Doppler + derived speed with 3σ/8σ robust gating
+/// - soft stationary snapping (moderate R) + inflation to exit quickly
+class SpeedEstimator {
+  final _KF _kf = _KF(
+    sigmaJerk: 3.0,      // m/s^3 process noise (higher => more responsive)
+    fading: 1.15,        // >1 inflates P each predict (forgetting); 1.1–1.3 works well
+    pFloorV: 0.10,       // min var for speed state (m/s)^2
+    pFloorA: 0.25,       // min var for accel state (m/s^2)^2
+    maxSpeed: 80.0,      // cap estimate (m/s) ~288 km/h
+  );
+
+  Position? _lastSmoothed;
+  DateTime? _lastFixWallTime;
+  int _stationaryCount = 0;
+
+  // Tunables (kept similar to yours, adjusted for robustness)
+  final double horizAccBad = 30.0;         // m: ignore derived speed if poor
+  final double minDt = 0.12;               // s: minimum dt to trust derived speed
+  final double maxDt = 2.5;                // s: clamp dt to avoid huge jumps
+  final double stationaryDisp = 1.0;       // m
+  final int stationaryDebounceCount = 3;   // frames
+  final double smallSpeed = 0.5;           // m/s: tiny motion threshold
+  final double stationaryExitInflate = 4.0; // inflate P when leaving stationary
+
+  // Treat tiny/0 Doppler accuracy as "clamp up", not "unknown"
+  final double devAccClampFloor = 0.15;    // m/s: min Doppler σ we accept
+
+  // Extra noise added to derived-speed variance to cover curvature/nonlinearity
+  final double drvExtraNoise = 0.20;       // m/s (added in quadrature)
+
+  Position fuse(Position smoothed) {
+    final wallNow = DateTime.now();
+    final dtRaw = (_lastFixWallTime != null)
+        ? (wallNow.difference(_lastFixWallTime!).inMilliseconds / 1000.0)
+        : null;
+    final dt = (dtRaw == null)
+        ? minDt
+        : dtRaw.clamp(minDt, maxDt);
+
+    // --- Measurements -------------------------------------------------------
+
+    // Doppler (device) speed
+    final devSpeed = (smoothed.speed.isFinite && smoothed.speed >= 0)
+        ? smoothed.speed
+        : null;
+
+    double? devAcc = (smoothed.speedAccuracy?.isFinite ?? false)
+        ? smoothed.speedAccuracy
+        : null;
+    if (devAcc != null) {
+      // clamp too-small/zero to a sane floor; do NOT discard
+      devAcc = math.max(devAcc, devAccClampFloor);
+    }
+
+    double? devR = (devAcc != null) ? _boundedVar(devAcc * devAcc) : null;
+
+    // Derived speed from smoothed positions (distance / wall-time dt)
+    double? drvSpeed;
+    double? drvR;
+    if (_lastSmoothed != null && dtRaw != null && dtRaw >= minDt) {
+      final d = Geolocator.distanceBetween(
+        _lastSmoothed!.latitude, _lastSmoothed!.longitude,
+        smoothed.latitude,       smoothed.longitude,
+      );
+
+      final acc1 = _finiteOr(_lastSmoothed!.accuracy, 999.0);
+      final acc2 = _finiteOr(smoothed.accuracy, 999.0);
+      final accOk = (acc1 <= horizAccBad && acc2 <= horizAccBad);
+
+      if (accOk) {
+        final v = (d / dtRaw).clamp(0.0, _kf.maxSpeed);
+        final sigmaV = math.sqrt(acc1 * acc1 + acc2 * acc2) / dtRaw;
+        final sigma = math.sqrt(sigmaV * sigmaV + drvExtraNoise * drvExtraNoise);
+        drvSpeed = v;
+        drvR = _boundedVar(sigma * sigma);
+        // If dt is very small, derived becomes unstable; inflate R
+        if (dtRaw < 0.25) {
+          final scale = (0.25 / dtRaw).clamp(1.0, 4.0);
+          drvR = _boundedVar(drvR! * scale);
+        }
+      }
+    }
+
+    // --- Stationary gating (soft) ------------------------------------------
+    bool stationarySoftUpdate = false;
+    double? zStationary;
+    double? rStationary;
+
+    if (_lastSmoothed != null && _lastFixWallTime != null) {
+      final d = Geolocator.distanceBetween(
+        _lastSmoothed!.latitude, _lastSmoothed!.longitude,
+        smoothed.latitude,       smoothed.longitude,
+      );
+      final acc1 = _finiteOr(_lastSmoothed!.accuracy, 999.0);
+      final acc2 = _finiteOr(smoothed.accuracy, 999.0);
+
+      final dTiny = d <= math.max(stationaryDisp, 0.5 * (acc1 + acc2));
+      final devTiny = (devSpeed ?? 0.0) < smallSpeed;
+      final drvTiny = (drvSpeed ?? 0.0) < smallSpeed;
+
+      if (dTiny && (devTiny || devR == null) && (drvTiny || drvR == null)) {
+        _stationaryCount++;
+        if (_stationaryCount >= stationaryDebounceCount) {
+          // Softly pull to zero, but keep enough uncertainty to leave quickly
+          stationarySoftUpdate = true;
+          zStationary = 0.0;
+          rStationary = 0.25 * 0.25; // moderate confidence (σ=0.25 m/s)
+          // Keep some "readiness" to move: gentle inflate every stationary tick
+          _kf.inflate(1.3);
+        }
+      } else {
+        // Leaving stationary: make the filter responsive immediately
+        if (_stationaryCount >= stationaryDebounceCount) {
+          _kf.inflate(stationaryExitInflate);
+        }
+        _stationaryCount = 0;
+      }
+    } else {
+      _stationaryCount = 0;
+    }
+
+    // --- Filter predict & updates ------------------------------------------
+
+    // Initialize sensibly on first call
+    if (!_kf.initialized) {
+      final z0 = devSpeed ?? drvSpeed ?? 0.0;
+      final r0 = (devR ?? drvR ?? 25.0); // very loose if unknown
+      _kf.init(z0.clamp(0.0, _kf.maxSpeed), r0);
+    }
+
+    _kf.predict(dt);
+
+    // 1) Stationary soft-update (if applicable)
+    if (stationarySoftUpdate && zStationary != null && rStationary != null) {
+      _kf.updateRobust(zStationary, rStationary);
+    }
+
+    // 2) Doppler (preferred, robust-gated)
+    if (devSpeed != null && devR != null) {
+      _kf.updateRobust(devSpeed, devR);
+    }
+
+    // 3) Derived (secondary, robust-gated)
+    if (drvSpeed != null && drvR != null) {
+      _kf.updateRobust(drvSpeed, drvR);
+    }
+
+    final estSpeed = _kf.v.clamp(0.0, _kf.maxSpeed);
+    final estVar = math.max(_kf.p00, 0.0); // variance of velocity state
+
+    _lastSmoothed = smoothed;
+    _lastFixWallTime = wallNow;
+
+    return Position(
+      latitude: smoothed.latitude,
+      longitude: smoothed.longitude,
+      accuracy: smoothed.accuracy,
+      altitude: smoothed.altitude,
+      heading: smoothed.heading,
+      speed: estSpeed,
+      speedAccuracy: math.sqrt(estVar),
+      timestamp: smoothed.timestamp ?? wallNow,
+      isMocked: smoothed.isMocked,
+      altitudeAccuracy: smoothed.altitudeAccuracy,
+      headingAccuracy: smoothed.headingAccuracy,
+    );
+  }
+
+  static double _finiteOr(double? v, double fallback) =>
+      (v != null && v.isFinite) ? v : fallback;
+
+  static double _boundedVar(double v,
+      {double minVar = 0.25 * 0.25, double maxVar = 400.0}) {
+    if (!v.isFinite) return minVar;
+    return v.clamp(minVar, maxVar);
+  }
+}
+
+/// 2-state constant-acceleration KF on [velocity, acceleration].
+/// Dynamics: v_k = v + a*dt, a_k = a + w (jerk integrated) with white-jerk noise.
+/// Discrete Q = q * [[dt^3/3, dt^2/2],
+///                   [dt^2/2,    dt  ]]
+class _KF {
+  _KF({
+    required this.sigmaJerk,
+    required this.fading,
+    required this.pFloorV,
+    required this.pFloorA,
+    required this.maxSpeed,
+  });
+
+  final double sigmaJerk;   // m/s^3
+  final double fading;      // >1: covariance inflation per predict
+  final double pFloorV;     // min var for v
+  final double pFloorA;     // min var for a
+  final double maxSpeed;    // cap for v
+
+  bool initialized = false;
+
+  // State x = [v, a]
+  double v = 0.0;
+  double a = 0.0;
+
+  // Covariance P
+  double p00 = 10.0, p01 = 0.0, p10 = 0.0, p11 = 10.0;
+
+  void init(double v0, double r0) {
+    v = v0.clamp(0.0, maxSpeed);
+    a = 0.0;
+    // Seed P from measurement variance; allow acceleration to be quite uncertain
+    p00 = math.max(r0, pFloorV);
+    p11 = math.max(4.0, pFloorA); // start with loose accel variance
+    p01 = 0.0;
+    p10 = 0.0;
+    initialized = true;
+  }
+
+  void predict(double dt) {
+    if (!initialized) return;
+
+    // State prediction
+    v = (v + a * dt).clamp(0.0, maxSpeed);
+    // a = a (constant accel model)
+
+    // P' = F P F^T + Q, with F = [[1, dt],[0,1]]
+    final p00n = p00 + dt * (p01 + p10) + dt * dt * p11;
+    final p01n = p01 + dt * p11;
+    final p10n = p10 + dt * p11;
+    final p11n = p11;
+
+    // Q from white-jerk spectral density q = sigmaJerk^2
+    final q = sigmaJerk * sigmaJerk;
+    final dt2 = dt * dt;
+    final q00 = q * (dt * dt2) / 3.0; // dt^3 / 3
+    final q01 = q * (dt2) / 2.0;      // dt^2 / 2
+    final q11 = q * dt;
+
+    p00 = (p00n + q00) * fading;
+    p01 = (p01n + q01) * fading;
+    p10 = (p10n + q01) * fading;
+    p11 = (p11n + q11) * fading;
+
+    // Floors to avoid collapse
+    p00 = math.max(p00, pFloorV);
+    p11 = math.max(p11, pFloorA);
+  }
+
+  /// Robust update with scalar measurement z of velocity, variance r.
+  /// Uses 3σ soft-inflation and 8σ hard-reject gating.
+  void updateRobust(double z, double r, {double gateSoft = 3.0, double gateHard = 8.0}) {
+    if (!initialized) return;
+
+    final s = p00 + r;                  // innovation variance (scalar)
+    final sigma = math.sqrt(math.max(s, 1e-12));
+    final y = z - v;                    // innovation
+
+    final ay = y.abs();
+    if (ay > gateHard * sigma) {
+      // Hard reject (likely glitch)
+      return;
+    } else if (ay > gateSoft * sigma) {
+      // Soft accept: inflate P so the gain is higher for this surprise
+      inflate(2.5);
+    }
+
+    // K = P H^T / S, with H = [1, 0]
+    final k0 = p00 / s;
+    final k1 = p10 / s;
+
+    // State update
+    v = (v + k0 * y).clamp(0.0, maxSpeed);
+    a = a + k1 * y;
+
+    // Joseph form: P = (I-KH)P(I-KH)^T + K R K^T
+    final t00 = (1.0 - k0) * p00;
+    final t01 = (1.0 - k0) * p01;
+    final t10 = p10 - k1 * p00;
+    final t11 = p11 - k1 * p01;
+
+    final p00n = t00 * (1.0 - k0) + (k0 * k0) * r;
+    final p01n = -t00 * k1 + t01 + (k0 * k1) * r;
+    final p10n = t10 * (1.0 - k0) + (k1 * k0) * r;
+    final p11n = -t10 * k1 + t11 + (k1 * k1) * r;
+
+    p00 = p00n;
+    p01 = p01n;
+    p10 = p10n;
+    p11 = p11n;
+
+    // Symmetrize lightly
+    final avg = 0.5 * (p01 + p10);
+    p01 = avg;
+    p10 = avg;
+
+    // Floors
+    p00 = math.max(p00, pFloorV);
+    p11 = math.max(p11, pFloorA);
+  }
+
+  /// Multiply covariance by a factor (>=1).
+  void inflate(double factor) {
+    if (!initialized) return;
+    final f = factor.isFinite && factor >= 1.0 ? factor : 1.0;
+    p00 *= f;
+    p01 *= f;
+    p10 *= f;
+    p11 *= f;
+    p00 = math.max(p00, pFloorV);
+    p11 = math.max(p11, pFloorA);
+  }
+}

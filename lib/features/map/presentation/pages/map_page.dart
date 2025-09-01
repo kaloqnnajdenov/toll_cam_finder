@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/toll_cameras_overlay.dart';
+import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
 
 import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
@@ -51,6 +52,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   // ------------------ toll cameras (moved to utils) ------------------
   final CameraUtils _cameras = CameraUtils(boundsPaddingDeg: 0.05);
 
+  // ------------------ speed state ------------------
+  double? _speedKmh; // NEW
+
+  final SpeedEstimator _speedEstimator = SpeedEstimator();
   @override
   void initState() {
     super.initState();
@@ -93,6 +98,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     if (!hasPermission) return;
 
     final pos = await _locationService.getCurrentPosition();
+
+    // NEW: set initial speed (km/h)
+    final fused0 = _speedEstimator.fuse(pos);
+    final s0 = fused0.speed;
+    if (s0.isFinite && s0 >= 0) {
+      _speedKmh = s0 * 3.6;
+    }
+
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
@@ -102,6 +115,15 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     _posSub?.cancel();
     _posSub = _locationService.getPositionStream().listen((p) {
+      // NEW: update speed on each fix
+      final fused = _speedEstimator.fuse(p);
+      final sp = fused.speed; // m/s (filtered)
+
+      //TODO: make more readable
+      if (sp.isFinite && sp >= 0) {
+        if (mounted) setState(() => _speedKmh = sp * 3.6);
+      }
+
       final next = LatLng(p.latitude, p.longitude);
       _animateMarkerTo(next);
 
@@ -218,7 +240,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         icon: Icon(
           _followUser ? Icons.my_location : Icons.my_location_outlined,
         ),
-        label: Text("Recenter"),
+        // NEW: append speed if available
+        label: Text(
+          _speedKmh == null
+              ? "Recenter"
+              : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h",
+        ),
       ),
     );
   }
