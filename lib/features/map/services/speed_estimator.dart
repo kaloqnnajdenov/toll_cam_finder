@@ -8,6 +8,7 @@ import 'dart:math' as math;
 /// - covariance fading (forgetting) + floors
 /// - sequential fusion of Doppler + derived speed with 3σ/8σ robust gating
 /// - soft stationary snapping (moderate R) + inflation to exit quickly
+/// - zero-lock with hysteresis (hold exact 0 while stopped; ignore Doppler until clear movement)
 class SpeedEstimator {
   final _KF _kf = _KF(
     sigmaJerk: 3.0,      // m/s^3 process noise (higher => more responsive)
@@ -35,6 +36,10 @@ class SpeedEstimator {
 
   // Extra noise added to derived-speed variance to cover curvature/nonlinearity
   final double drvExtraNoise = 0.20;       // m/s (added in quadrature)
+
+  // --- zero-lock (hysteresis) ---
+  bool _zeroLocked = false;
+  final double zeroExit = 0.90; // m/s (~3.2 km/h) to LEAVE zero-lock
 
   Position fuse(Position smoothed) {
     final wallNow = DateTime.now();
@@ -112,9 +117,10 @@ class SpeedEstimator {
           // Softly pull to zero, but keep enough uncertainty to leave quickly
           stationarySoftUpdate = true;
           zStationary = 0.0;
-          rStationary = 0.25 * 0.25; // moderate confidence (σ=0.25 m/s)
+          rStationary = 0.12 * 0.12; // stronger pull (σ=0.12 m/s)
           // Keep some "readiness" to move: gentle inflate every stationary tick
           _kf.inflate(1.3);
+          _zeroLocked = true; // engage zero-lock
         }
       } else {
         // Leaving stationary: make the filter responsive immediately
@@ -122,6 +128,7 @@ class SpeedEstimator {
           _kf.inflate(stationaryExitInflate);
         }
         _stationaryCount = 0;
+        // don't forcibly clear zero-lock here; it will clear on clear movement
       }
     } else {
       _stationaryCount = 0;
@@ -143,8 +150,8 @@ class SpeedEstimator {
       _kf.updateRobust(zStationary, rStationary);
     }
 
-    // 2) Doppler (preferred, robust-gated)
-    if (devSpeed != null && devR != null) {
+    // 2) Doppler (preferred, robust-gated) — skip while zero-locked
+    if (devSpeed != null && devR != null && !_zeroLocked) {
       _kf.updateRobust(devSpeed, devR);
     }
 
@@ -153,8 +160,23 @@ class SpeedEstimator {
       _kf.updateRobust(drvSpeed, drvR);
     }
 
-    final estSpeed = _kf.v.clamp(0.0, _kf.maxSpeed);
-    final estVar = math.max(_kf.p00, 0.0); // variance of velocity state
+    var estSpeed = _kf.v.clamp(0.0, _kf.maxSpeed);
+    var estVar = math.max(_kf.p00, 0.0); // variance of velocity state
+
+    // --- Zero-lock clamp & hysteresis exit ---------------------------------
+    if (_zeroLocked) {
+      final leaving = ((devSpeed ?? 0.0) > zeroExit) || ((drvSpeed ?? 0.0) > zeroExit);
+      if (!leaving) {
+        // Hold exact zero and keep filter nimble
+        _kf.v = 0.0;
+        _kf.a = 0.0;
+        estSpeed = 0.0;
+        estVar = math.max(_kf.p00, 0.0);
+      } else {
+        _zeroLocked = false;
+        _kf.inflate(stationaryExitInflate); // react quickly on exit
+      }
+    }
 
     _lastSmoothed = smoothed;
     _lastFixWallTime = wallNow;

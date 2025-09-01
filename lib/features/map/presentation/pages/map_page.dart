@@ -7,11 +7,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/toll_cameras_overlay.dart';
-import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
+// NOTE: removed direct SpeedEstimator import here
+// import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
 
 import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
-import '../../services/camera_utils.dart'; // <-- NEW
+import '../../services/camera_utils.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -49,13 +50,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     return LatLng(_latTween!.transform(t), _lngTween!.transform(t));
   }
 
-  // ------------------ toll cameras (moved to utils) ------------------
+  // ------------------ toll cameras ------------------
   final CameraUtils _cameras = CameraUtils(boundsPaddingDeg: 0.05);
 
-  // ------------------ speed state ------------------
-  double? _speedKmh; // NEW
+  // ------------------ speed state (km/h with UI deadband) ------------------
+  double? _speedKmh;
+  static const double _uiDeadbandKmh = 1.0; // show 0 below this
 
-  final SpeedEstimator _speedEstimator = SpeedEstimator();
   @override
   void initState() {
     super.initState();
@@ -97,14 +98,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
 
+    // Position is already fused/smoothed by LocationService (including speed)
     final pos = await _locationService.getCurrentPosition();
 
-    // NEW: set initial speed (km/h)
-    final fused0 = _speedEstimator.fuse(pos);
-    final s0 = fused0.speed;
-    if (s0.isFinite && s0 >= 0) {
-      _speedKmh = s0 * 3.6;
-    }
+    final v0 = pos.speed; // m/s
+    var kmh0 = (v0.isFinite && v0 >= 0) ? v0 * 3.6 : 0.0;
+    if (kmh0 < _uiDeadbandKmh) kmh0 = 0.0;
+    _speedKmh = kmh0;
 
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
@@ -115,14 +115,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     _posSub?.cancel();
     _posSub = _locationService.getPositionStream().listen((p) {
-      // NEW: update speed on each fix
-      final fused = _speedEstimator.fuse(p);
-      final sp = fused.speed; // m/s (filtered)
-
-      //TODO: make more readable
-      if (sp.isFinite && sp >= 0) {
-        if (mounted) setState(() => _speedKmh = sp * 3.6);
-      }
+      // p is already fused (speed in m/s)
+      final sp = p.speed;
+      double shownKmh = (sp.isFinite && sp >= 0) ? sp * 3.6 : 0.0;
+      if (shownKmh < _uiDeadbandKmh) shownKmh = 0.0;
+      if (mounted) setState(() => _speedKmh = shownKmh);
 
       final next = LatLng(p.latitude, p.longitude);
       _animateMarkerTo(next);
@@ -240,11 +237,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         icon: Icon(
           _followUser ? Icons.my_location : Icons.my_location_outlined,
         ),
-        // NEW: append speed if available
         label: Text(
           _speedKmh == null
               ? "Recenter"
-              : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h",
+              : (_speedKmh == 0.0
+                  ? "Recenter • 0 km/h"
+                  : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h"),
         ),
       ),
     );
