@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../features/map/presentation/pages/map_page.dart';
+import '../presentation/pages/map_page.dart';
 
 class AppRoutes {
   static const String map = '/';

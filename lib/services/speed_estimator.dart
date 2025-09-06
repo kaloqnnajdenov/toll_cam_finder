@@ -1,15 +1,17 @@
-// speed_estimator.dart
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 
-/// Drop-in, robust speed estimator:
+/// - Internal lat/lng smoothing (1-D Kalman per coord; moved here from LocationService)
 /// - 2-state KF on [velocity, acceleration]
-/// - dt-scaled process noise (white-jerk model)
-/// - covariance fading (forgetting) + floors
+/// - dt-scaled process noise (white-jerk model) + covariance fading + floors
 /// - sequential fusion of Doppler + derived speed with 3σ/8σ robust gating
 /// - soft stationary snapping (moderate R) + inflation to exit quickly
 /// - zero-lock with hysteresis (hold exact 0 while stopped; ignore Doppler until clear movement)
 class SpeedEstimator {
+  // ---- NEW: coordinate smoothers live here (no smoothing in LocationService) ----
+  final _LocationFilter _latFilter = _LocationFilter();
+  final _LocationFilter _lngFilter = _LocationFilter();
+
   final _KF _kf = _KF(
     sigmaJerk: 3.0,      // m/s^3 process noise (higher => more responsive)
     fading: 1.15,        // >1 inflates P each predict (forgetting); 1.1–1.3 works well
@@ -18,70 +20,73 @@ class SpeedEstimator {
     maxSpeed: 80.0,      // cap estimate (m/s) ~288 km/h
   );
 
-  Position? _lastSmoothed;
+  // Store previous SMOOTHED coordinate + accuracy for derived-speed & stationary logic
+  double? _lastLatSm;
+  double? _lastLngSm;
+  double? _lastAcc; // we keep last horizontal acc for variance calc
   DateTime? _lastFixWallTime;
   int _stationaryCount = 0;
 
-  // Tunables (kept similar to yours, adjusted for robustness)
-  final double horizAccBad = 30.0;         // m: ignore derived speed if poor
-  final double minDt = 0.12;               // s: minimum dt to trust derived speed
-  final double maxDt = 2.5;                // s: clamp dt to avoid huge jumps
-  final double stationaryDisp = 1.0;       // m
-  final int stationaryDebounceCount = 3;   // frames
-  final double smallSpeed = 0.5;           // m/s: tiny motion threshold
-  final double stationaryExitInflate = 4.0; // inflate P when leaving stationary
+  // Tunables (as before)
+  final double horizAccBad = 30.0;           // m: ignore derived speed if poor
+  final double minDt = 0.12;                 // s: minimum dt to trust derived speed
+  final double maxDt = 2.5;                  // s: clamp dt to avoid huge jumps
+  final double stationaryDisp = 1.0;         // m
+  final int stationaryDebounceCount = 3;     // frames
+  final double smallSpeed = 0.3;             // m/s: tiny motion threshold
+  final double stationaryExitInflate = 4.0;  // inflate P when leaving stationary
 
   // Treat tiny/0 Doppler accuracy as "clamp up", not "unknown"
-  final double devAccClampFloor = 0.15;    // m/s: min Doppler σ we accept
+  final double devAccClampFloor = 0.15;      // m/s: min Doppler σ we accept
 
   // Extra noise added to derived-speed variance to cover curvature/nonlinearity
-  final double drvExtraNoise = 0.20;       // m/s (added in quadrature)
+  final double drvExtraNoise = 0.20;         // m/s (added in quadrature)
 
   // --- zero-lock (hysteresis) ---
   bool _zeroLocked = false;
   final double zeroExit = 0.90; // m/s (~3.2 km/h) to LEAVE zero-lock
 
-  Position fuse(Position smoothed) {
+  /// Fuse a raw geolocator Position. Returns a Position whose lat/lng are the
+  /// internally smoothed coordinates and whose speed is the robust KF estimate.
+  Position fuse(Position raw) {
     final wallNow = DateTime.now();
     final dtRaw = (_lastFixWallTime != null)
         ? (wallNow.difference(_lastFixWallTime!).inMilliseconds / 1000.0)
         : null;
-    final dt = (dtRaw == null)
-        ? minDt
-        : dtRaw.clamp(minDt, maxDt);
+    final dt = (dtRaw == null) ? minDt : dtRaw.clamp(minDt, maxDt);
+
+    // ---- NEW: smooth coordinates here (centralized) ----
+    final latSm = _latFilter.filter(raw.latitude);
+    final lngSm = _lngFilter.filter(raw.longitude);
+
+    // Prepare an accuracy figure for derived-speed/stationary (use raw.accuracy if finite)
+    final accNow = _finiteOr(raw.accuracy, 999.0);
 
     // --- Measurements -------------------------------------------------------
 
     // Doppler (device) speed
-    final devSpeed = (smoothed.speed.isFinite && smoothed.speed >= 0)
-        ? smoothed.speed
-        : null;
+    final devSpeed = (raw.speed.isFinite && raw.speed >= 0) ? raw.speed : null;
 
-    double? devAcc = (smoothed.speedAccuracy?.isFinite ?? false)
-        ? smoothed.speedAccuracy
-        : null;
+    double? devAcc = (raw.speedAccuracy.isFinite) ? raw.speedAccuracy : null;
     if (devAcc != null) {
       // clamp too-small/zero to a sane floor; do NOT discard
       devAcc = math.max(devAcc, devAccClampFloor);
     }
-
     double? devR = (devAcc != null) ? _boundedVar(devAcc * devAcc) : null;
 
-    // Derived speed from smoothed positions (distance / wall-time dt)
+    // Derived speed from SMOOTHED positions (distance / wall-time dt), single computation reused
     double? drvSpeed;
     double? drvR;
-    if (_lastSmoothed != null && dtRaw != null && dtRaw >= minDt) {
-      final d = Geolocator.distanceBetween(
-        _lastSmoothed!.latitude, _lastSmoothed!.longitude,
-        smoothed.latitude,       smoothed.longitude,
-      );
+    double? dispMeters; // reuse for stationary detection
+    if (_lastLatSm != null && _lastLngSm != null && dtRaw != null && dtRaw >= minDt) {
+      dispMeters = Geolocator.distanceBetween(_lastLatSm!, _lastLngSm!, latSm, lngSm);
 
-      final acc1 = _finiteOr(_lastSmoothed!.accuracy, 999.0);
-      final acc2 = _finiteOr(smoothed.accuracy, 999.0);
+      final acc1 = _finiteOr(_lastAcc, 999.0);
+      final acc2 = accNow;
       final accOk = (acc1 <= horizAccBad && acc2 <= horizAccBad);
 
       if (accOk) {
-        final v = (d / dtRaw).clamp(0.0, _kf.maxSpeed);
+        final v = (dispMeters / dtRaw).clamp(0.0, _kf.maxSpeed);
         final sigmaV = math.sqrt(acc1 * acc1 + acc2 * acc2) / dtRaw;
         final sigma = math.sqrt(sigmaV * sigmaV + drvExtraNoise * drvExtraNoise);
         drvSpeed = v;
@@ -89,7 +94,7 @@ class SpeedEstimator {
         // If dt is very small, derived becomes unstable; inflate R
         if (dtRaw < 0.25) {
           final scale = (0.25 / dtRaw).clamp(1.0, 4.0);
-          drvR = _boundedVar(drvR! * scale);
+          drvR = _boundedVar(drvR * scale);
         }
       }
     }
@@ -99,15 +104,14 @@ class SpeedEstimator {
     double? zStationary;
     double? rStationary;
 
-    if (_lastSmoothed != null && _lastFixWallTime != null) {
-      final d = Geolocator.distanceBetween(
-        _lastSmoothed!.latitude, _lastSmoothed!.longitude,
-        smoothed.latitude,       smoothed.longitude,
-      );
-      final acc1 = _finiteOr(_lastSmoothed!.accuracy, 999.0);
-      final acc2 = _finiteOr(smoothed.accuracy, 999.0);
+    if (_lastLatSm != null && _lastLngSm != null && _lastFixWallTime != null) {
+      // Reuse displacement if available, else compute once
+      dispMeters ??= Geolocator.distanceBetween(_lastLatSm!, _lastLngSm!, latSm, lngSm);
 
-      final dTiny = d <= math.max(stationaryDisp, 0.5 * (acc1 + acc2));
+      final acc1 = _finiteOr(_lastAcc, 999.0);
+      final acc2 = accNow;
+
+      final dTiny = dispMeters <= math.max(stationaryDisp, 0.5 * (acc1 + acc2));
       final devTiny = (devSpeed ?? 0.0) < smallSpeed;
       final drvTiny = (drvSpeed ?? 0.0) < smallSpeed;
 
@@ -178,21 +182,26 @@ class SpeedEstimator {
       }
     }
 
-    _lastSmoothed = smoothed;
+    // ---- Bookkeeping of smoothed coords & accuracy ----
+    _lastLatSm = latSm;
+    _lastLngSm = lngSm;
+    _lastAcc   = accNow;
     _lastFixWallTime = wallNow;
 
+    // ---- Return a Position with SMOOTHED coords + estimated speed ----
     return Position(
-      latitude: smoothed.latitude,
-      longitude: smoothed.longitude,
-      accuracy: smoothed.accuracy,
-      altitude: smoothed.altitude,
-      heading: smoothed.heading,
+      latitude: latSm,
+      longitude: lngSm,
+      accuracy: raw.accuracy,
+      altitude: raw.altitude,
+      heading: raw.heading,
       speed: estSpeed,
       speedAccuracy: math.sqrt(estVar),
-      timestamp: smoothed.timestamp ?? wallNow,
-      isMocked: smoothed.isMocked,
-      altitudeAccuracy: smoothed.altitudeAccuracy,
-      headingAccuracy: smoothed.headingAccuracy,
+      timestamp: raw.timestamp ?? wallNow,
+      isMocked: raw.isMocked,
+      // Preserve/forward (keep the same compatibility shim you had before)
+      altitudeAccuracy: raw.altitudeAccuracy ?? raw.accuracy,
+      headingAccuracy:  raw.headingAccuracy  ?? raw.accuracy,
     );
   }
 
@@ -203,6 +212,44 @@ class SpeedEstimator {
       {double minVar = 0.25 * 0.25, double maxVar = 400.0}) {
     if (!v.isFinite) return minVar;
     return v.clamp(minVar, maxVar);
+  }
+}
+
+/// 1-D scalar Kalman filter for coordinates (moved from LocationService)
+class _LocationFilter {
+  double _errorEstimate = 1.0;
+  double _lastEstimate = 0.0;
+  double _kalmanGain = 0.0;
+  final double _errorMeasure = 0.1;
+  final double _errorProcess = 0.01;
+  bool _initialized = false;
+
+  double filter(double currentMeasurement) {
+    if (!_initialized) {
+      _initialized = true;
+      _lastEstimate = currentMeasurement; // avoid huge first-step bias
+      return currentMeasurement;
+    }
+
+    // Prediction
+    final prediction = _lastEstimate;
+    _errorEstimate = _errorEstimate + _errorProcess;
+
+    // Update
+    _kalmanGain = _errorEstimate / (_errorEstimate + _errorMeasure);
+    final currentEstimate =
+        prediction + _kalmanGain * (currentMeasurement - prediction);
+    _errorEstimate = (1.0 - _kalmanGain) * _errorEstimate;
+
+    _lastEstimate = currentEstimate;
+    return currentEstimate;
+  }
+
+  void reset() {
+    _errorEstimate = 1.0;
+    _lastEstimate = 0.0;
+    _kalmanGain = 0.0;
+    _initialized = false;
   }
 }
 

@@ -5,8 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/toll_cameras_overlay.dart';
+import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
+import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 // NOTE: removed direct SpeedEstimator import here
 // import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
 
