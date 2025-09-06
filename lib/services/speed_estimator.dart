@@ -197,11 +197,11 @@ class SpeedEstimator {
       heading: raw.heading,
       speed: estSpeed,
       speedAccuracy: math.sqrt(estVar),
-      timestamp: raw.timestamp ?? wallNow,
+      timestamp: raw.timestamp,
       isMocked: raw.isMocked,
       // Preserve/forward (keep the same compatibility shim you had before)
-      altitudeAccuracy: raw.altitudeAccuracy ?? raw.accuracy,
-      headingAccuracy:  raw.headingAccuracy  ?? raw.accuracy,
+      altitudeAccuracy: raw.altitudeAccuracy,
+      headingAccuracy:  raw.headingAccuracy,
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 
+/// Single source of truth for the base map layer.
 class BaseTileLayer extends StatelessWidget {
   const BaseTileLayer({super.key});
 

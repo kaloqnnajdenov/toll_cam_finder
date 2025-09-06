@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+
 import 'package:toll_cam_finder/core/constants.dart';
-import 'package:toll_cam_finder/presentation/widgets/avg_speed.dart';
+import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
+import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
+import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
-// NOTE: removed direct SpeedEstimator import here
-// import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
 
 import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
@@ -60,6 +61,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   double? _speedKmh;
   static const double _uiDeadbandKmh = 1.0; // show 0 below this
 
+  final AverageSpeedController _avgCtrl = AverageSpeedController();
+
   @override
   void initState() {
     super.initState();
@@ -69,10 +72,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _curve = CurvedAnimation(parent: _anim, curve: Curves.easeInOut);
-    _curve.addListener(() {
-      if (mounted) setState(() {});
-    });
+    _curve = CurvedAnimation(parent: _anim, curve: Curves.easeInOut)
+      ..addListener(() {
+        if (mounted) setState(() {});
+      });
 
     // map events (stop following on manual gesture, update visible cameras)
     _mapEvtSub = _mapController.mapEventStream.listen((evt) {
@@ -87,8 +90,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _initLocation();
     _loadCameras();
   }
-
-  final AverageSpeedController _avgCtrl = AverageSpeedController();
 
   @override
   void dispose() {
@@ -115,9 +116,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
-    setState(() {});
+    if (mounted) setState(() {});
 
-    if (_mapReady) _mapController.move(_center, AppConstants.zoomWhenFocused);
+    if (_mapReady) {
+      _mapController.move(_center, AppConstants.zoomWhenFocused);
+    }
 
     _posSub?.cancel();
     _posSub = _locationService.getPositionStream().listen((p) {
@@ -128,7 +131,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       if (mounted) setState(() => _speedKmh = shownKmh);
 
       _avgCtrl.addSample(shownKmh);
-      
+
       final next = LatLng(p.latitude, p.longitude);
       _animateMarkerTo(next);
 
@@ -188,7 +191,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   // ------------------ load + filter cameras via CameraUtils ------------------
   Future<void> _loadCameras() async {
     await _cameras.loadFromAsset(AppConstants.camerasAsset);
-    setState(() {}); // reflect loading/error/all-cameras state
+    if (mounted) setState(() {});
     _updateVisibleCameras();
   }
 
@@ -201,9 +204,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         bounds = null;
       }
     }
-    setState(() {
-      _cameras.updateVisible(bounds: bounds);
-    });
+    if (mounted) {
+      setState(() {
+        _cameras.updateVisible(bounds: bounds);
+      });
+    }
   }
 
   // ------------------ build ------------------
@@ -217,7 +222,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
 
     return Scaffold(
-      // WRAP body with a Stack to overlay the dial
       body: Stack(
         children: [
           FlutterMap(
@@ -235,51 +239,46 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: AppConstants.mapURL,
-                userAgentPackageName: AppConstants.userAgentPackageName,
-              ),
+              const BaseTileLayer(),
               TollCamerasOverlay(cameras: cameraState),
               BlueDotMarker(point: markerPoint),
             ],
           ),
 
-          // ADD: positioned Average Speed dial (top-left)
-          Positioned(
-            top: 16,
-            left: 16,
-            child: AverageSpeedDial(controller: _avgCtrl, unit: 'km/h'),
+          // Top-left dials, stacked and safe
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, left: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CurrentSpeedDial(speedKmh: _speedKmh, unit: 'km/h'),
+                  const SizedBox(height: 12),
+                  AverageSpeedDial(controller: _avgCtrl, unit: 'km/h'),
+                ],
+              ),
+            ),
           ),
         ],
       ),
 
-      // ADD: a column of FABs: Recenter + Start/Reset Avg
+      // Right-side FABs: Recenter + Start/Reset Avg
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // existing recenter FAB (unchanged)
           FloatingActionButton.extended(
             heroTag: 'recenter_btn',
             onPressed: _onResetView,
             icon: Icon(
               _followUser ? Icons.my_location : Icons.my_location_outlined,
             ),
-            label: Text(
-              _speedKmh == null
-                  ? "Recenter"
-                  : (_speedKmh == 0.0
-                      ? "Recenter • 0 km/h"
-                      : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h"),
-            ),
+            label: const Text('Recenter'),
           ),
           const SizedBox(height: 12),
-
-          // new Start/Reset Avg mini FAB
           AverageSpeedButton(controller: _avgCtrl),
         ],
       ),
     );
   }
-
 }

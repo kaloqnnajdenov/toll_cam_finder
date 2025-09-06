@@ -1,12 +1,22 @@
-// lib/widgets/blue_dot_marker.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+/// Draws a subtle blue accuracy dot at [point].
+/// Defaults match previous visuals; added params for future flexibility.
 class BlueDotMarker extends StatelessWidget {
   final LatLng? point;
+  final double size;
+  final double innerSize;
+  final double outerOpacity;
 
-  const BlueDotMarker({super.key, required this.point});
+  const BlueDotMarker({
+    super.key,
+    required this.point,
+    this.size = 40,
+    this.innerSize = 12,
+    this.outerOpacity = 0.25,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,18 +26,18 @@ class BlueDotMarker extends StatelessWidget {
       markers: [
         Marker(
           point: point!,
-          width: 40,
-          height: 40,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withOpacity(0.25),
+              color: Colors.blue.withOpacity(outerOpacity),
             ),
             child: Center(
               child: Container(
-                width: 12,
-                height: 12,
+                width: innerSize,
+                height: innerSize,
                 decoration: const BoxDecoration(
                   color: Colors.blue,
                   shape: BoxShape.circle,
