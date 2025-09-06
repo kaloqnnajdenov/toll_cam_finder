@@ -5,8 +5,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/presentation/widgets/avg_speed.dart';
+import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
+import 'package:toll_cam_finder/services/average_speed_est.dart';
 // NOTE: removed direct SpeedEstimator import here
 // import 'package:toll_cam_finder/features/map/services/speed_estimator.dart';
 
@@ -85,11 +88,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _loadCameras();
   }
 
+  final AverageSpeedController _avgCtrl = AverageSpeedController();
+
   @override
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
     _anim.dispose();
+    _avgCtrl.dispose();
     super.dispose();
   }
 
@@ -121,6 +127,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       if (shownKmh < _uiDeadbandKmh) shownKmh = 0.0;
       if (mounted) setState(() => _speedKmh = shownKmh);
 
+      _avgCtrl.addSample(shownKmh);
+      
       final next = LatLng(p.latitude, p.longitude);
       _animateMarkerTo(next);
 
@@ -209,42 +217,69 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
 
     return Scaffold(
-      body: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _center,
-          initialZoom: _currentZoom,
-          onMapReady: () {
-            _mapReady = true;
-            if (_userLatLng != null) {
-              _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
-              _currentZoom = AppConstants.zoomWhenFocused;
-            }
-            _updateVisibleCameras();
-          },
-        ),
+      // WRAP body with a Stack to overlay the dial
+      body: Stack(
         children: [
-          TileLayer(
-            urlTemplate: AppConstants.mapURL,
-            userAgentPackageName: AppConstants.userAgentPackageName,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _center,
+              initialZoom: _currentZoom,
+              onMapReady: () {
+                _mapReady = true;
+                if (_userLatLng != null) {
+                  _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
+                  _currentZoom = AppConstants.zoomWhenFocused;
+                }
+                _updateVisibleCameras();
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: AppConstants.mapURL,
+                userAgentPackageName: AppConstants.userAgentPackageName,
+              ),
+              TollCamerasOverlay(cameras: cameraState),
+              BlueDotMarker(point: markerPoint),
+            ],
           ),
-          TollCamerasOverlay(cameras: cameraState),
-          BlueDotMarker(point: markerPoint),
+
+          // ADD: positioned Average Speed dial (top-left)
+          Positioned(
+            top: 16,
+            left: 16,
+            child: AverageSpeedDial(controller: _avgCtrl, unit: 'km/h'),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _onResetView,
-        icon: Icon(
-          _followUser ? Icons.my_location : Icons.my_location_outlined,
-        ),
-        label: Text(
-          _speedKmh == null
-              ? "Recenter"
-              : (_speedKmh == 0.0
-                  ? "Recenter • 0 km/h"
-                  : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h"),
-        ),
+
+      // ADD: a column of FABs: Recenter + Start/Reset Avg
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // existing recenter FAB (unchanged)
+          FloatingActionButton.extended(
+            heroTag: 'recenter_btn',
+            onPressed: _onResetView,
+            icon: Icon(
+              _followUser ? Icons.my_location : Icons.my_location_outlined,
+            ),
+            label: Text(
+              _speedKmh == null
+                  ? "Recenter"
+                  : (_speedKmh == 0.0
+                      ? "Recenter • 0 km/h"
+                      : "Recenter • ${_speedKmh!.toStringAsFixed(1)} km/h"),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // new Start/Reset Avg mini FAB
+          AverageSpeedButton(controller: _avgCtrl),
+        ],
       ),
     );
   }
+
 }
