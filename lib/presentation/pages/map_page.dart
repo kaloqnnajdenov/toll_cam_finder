@@ -1,106 +1,76 @@
 import 'dart:async';
-import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart'; // kDebugMode
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
-import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
-import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
-import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
-import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
-import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
+import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
-import '../../services/permission_service.dart';
 import '../../services/location_service.dart';
-import '../../services/camera_utils.dart';
+import '../../services/permission_service.dart';
+import 'map/blue_dot_animator.dart';
+import 'map/segment_debugger.dart';
+import 'map/toll_camera_controller.dart';
+import 'map/widgets/map_controls_panel.dart';
+import 'map/widgets/map_fab_column.dart';
+import 'map/widgets/segment_overlays.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
+
   @override
   State<MapPage> createState() => _MapPageState();
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
-  // ------------------ external deps/services ------------------
-  final _mapController = MapController();
-  final _permissionService = PermissionService();
-  final _locationService = LocationService();
+  static const double _uiDeadbandKmh = 1.0;
 
-  // ------------------ map + user state ------------------
+  // External services
+  final MapController _mapController = MapController();
+  final PermissionService _permissionService = PermissionService();
+  final LocationService _locationService = LocationService();
+
+  // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
   bool _mapReady = false;
-
   bool _followUser = false;
   double _currentZoom = AppConstants.initialZoom;
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
 
-  // ------------------ animation for blue dot ------------------
-  late final AnimationController _anim;
-  late final Animation<double> _curve;
-  Tween<double>? _latTween;
-  Tween<double>? _lngTween;
-  DateTime? _lastFixAt;
-
-  LatLng? get _animatedLatLng {
-    if (_latTween == null || _lngTween == null) return _userLatLng;
-    final t = _curve.value;
-    return LatLng(_latTween!.transform(t), _lngTween!.transform(t));
-  }
-
-  // ------------------ toll cameras ------------------
-  final CameraUtils _cameras = CameraUtils(boundsPaddingDeg: 0.05);
-
-  // ------------------ segments index (Step 2) ------------------
-  final _segIndex = SegmentIndexService.instance;
-  bool _segmentsReady = false;
-  List<SegmentGeometry> _debugCandidates = const [];
-  List<LatLng> _debugQuerySquare = const [];
-  DateTime? _lastSegLog;
-
-  // ------------------ speed state (km/h with UI deadband) ------------------
-  double? _speedKmh;
-  static const double _uiDeadbandKmh = 1.0;
-
+  // Helpers
+  late final BlueDotAnimator _blueDotAnimator;
   final AverageSpeedController _avgCtrl = AverageSpeedController();
+  final TollCameraController _cameraController = TollCameraController();
+  final SegmentDebugger _segmentDebugger = SegmentDebugger(
+    SegmentIndexService.instance,
+  );
+
+  double? _speedKmh;
 
   @override
   void initState() {
     super.initState();
 
-    // blue-dot animation
-    _anim = AnimationController(
+    _blueDotAnimator = BlueDotAnimator(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _curve = CurvedAnimation(parent: _anim, curve: Curves.easeInOut)
-      ..addListener(() {
+      onTick: () {
         if (mounted) setState(() {});
-      });
+      },
+    );
 
-    // map events (stop following on manual gesture, update visible cameras)
-    _mapEvtSub = _mapController.mapEventStream.listen((evt) {
-      _currentZoom = evt.camera.zoom;
-      if (evt.source != MapEventSource.mapController) {
-        if (_followUser) setState(() => _followUser = false);
-      }
-      _updateVisibleCameras();
-      // per request: no candidate refresh on map moves (only GPS-driven)
-    });
-
+    _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     _initLocation();
     _loadCameras();
-
     unawaited(_initSegmentsIndex());
   }
 
@@ -108,23 +78,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
-    _anim.dispose();
+    _blueDotAnimator.dispose();
     _avgCtrl.dispose();
     super.dispose();
   }
 
-  // ------------------ location init and stream ------------------
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
 
     final pos = await _locationService.getCurrentPosition();
 
-    final v0 = pos.speed; // m/s
-    var kmh0 = (v0.isFinite && v0 >= 0) ? v0 * 3.6 : 0.0;
-    if (kmh0 < _uiDeadbandKmh) kmh0 = 0.0;
-    _speedKmh = kmh0;
-
+    _speedKmh = _normalizeSpeed(pos.speed);
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
@@ -132,130 +97,77 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     if (_mapReady) {
       _mapController.move(_center, AppConstants.zoomWhenFocused);
+      _currentZoom = AppConstants.zoomWhenFocused;
     }
 
     _posSub?.cancel();
-    _posSub = _locationService.getPositionStream().listen((p) {
-      final sp = p.speed;
-      double shownKmh = (sp.isFinite && sp >= 0) ? sp * 3.6 : 0.0;
-      if (shownKmh < _uiDeadbandKmh) shownKmh = 0.0;
-      if (mounted) setState(() => _speedKmh = shownKmh);
-
-      _avgCtrl.addSample(shownKmh);
-
-      final next = LatLng(p.latitude, p.longitude);
-      _animateMarkerTo(next);
-
-      // ---- Step 2: refresh candidates around GPS dot ----
-      if (kDebugMode && _segmentsReady) {
-        _refreshCandidatesAroundGps(next);
-      }
-
-      if (_followUser) {
-        final followPoint = _animatedLatLng ?? next;
-        _mapController.move(followPoint, _currentZoom);
-      }
-    });
-  }
-
-  // Build candidates around the given GPS position and compute the query square
-  void _refreshCandidatesAroundGps(LatLng gps, {String reason = 'gps'}) {
-    final sw = Stopwatch()..start();
-    final cands = _segIndex.candidatesNearLatLng(
-      gps,
-      radiusMeters: AppConstants.candidateRadiusMeters,
+    _posSub = _locationService.getPositionStream().listen(
+      _handlePositionUpdate,
     );
-    sw.stop();
+  }
 
-    _debugCandidates = cands;
-    _debugQuerySquare = _computeQuerySquare(gps, AppConstants.candidateRadiusMeters);
+  void _handlePositionUpdate(Position position) {
+    final shownKmh = _normalizeSpeed(position.speed);
+    final next = LatLng(position.latitude, position.longitude);
+    _avgCtrl.addSample(shownKmh);
+    _moveBlueDot(next);
 
-    // throttle logs to 1/s
-    final now = DateTime.now();
-    if (_lastSegLog == null || now.difference(_lastSegLog!) > const Duration(seconds: 1)) {
-      debugPrint(
-        '[SEGIDX/$reason] ${cands.length} candidates in ${sw.elapsedMicroseconds}µs '
-        '@ ${gps.latitude.toStringAsFixed(5)},${gps.longitude.toStringAsFixed(5)} '
-        '(r=${AppConstants.candidateRadiusMeters.toInt()}m)',
-      );
-      _lastSegLog = now;
+    if (kDebugMode && _segmentDebugger.isReady) {
+      _segmentDebugger.refresh(next);
     }
 
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    setState(() {
+      _speedKmh = shownKmh;
+    });
+
+    if (_followUser) {
+      final followPoint = _blueDotAnimator.position ?? next;
+      _mapController.move(followPoint, _currentZoom);
+    }
   }
 
-  // Compute a square ~radiusMeters around a center in lat/lon degrees
-  List<LatLng> _computeQuerySquare(LatLng c, double radiusMeters) {
-    const mPerDegLat = 111320.0;
-    final mPerDegLon = (mPerDegLat * math.cos(c.latitude * math.pi / 180.0))
-        .clamp(1e-9, double.infinity);
-    final dLat = radiusMeters / mPerDegLat;
-    final dLon = radiusMeters / mPerDegLon;
-
-    final minLat = c.latitude - dLat;
-    final maxLat = c.latitude + dLat;
-    final minLon = c.longitude - dLon;
-    final maxLon = c.longitude + dLon;
-
-    return <LatLng>[
-      LatLng(minLat, minLon),
-      LatLng(minLat, maxLon),
-      LatLng(maxLat, maxLon),
-      LatLng(maxLat, minLon),
-      LatLng(minLat, minLon),
-    ];
-  }
-
-  void _animateMarkerTo(LatLng next) {
-    final from = _animatedLatLng ?? _userLatLng ?? _center;
-
+  void _moveBlueDot(LatLng next) {
+    final from = _blueDotAnimator.position ?? _userLatLng ?? _center;
     _userLatLng = next;
+    _blueDotAnimator.animate(from: from, to: next);
+  }
 
-    final now = DateTime.now();
-    int ms = 500;
-    if (_lastFixAt != null) {
-      final intervalMs = now.difference(_lastFixAt!).inMilliseconds;
-      ms = (intervalMs * AppConstants.fillRatio).toInt();
-      if (ms < AppConstants.minMs) ms = AppConstants.minMs;
-      if (ms > AppConstants.maxMs) ms = AppConstants.maxMs;
+  double _normalizeSpeed(double metersPerSecond) {
+    if (!metersPerSecond.isFinite || metersPerSecond < 0) return 0.0;
+    final kmh = metersPerSecond * 3.6;
+    return kmh < _uiDeadbandKmh ? 0.0 : kmh;
+  }
+
+  void _onMapEvent(MapEvent evt) {
+    _currentZoom = evt.camera.zoom;
+    if (evt.source != MapEventSource.mapController && _followUser) {
+      setState(() => _followUser = false);
     }
-    _lastFixAt = now;
-
-    _latTween = Tween<double>(begin: from.latitude, end: next.latitude);
-    _lngTween = Tween<double>(begin: from.longitude, end: next.longitude);
-
-    _anim
-      ..duration = Duration(milliseconds: ms)
-      ..stop()
-      ..reset()
-      ..forward();
+    _updateVisibleCameras();
   }
 
   // ------------------ reset view button ------------------
+  void _onMapReady() {
+    _mapReady = true;
+    if (_userLatLng != null) {
+      _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
+      _currentZoom = AppConstants.zoomWhenFocused;
+    }
+    _updateVisibleCameras();
+  }
+
   void _onResetView() {
-    LatLng target;
-    if (_animatedLatLng != null) {
-      target = _animatedLatLng!;
-    } else if (_userLatLng != null) {
-      target = _userLatLng!;
-    } else {
-      target = _center;
-    }
-
-    _followUser = true;
-
-    double zoom = _currentZoom;
-    if (_currentZoom < AppConstants.zoomWhenFocused) {
-      zoom = AppConstants.zoomWhenFocused;
-    }
-
+    final target = _blueDotAnimator.position ?? _userLatLng ?? _center;
+    setState(() => _followUser = true);
+    final zoom = _currentZoom < AppConstants.zoomWhenFocused
+        ? AppConstants.zoomWhenFocused
+        : _currentZoom;
     _mapController.move(target, zoom);
   }
 
-  // ------------------ load + filter cameras via CameraUtils ------------------
   Future<void> _loadCameras() async {
-    await _cameras.loadFromAsset(AppConstants.camerasAsset);
-    if (mounted) setState(() {});
     _updateVisibleCameras();
   }
 
@@ -268,41 +180,30 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         bounds = null;
       }
     }
-    if (mounted) {
-      setState(() {
-        _cameras.updateVisible(bounds: bounds);
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      _cameraController.updateVisible(bounds: bounds);
+    });
   }
 
-  // ------------------ segments index bootstrap ------------------
   Future<void> _initSegmentsIndex() async {
-    await _segIndex.tryLoadFromDefaultAsset(
-      assetPath: 'assets/data/toll_segments.geojson',
+    final ready = await _segmentDebugger.initialise(
+      assetPath: 'assets/data/toll_segments.geojson', //TODO: set in constants
     );
-    if (mounted && _segIndex.isReady) {
-      setState(() => _segmentsReady = true);
-      if (kDebugMode) debugPrint('[SEGIDX] index ready');
-      // If we already have a location, seed once around GPS
-      if (_userLatLng != null && kDebugMode) {
-        _refreshCandidatesAroundGps(_userLatLng!, reason: 'seed');
-      }
-    } else {
-      if (kDebugMode) {
-        debugPrint('[SEGIDX] not ready — missing asset or parse failure.');
-      }
+    if (!mounted || !ready) return;
+
+    if (kDebugMode && _userLatLng != null) {
+      _segmentDebugger.refresh(_userLatLng!, reason: 'seed');
     }
+
+    setState(() {});
   }
 
-  // ------------------ build ------------------
   @override
   Widget build(BuildContext context) {
-    final markerPoint = _animatedLatLng ?? _userLatLng;
-    final cameraState = TollCamerasState(
-      error: _cameras.error,
-      isLoading: _cameras.isLoading,
-      visibleCameras: _cameras.visibleCameras,
-    );
+    final markerPoint = _blueDotAnimator.position ?? _userLatLng;
+    final cameraState = _cameraController.state;
 
     return Scaffold(
       body: Stack(
@@ -312,121 +213,40 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             options: MapOptions(
               initialCenter: _center,
               initialZoom: _currentZoom,
-              onMapReady: () {
-                _mapReady = true;
-                if (_userLatLng != null) {
-                  _mapController.move(
-                    _userLatLng!,
-                    AppConstants.zoomWhenFocused,
-                  );
-                  _currentZoom = AppConstants.zoomWhenFocused;
-                }
-                _updateVisibleCameras();
-              },
+              onMapReady: _onMapReady,
             ),
             children: [
-              // Base map first
               const BaseTileLayer(),
 
-              // Your GPS dot
               BlueDotMarker(point: markerPoint),
 
-              // DEBUG: query square (border-only so it never hides markers)
-              if (kDebugMode && _debugQuerySquare.isNotEmpty)
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: _debugQuerySquare,
-                      color: Colors.transparent, // border only
-                      borderColor: Colors.blue,
-                      borderStrokeWidth: 1.5,
-                      disableHolesBorder: true,
-                    ),
-                  ],
-                ),
-
-              // DEBUG: candidate segment rectangles (blue)
-              if (kDebugMode && _debugCandidates.isNotEmpty)
-                _buildCandidateBoundsOverlay(),
-
-              // IMPORTANT: cameras last so they render on top
+              if (kDebugMode && _segmentDebugger.querySquare.isNotEmpty)
+                QuerySquareOverlay(points: _segmentDebugger.querySquare),
+              if (kDebugMode && _segmentDebugger.candidates.isNotEmpty)
+                CandidateBoundsOverlay(candidates: _segmentDebugger.candidates),
               TollCamerasOverlay(cameras: cameraState),
             ],
           ),
-
-          // Top-left dials, stacked and safe
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(top: 16, left: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CurrentSpeedDial(speedKmh: _speedKmh, unit: 'km/h'),
-                  const SizedBox(height: 12),
-                  AverageSpeedDial(controller: _avgCtrl, unit: 'km/h'),
-
-                  // tiny debug badge
-                  if (kDebugMode)
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Segments: ${_debugCandidates.length}  '
-                        'r=${AppConstants.candidateRadiusMeters.toInt()}m',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                ],
+              child: MapControlsPanel(
+                speedKmh: _speedKmh,
+                avgController: _avgCtrl,
+                showDebugBadge: _segmentDebugger.isReady,
+                segmentCount: _segmentDebugger.candidates.length,
+                segmentRadiusMeters: AppConstants.candidateRadiusMeters,
               ),
             ),
           ),
         ],
       ),
 
-      // Right-side FABs: Recenter + Start/Reset Avg
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'recenter_btn',
-            onPressed: _onResetView,
-            icon: Icon(
-              _followUser ? Icons.my_location : Icons.my_location_outlined,
-            ),
-            label: const Text('Recenter'),
-          ),
-          const SizedBox(height: 12),
-          AverageSpeedButton(controller: _avgCtrl),
-        ],
+      floatingActionButton: MapFabColumn(
+        followUser: _followUser,
+        onResetView: _onResetView,
+        avgController: _avgCtrl,
       ),
     );
-  }
-
-  // ------------------ Candidate bbox overlay (blue) ------------------
-  Widget _buildCandidateBoundsOverlay() {
-    final polygons = _debugCandidates.map((g) {
-      final b = g.bounds;
-      final pts = <LatLng>[
-        LatLng(b.minLat, b.minLon),
-        LatLng(b.minLat, b.maxLon),
-        LatLng(b.maxLat, b.maxLon),
-        LatLng(b.maxLat, b.minLon),
-        LatLng(b.minLat, b.minLon),
-      ];
-      return Polygon(
-        points: pts,
-        color: Colors.transparent,
-        borderColor: Colors.blueAccent,   // BLUE candidate rectangles
-        borderStrokeWidth: 1.8,
-        disableHolesBorder: true,
-      );
-    }).toList();
-
-    return PolygonLayer(polygons: polygons);
   }
 }
