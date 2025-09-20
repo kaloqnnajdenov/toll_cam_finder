@@ -7,11 +7,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
+import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 
 import '../../services/location_service.dart';
@@ -32,7 +34,7 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
-   static const double _mapFollowEpsilonDeg = 1e-6;
+  static const double _mapFollowEpsilonDeg = 1e-6;
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
@@ -58,6 +60,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     SegmentIndexService.instance,
   );
 
+  late final SegmentTracker _segmentTracker = SegmentTracker(
+    indexService: SegmentIndexService.instance,
+    candidateRadiusMeters: AppConstants.candidateRadiusMeters,
+    onSegmentEntered: _onSegmentEntered,
+    onSegmentExited: _onSegmentExited,
+  );
+
   double? _speedKmh;
 
   @override
@@ -67,10 +76,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _headingController = MapHeadingController(mapController: _mapController)
       ..addListener(_onHeadingChanged);
 
-    _blueDotAnimator = BlueDotAnimator(
-      vsync: this,
-            onTick: _onBlueDotTick,
-    );
+    _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     _initLocation();
@@ -107,6 +113,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _center = firstFix;
     if (mounted) setState(() {});
 
+    _segmentTracker.handleLocationUpdate(
+      current: firstFix,
+      headingDegrees: pos.heading,
+    );
+
     if (_mapReady) {
       _mapController.move(_center, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
@@ -116,6 +127,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _posSub = _locationService.getPositionStream().listen(
       _handlePositionUpdate,
     );
+  }
+
+  void _onSegmentEntered(SegmentGeometry segment) {
+    if (kDebugMode) {
+      debugPrint('[MapPage] Entered segment ${segment.id}');
+    }
+  }
+
+  void _onSegmentExited(SegmentGeometry segment) {
+    if (kDebugMode) {
+      debugPrint('[MapPage] Exited segment ${segment.id}');
+    }
   }
 
   void _handlePositionUpdate(Position position) {
@@ -132,6 +155,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       speedKmh: smoothedKmh,
     );
 
+    _segmentTracker.handleLocationUpdate(
+      current: next,
+      previous: previous,
+      headingDegrees: position.heading,
+    );
+
     if (kDebugMode && _segmentDebugger.isReady) {
       _segmentDebugger.refresh(next);
     }
@@ -141,7 +170,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     setState(() {
       _speedKmh = smoothedKmh;
     });
-
   }
 
   void _moveBlueDot(LatLng next) {
@@ -201,7 +229,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _mapController.move(target, zoom);
   }
 
-void _onBlueDotTick() {
+  void _onBlueDotTick() {
     if (_followUser && _mapReady) {
       final target = _blueDotAnimator.position;
       if (target != null) {
@@ -281,7 +309,7 @@ void _onBlueDotTick() {
 
   Future<void> _initSegmentsIndex() async {
     final ready = await _segmentDebugger.initialise(
-      assetPath: AppConstants.pathToTollSegments
+      assetPath: AppConstants.pathToTollSegments,
     );
     if (!mounted || !ready) return;
 
@@ -289,6 +317,10 @@ void _onBlueDotTick() {
       _segmentDebugger.refresh(_userLatLng!, reason: 'seed');
     }
 
+    if (_userLatLng != null) {
+      _segmentTracker.handleLocationUpdate(current: _userLatLng!);
+    }
+    
     setState(() {});
   }
 
