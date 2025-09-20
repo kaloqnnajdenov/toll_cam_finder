@@ -8,6 +8,8 @@ class AppConstants {
   static const int minMs = 1;
   static const int maxMs = 1200;
   static const double fillRatio = 0.85;
+  static const double blueDotTeleportDistanceMeters = 500.0;
+  static const double blueDotTeleportSpeedMps = 70.0;
   static const double candidateRadiusMeters = 3000;
 
   static const int gpsSampleIntervalMs = 100;

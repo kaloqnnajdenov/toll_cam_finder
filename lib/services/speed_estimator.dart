@@ -13,11 +13,11 @@ class SpeedEstimator {
   final _LocationFilter _lngFilter = _LocationFilter();
 
   final _KF _kf = _KF(
-    sigmaJerk: 3.0,      // m/s^3 process noise (higher => more responsive)
-    fading: 1.15,        // >1 inflates P each predict (forgetting); 1.1–1.3 works well
-    pFloorV: 0.10,       // min var for speed state (m/s)^2
-    pFloorA: 0.25,       // min var for accel state (m/s^2)^2
-    maxSpeed: 80.0,      // cap estimate (m/s) ~288 km/h
+    sigmaJerk: 3.0, // m/s^3 process noise (higher => more responsive)
+    fading: 1.15, // >1 inflates P each predict (forgetting); 1.1–1.3 works well
+    pFloorV: 0.10, // min var for speed state (m/s)^2
+    pFloorA: 0.25, // min var for accel state (m/s^2)^2
+    maxSpeed: 80.0, // cap estimate (m/s) ~288 km/h
   );
 
   // Store previous SMOOTHED coordinate + accuracy for derived-speed & stationary logic
@@ -28,19 +28,19 @@ class SpeedEstimator {
   int _stationaryCount = 0;
 
   // Tunables (as before)
-  final double horizAccBad = 30.0;           // m: ignore derived speed if poor
-  final double minDt = 0.12;                 // s: minimum dt to trust derived speed
-  final double maxDt = 2.5;                  // s: clamp dt to avoid huge jumps
-  final double stationaryDisp = 1.0;         // m
-  final int stationaryDebounceCount = 3;     // frames
-  final double smallSpeed = 0.3;             // m/s: tiny motion threshold
-  final double stationaryExitInflate = 4.0;  // inflate P when leaving stationary
+  final double horizAccBad = 30.0; // m: ignore derived speed if poor
+  final double minDt = 0.12; // s: minimum dt to trust derived speed
+  final double maxDt = 2.5; // s: clamp dt to avoid huge jumps
+  final double stationaryDisp = 1.0; // m
+  final int stationaryDebounceCount = 3; // frames
+  final double smallSpeed = 0.3; // m/s: tiny motion threshold
+  final double stationaryExitInflate = 4.0; // inflate P when leaving stationary
 
   // Treat tiny/0 Doppler accuracy as "clamp up", not "unknown"
-  final double devAccClampFloor = 0.15;      // m/s: min Doppler σ we accept
+  final double devAccClampFloor = 0.15; // m/s: min Doppler σ we accept
 
   // Extra noise added to derived-speed variance to cover curvature/nonlinearity
-  final double drvExtraNoise = 0.20;         // m/s (added in quadrature)
+  final double drvExtraNoise = 0.20; // m/s (added in quadrature)
 
   // --- zero-lock (hysteresis) ---
   bool _zeroLocked = false;
@@ -78,8 +78,16 @@ class SpeedEstimator {
     double? drvSpeed;
     double? drvR;
     double? dispMeters; // reuse for stationary detection
-    if (_lastLatSm != null && _lastLngSm != null && dtRaw != null && dtRaw >= minDt) {
-      dispMeters = Geolocator.distanceBetween(_lastLatSm!, _lastLngSm!, latSm, lngSm);
+    if (_lastLatSm != null &&
+        _lastLngSm != null &&
+        dtRaw != null &&
+        dtRaw >= minDt) {
+      dispMeters = Geolocator.distanceBetween(
+        _lastLatSm!,
+        _lastLngSm!,
+        latSm,
+        lngSm,
+      );
 
       final acc1 = _finiteOr(_lastAcc, 999.0);
       final acc2 = accNow;
@@ -88,7 +96,9 @@ class SpeedEstimator {
       if (accOk) {
         final v = (dispMeters / dtRaw).clamp(0.0, _kf.maxSpeed);
         final sigmaV = math.sqrt(acc1 * acc1 + acc2 * acc2) / dtRaw;
-        final sigma = math.sqrt(sigmaV * sigmaV + drvExtraNoise * drvExtraNoise);
+        final sigma = math.sqrt(
+          sigmaV * sigmaV + drvExtraNoise * drvExtraNoise,
+        );
         drvSpeed = v;
         drvR = _boundedVar(sigma * sigma);
         // If dt is very small, derived becomes unstable; inflate R
@@ -106,7 +116,12 @@ class SpeedEstimator {
 
     if (_lastLatSm != null && _lastLngSm != null && _lastFixWallTime != null) {
       // Reuse displacement if available, else compute once
-      dispMeters ??= Geolocator.distanceBetween(_lastLatSm!, _lastLngSm!, latSm, lngSm);
+      dispMeters ??= Geolocator.distanceBetween(
+        _lastLatSm!,
+        _lastLngSm!,
+        latSm,
+        lngSm,
+      );
 
       final acc1 = _finiteOr(_lastAcc, 999.0);
       final acc2 = accNow;
@@ -169,7 +184,8 @@ class SpeedEstimator {
 
     // --- Zero-lock clamp & hysteresis exit ---------------------------------
     if (_zeroLocked) {
-      final leaving = ((devSpeed ?? 0.0) > zeroExit) || ((drvSpeed ?? 0.0) > zeroExit);
+      final leaving =
+          ((devSpeed ?? 0.0) > zeroExit) || ((drvSpeed ?? 0.0) > zeroExit);
       if (!leaving) {
         // Hold exact zero and keep filter nimble
         _kf.v = 0.0;
@@ -185,7 +201,7 @@ class SpeedEstimator {
     // ---- Bookkeeping of smoothed coords & accuracy ----
     _lastLatSm = latSm;
     _lastLngSm = lngSm;
-    _lastAcc   = accNow;
+    _lastAcc = accNow;
     _lastFixWallTime = wallNow;
 
     // ---- Return a Position with SMOOTHED coords + estimated speed ----
@@ -201,15 +217,18 @@ class SpeedEstimator {
       isMocked: raw.isMocked,
       // Preserve/forward (keep the same compatibility shim you had before)
       altitudeAccuracy: raw.altitudeAccuracy,
-      headingAccuracy:  raw.headingAccuracy,
+      headingAccuracy: raw.headingAccuracy,
     );
   }
 
   static double _finiteOr(double? v, double fallback) =>
       (v != null && v.isFinite) ? v : fallback;
 
-  static double _boundedVar(double v,
-      {double minVar = 0.25 * 0.25, double maxVar = 400.0}) {
+  static double _boundedVar(
+    double v, {
+    double minVar = 0.25 * 0.25,
+    double maxVar = 400.0,
+  }) {
     if (!v.isFinite) return minVar;
     return v.clamp(minVar, maxVar);
   }
@@ -266,11 +285,11 @@ class _KF {
     required this.maxSpeed,
   });
 
-  final double sigmaJerk;   // m/s^3
-  final double fading;      // >1: covariance inflation per predict
-  final double pFloorV;     // min var for v
-  final double pFloorA;     // min var for a
-  final double maxSpeed;    // cap for v
+  final double sigmaJerk; // m/s^3
+  final double fading; // >1: covariance inflation per predict
+  final double pFloorV; // min var for v
+  final double pFloorA; // min var for a
+  final double maxSpeed; // cap for v
 
   bool initialized = false;
 
@@ -309,7 +328,7 @@ class _KF {
     final q = sigmaJerk * sigmaJerk;
     final dt2 = dt * dt;
     final q00 = q * (dt * dt2) / 3.0; // dt^3 / 3
-    final q01 = q * (dt2) / 2.0;      // dt^2 / 2
+    final q01 = q * (dt2) / 2.0; // dt^2 / 2
     final q11 = q * dt;
 
     p00 = (p00n + q00) * fading;
@@ -324,17 +343,26 @@ class _KF {
 
   /// Robust update with scalar measurement z of velocity, variance r.
   /// Uses 3σ soft-inflation and 8σ hard-reject gating.
-  void updateRobust(double z, double r, {double gateSoft = 3.0, double gateHard = 8.0}) {
+  void updateRobust(
+    double z,
+    double r, {
+    double gateSoft = 3.0,
+    double gateHard = 8.0,
+  }) {
     if (!initialized) return;
 
-    final s = p00 + r;                  // innovation variance (scalar)
+    final s = p00 + r; // innovation variance (scalar)
     final sigma = math.sqrt(math.max(s, 1e-12));
-    final y = z - v;                    // innovation
+    final y = z - v; // innovation
 
     final ay = y.abs();
     if (ay > gateHard * sigma) {
-      // Hard reject (likely glitch)
-      return;
+      if (y > 0) {
+        // Measurement wildly higher than expected: reject.
+        return;
+      }
+      // Soft accept: encourage responsiveness (more aggressively for drops).
+      inflate(y >= 0 ? 2.5 : 1.8);
     } else if (ay > gateSoft * sigma) {
       // Soft accept: inflate P so the gain is higher for this surprise
       inflate(2.5);

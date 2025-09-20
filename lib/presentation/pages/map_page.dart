@@ -12,6 +12,7 @@ import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
+import 'package:toll_cam_finder/services/speed_smoother.dart';
 
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
@@ -50,6 +51,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
   final AverageSpeedController _avgCtrl = AverageSpeedController();
+  final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
   final SegmentDebugger _segmentDebugger = SegmentDebugger(
     SegmentIndexService.instance,
@@ -86,10 +88,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
-
+    _speedSmoother.reset();
     final pos = await _locationService.getCurrentPosition();
 
-    _speedKmh = _normalizeSpeed(pos.speed);
+    final firstKmh = _normalizeSpeed(pos.speed);
+    _speedKmh = _speedSmoother.next(firstKmh);
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
@@ -108,6 +111,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   void _handlePositionUpdate(Position position) {
     final shownKmh = _normalizeSpeed(position.speed);
+    final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
     _avgCtrl.addSample(shownKmh);
     _moveBlueDot(next);
@@ -119,7 +123,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     if (!mounted) return;
 
     setState(() {
-      _speedKmh = shownKmh;
+      _speedKmh = smoothedKmh;
     });
 
     if (_followUser) {
@@ -168,6 +172,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _loadCameras() async {
+    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
+    if (!mounted) return;
     _updateVisibleCameras();
   }
 
