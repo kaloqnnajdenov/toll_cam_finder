@@ -1,22 +1,82 @@
 import 'package:latlong2/latlong.dart';
 
 class AppConstants {
-  // Bulgaria center
+  /// Geographic center used before a GPS fix is available; shifting it moves the
+  /// initial map focus to another country or region.
   static const LatLng initialCenter = LatLng(42.7339, 25.4858);
+
+  /// Map zoom level applied at startup; increasing it starts the user closer to
+  /// street level, while decreasing shows a broader overview.
   static const double initialZoom = 7.0;
+
+  /// Target zoom when centering on the user's location; higher values zoom in
+  /// more aggressively once location is known, lower values keep more context.
   static const double zoomWhenFocused = 16;
+
+  /// Minimum duration (ms) for the blue-dot animation; reducing it makes
+  /// transitions snappier but can look jittery, increasing it slows all moves.
   static const int minMs = 1;
-  static const int maxMs = 1200;
-  static const double fillRatio = 0.85;
-  static const double blueDotTeleportDistanceMeters = 500.0;
+
+  /// Maximum duration (ms) for the blue-dot animation; raising it lets the dot
+  /// trail longer on sparse GPS data, lowering it forces quicker catch-ups.
+  static const int maxMs = 2000;
+
+  /// Fraction of the GPS sampling interval dedicated to animating between
+  /// fixes; higher values keep the dot moving nearly until the next fix,
+  /// whereas lower values leave idle gaps but react faster to new data.
+  static const double fillRatio = 0.95;
+
+  /// Distance jump that triggers an instant teleport of the blue dot; larger
+  /// values favor smoothing even on big jumps, smaller ones snap to new fixes
+  /// more often.
+  static const double blueDotTeleportDistanceMeters = 800.0;
+
+  /// Implied speed (m/s) that triggers teleporting; increasing it tolerates
+  /// faster jumps before snapping, decreasing makes unrealistic spikes reset
+  /// immediately.
   static const double blueDotTeleportSpeedMps = 70.0;
+
+  /// Radius (meters) used to query nearby toll-road segments; expanding it
+  /// yields more candidates at the cost of extra processing, shrinking risks
+  /// missing relevant segments.
   static const double candidateRadiusMeters = 3000;
 
+  ///Acts as the half-life for the exponential smoothing that blends the previously
+  ///displayed position with each new GPS fix. Shortening it makes the blue dot
+  ///react quickly (less smoothing, more jitter); lengthening it keeps motion buttery
+  /// smooth but lags further behind abrupt path changes.
+  static const double smoothingHalfLifeMs = 400.0;
+
+  /// Sets the distance scale that boosts the smoothing factor when the raw fix
+  /// diverges sharply from the smoothed track. Lowering it means even modest
+  /// discrepancies drive an aggressive snap toward the fresh fix; raising it
+  /// requires a much larger separation before the interpolation accelerates,
+  /// preserving smoothing longer.
+  static const double catchUpDistanceMeters = 20.0;
+
+  ///asset path
+  static const String pathToTollSegments = 'assets/data/toll_segments.geojson';
+
+  /// The animation controller starts with, and falls back to, a 500 ms duration for
+  /// each interpolation run. Increasing that duration makes movements appear slower
+  /// and smoother, while decreasing it yields snappier—but potentially choppier—updates
+  /// between GPS samples.
+  static const int interpolationDurationMs = 500;
+
+  /// Requested interval (ms) between GPS samples on Android; lowering it asks
+  /// for more frequent updates (better responsiveness, more battery), raising
+  /// it saves power but slows tracking.
   static const int gpsSampleIntervalMs = 100;
-  // For OSM etiquette. Replace with your real app id when you set it.
+
+  /// HTTP user-agent package identifier sent to the tile server; replace with a
+  /// real app id to stay within OpenStreetMap usage policy.
   static const String userAgentPackageName = 'com.example.toll_cam';
+
+  /// HTTP user-agent package identifier sent to the tile server; replace with a
+  /// real app id to stay within OpenStreetMap usage policy.
   static const String mapURL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    static const String camerasAsset = 'assets/data/toll_cameras_points.geojson';
-
+  /// Asset path to the GeoJSON dataset of toll cameras; changing it swaps the
+  /// loaded camera set (or breaks loading if the file is missing).
+  static const String camerasAsset = 'assets/data/toll_cameras_points.geojson';
 }

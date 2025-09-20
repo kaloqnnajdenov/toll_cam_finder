@@ -32,6 +32,7 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+   static const double _mapFollowEpsilonDeg = 1e-6;
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
@@ -68,9 +69,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     _blueDotAnimator = BlueDotAnimator(
       vsync: this,
-      onTick: () {
-        if (mounted) setState(() {});
-      },
+            onTick: _onBlueDotTick,
     );
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
@@ -143,10 +142,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       _speedKmh = smoothedKmh;
     });
 
-    if (_followUser) {
-      final followPoint = _blueDotAnimator.position ?? next;
-      _mapController.move(followPoint, _currentZoom);
-    }
   }
 
   void _moveBlueDot(LatLng next) {
@@ -206,6 +201,39 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _mapController.move(target, zoom);
   }
 
+void _onBlueDotTick() {
+    if (_followUser && _mapReady) {
+      final target = _blueDotAnimator.position;
+      if (target != null) {
+        _updateFollowCamera(target);
+      }
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _updateFollowCamera(LatLng target) {
+    if (!_mapReady) return;
+
+    late final MapCamera camera;
+    try {
+      camera = _mapController.camera;
+    } catch (_) {
+      return;
+    }
+
+    final currentCenter = camera.center;
+    final latDiff = (currentCenter.latitude - target.latitude).abs();
+    final lngDiff = (currentCenter.longitude - target.longitude).abs();
+    if (latDiff <= _mapFollowEpsilonDeg && lngDiff <= _mapFollowEpsilonDeg) {
+      return;
+    }
+
+    _mapController.move(target, camera.zoom);
+  }
+
   void _toggleFollowHeading() {
     final bool enable = !_headingController.followHeading;
     if (enable) {
@@ -253,7 +281,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   Future<void> _initSegmentsIndex() async {
     final ready = await _segmentDebugger.initialise(
-      assetPath: 'assets/data/toll_segments.geojson', //TODO: set in constants
+      assetPath: AppConstants.pathToTollSegments
     );
     if (!mounted || !ready) return;
 

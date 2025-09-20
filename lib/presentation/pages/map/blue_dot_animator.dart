@@ -26,8 +26,7 @@ class BlueDotAnimator {
   LatLng? _smoothedTarget;
   DateTime? _lastFixAt;
 
-  static const double _smoothingHalfLifeMs = 1600.0;
-  static const double _catchUpDistanceMeters = 18.0;
+ 
 
   /// Current interpolated location.
   LatLng? get position {
@@ -76,7 +75,7 @@ class BlueDotAnimator {
     _latTween = Tween<double>(begin: from.latitude, end: smoothedTarget.latitude);
     _lngTween = Tween<double>(begin: from.longitude, end: smoothedTarget.longitude);
 
-    int ms = 500; //TODO: remove hardcoded value
+    int ms = AppConstants.interpolationDurationMs; 
     if (intervalMs != null) {
       ms = (intervalMs * AppConstants.fillRatio).toInt();
       if (ms < AppConstants.minMs) ms = AppConstants.minMs;
@@ -118,7 +117,7 @@ class BlueDotAnimator {
       raw.longitude,
     );
     final catchUpMeters = math.max(distanceFromLastRaw, distanceToSmoothed);
-    final catchUp = (catchUpMeters / _catchUpDistanceMeters).clamp(0.0, 1.0);
+    final catchUp = (catchUpMeters / AppConstants.catchUpDistanceMeters).clamp(0.0, 1.0);
     alpha = alpha + (1 - alpha) * catchUp;
     alpha = alpha.clamp(0.0, 1.0);
 
@@ -131,7 +130,7 @@ class BlueDotAnimator {
     if (intervalMs == null || intervalMs <= 0) {
       return 1.0;
     }
-    final ratio = intervalMs / _smoothingHalfLifeMs;
+    final ratio = intervalMs / AppConstants.smoothingHalfLifeMs;
     final powTerm = math.pow(0.5, ratio).toDouble();
     final alpha = 1 - powTerm;
     return alpha.clamp(0.0, 1.0);
