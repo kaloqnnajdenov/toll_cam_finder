@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
 /// "Average speed" dial styled to match CurrentSpeedDial.
@@ -62,15 +63,10 @@ class AverageSpeedDial extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          transitionBuilder: (child, anim) =>
-                              ScaleTransition(scale: anim, child: child),
-                          child: Text(
-                            avg.toStringAsFixed(decimals),
-                            key: ValueKey<String>(avg.toStringAsFixed(decimals)),
-                            style: textTheme.displaySmall,
-                          ),
+                        SmoothNumberText(
+                          value: avg,
+                          decimals: decimals,
+                          style: textTheme.displaySmall,
                         ),
                         const SizedBox(width: 6),
                         Padding(

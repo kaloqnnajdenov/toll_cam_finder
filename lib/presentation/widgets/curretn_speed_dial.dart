@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 
 /// Live "current speed" dial to mirror the Avg Speed dial.
 /// Pure UI: you pass [speedKmh]. Handles null/NaN gracefully.
@@ -23,8 +24,8 @@ class CurrentSpeedDial extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    final value = (speedKmh != null && speedKmh!.isFinite)
-        ? speedKmh!.clamp(0, double.infinity)
+    final double? value = (speedKmh != null && speedKmh!.isFinite)
+        ? speedKmh!.clamp(0, double.infinity).toDouble()
         : null;
 
     return SizedBox(
@@ -56,19 +57,10 @@ class CurrentSpeedDial extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      transitionBuilder: (child, anim) =>
-                          ScaleTransition(scale: anim, child: child),
-                      child: Text(
-                        value == null
-                            ? '—'
-                            : value.toStringAsFixed(decimals),
-                        key: ValueKey<String>(
-                          value == null ? 'dash' : value.toStringAsFixed(decimals),
-                        ),
-                        style: textTheme.displaySmall,
-                      ),
+                    SmoothNumberText(
+                      value: value,
+                      decimals: decimals,
+                      style: textTheme.displaySmall,
                     ),
                     const SizedBox(width: 6),
                     Padding(
