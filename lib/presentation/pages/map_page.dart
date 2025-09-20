@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'; // kDebugMode
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
+import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
@@ -57,9 +61,16 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   // ------------------ toll cameras ------------------
   final CameraUtils _cameras = CameraUtils(boundsPaddingDeg: 0.05);
 
+  // ------------------ segments index (Step 2) ------------------
+  final _segIndex = SegmentIndexService.instance;
+  bool _segmentsReady = false;
+  List<SegmentGeometry> _debugCandidates = const [];
+  List<LatLng> _debugQuerySquare = const [];
+  DateTime? _lastSegLog;
+
   // ------------------ speed state (km/h with UI deadband) ------------------
   double? _speedKmh;
-  static const double _uiDeadbandKmh = 1.0; // show 0 below this
+  static const double _uiDeadbandKmh = 1.0;
 
   final AverageSpeedController _avgCtrl = AverageSpeedController();
 
@@ -80,15 +91,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     // map events (stop following on manual gesture, update visible cameras)
     _mapEvtSub = _mapController.mapEventStream.listen((evt) {
       _currentZoom = evt.camera.zoom;
-
       if (evt.source != MapEventSource.mapController) {
         if (_followUser) setState(() => _followUser = false);
       }
       _updateVisibleCameras();
+      // per request: no candidate refresh on map moves (only GPS-driven)
     });
 
     _initLocation();
     _loadCameras();
+
+    _unawaited(_initSegmentsIndex());
   }
 
   @override
@@ -105,7 +118,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
 
-    // Position is already fused/smoothed by LocationService (including speed)
     final pos = await _locationService.getCurrentPosition();
 
     final v0 = pos.speed; // m/s
@@ -124,7 +136,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     _posSub?.cancel();
     _posSub = _locationService.getPositionStream().listen((p) {
-      // p is already fused (speed in m/s)
       final sp = p.speed;
       double shownKmh = (sp.isFinite && sp >= 0) ? sp * 3.6 : 0.0;
       if (shownKmh < _uiDeadbandKmh) shownKmh = 0.0;
@@ -135,11 +146,64 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       final next = LatLng(p.latitude, p.longitude);
       _animateMarkerTo(next);
 
+      // ---- Step 2: refresh candidates around GPS dot ----
+      if (kDebugMode && _segmentsReady) {
+        _refreshCandidatesAroundGps(next);
+      }
+
       if (_followUser) {
         final followPoint = _animatedLatLng ?? next;
         _mapController.move(followPoint, _currentZoom);
       }
     });
+  }
+
+  // Build candidates around the given GPS position and compute the query square
+  void _refreshCandidatesAroundGps(LatLng gps, {String reason = 'gps'}) {
+    final sw = Stopwatch()..start();
+    final cands = _segIndex.candidatesNearLatLng(
+      gps,
+      radiusMeters: AppConstants.candidateRadiusMeters,
+    );
+    sw.stop();
+
+    _debugCandidates = cands;
+    _debugQuerySquare = _computeQuerySquare(gps, AppConstants.candidateRadiusMeters);
+
+    // throttle logs to 1/s
+    final now = DateTime.now();
+    if (_lastSegLog == null || now.difference(_lastSegLog!) > const Duration(seconds: 1)) {
+      debugPrint(
+        '[SEGIDX/$reason] ${cands.length} candidates in ${sw.elapsedMicroseconds}µs '
+        '@ ${gps.latitude.toStringAsFixed(5)},${gps.longitude.toStringAsFixed(5)} '
+        '(r=${AppConstants.candidateRadiusMeters.toInt()}m)',
+      );
+      _lastSegLog = now;
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  // Compute a square ~radiusMeters around a center in lat/lon degrees
+  List<LatLng> _computeQuerySquare(LatLng c, double radiusMeters) {
+    const mPerDegLat = 111320.0;
+    final mPerDegLon = (mPerDegLat * math.cos(c.latitude * math.pi / 180.0))
+        .clamp(1e-9, double.infinity);
+    final dLat = radiusMeters / mPerDegLat;
+    final dLon = radiusMeters / mPerDegLon;
+
+    final minLat = c.latitude - dLat;
+    final maxLat = c.latitude + dLat;
+    final minLon = c.longitude - dLon;
+    final maxLon = c.longitude + dLon;
+
+    return <LatLng>[
+      LatLng(minLat, minLon),
+      LatLng(minLat, maxLon),
+      LatLng(maxLat, maxLon),
+      LatLng(maxLat, minLon),
+      LatLng(minLat, minLon),
+    ];
   }
 
   void _animateMarkerTo(LatLng next) {
@@ -211,6 +275,27 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
   }
 
+  // ------------------ segments index bootstrap ------------------
+  Future<void> _initSegmentsIndex() async {
+    await _segIndex.tryLoadFromDefaultAsset(
+      assetPath: 'assets/data/toll_segments.geojson',
+    );
+    if (mounted && _segIndex.isReady) {
+      setState(() => _segmentsReady = true);
+      if (kDebugMode) debugPrint('[SEGIDX] index ready');
+      // If we already have a location, seed once around GPS
+      if (_userLatLng != null && kDebugMode) {
+        _refreshCandidatesAroundGps(_userLatLng!, reason: 'seed');
+      }
+    } else {
+      if (kDebugMode) {
+        debugPrint('[SEGIDX] not ready — missing asset or parse failure.');
+      }
+    }
+  }
+
+  void _unawaited(Future<void> f) {}
+
   // ------------------ build ------------------
   @override
   Widget build(BuildContext context) {
@@ -232,16 +317,42 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               onMapReady: () {
                 _mapReady = true;
                 if (_userLatLng != null) {
-                  _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
+                  _mapController.move(
+                    _userLatLng!,
+                    AppConstants.zoomWhenFocused,
+                  );
                   _currentZoom = AppConstants.zoomWhenFocused;
                 }
                 _updateVisibleCameras();
               },
             ),
             children: [
+              // Base map first
               const BaseTileLayer(),
-              TollCamerasOverlay(cameras: cameraState),
+
+              // Your GPS dot
               BlueDotMarker(point: markerPoint),
+
+              // DEBUG: query square (border-only so it never hides markers)
+              if (kDebugMode && _debugQuerySquare.isNotEmpty)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: _debugQuerySquare,
+                      color: Colors.transparent, // border only
+                      borderColor: Colors.blue,
+                      borderStrokeWidth: 1.5,
+                      disableHolesBorder: true,
+                    ),
+                  ],
+                ),
+
+              // DEBUG: candidate segment rectangles (blue)
+              if (kDebugMode && _debugCandidates.isNotEmpty)
+                _buildCandidateBoundsOverlay(),
+
+              // IMPORTANT: cameras last so they render on top
+              TollCamerasOverlay(cameras: cameraState),
             ],
           ),
 
@@ -255,6 +366,22 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   CurrentSpeedDial(speedKmh: _speedKmh, unit: 'km/h'),
                   const SizedBox(height: 12),
                   AverageSpeedDial(controller: _avgCtrl, unit: 'km/h'),
+
+                  // tiny debug badge
+                  if (kDebugMode)
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Segments: ${_debugCandidates.length}  '
+                        'r=${AppConstants.candidateRadiusMeters.toInt()}m',
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -280,5 +407,28 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  // ------------------ Candidate bbox overlay (blue) ------------------
+  Widget _buildCandidateBoundsOverlay() {
+    final polygons = _debugCandidates.map((g) {
+      final b = g.bounds;
+      final pts = <LatLng>[
+        LatLng(b.minLat, b.minLon),
+        LatLng(b.minLat, b.maxLon),
+        LatLng(b.maxLat, b.maxLon),
+        LatLng(b.maxLat, b.minLon),
+        LatLng(b.minLat, b.minLon),
+      ];
+      return Polygon(
+        points: pts,
+        color: Colors.transparent,
+        borderColor: Colors.blueAccent,   // BLUE candidate rectangles
+        borderStrokeWidth: 1.8,
+        disableHolesBorder: true,
+      );
+    }).toList();
+
+    return PolygonLayer(polygons: polygons);
   }
 }

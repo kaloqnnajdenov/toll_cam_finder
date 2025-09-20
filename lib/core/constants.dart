@@ -8,7 +8,8 @@ class AppConstants {
   static const int minMs = 1;
   static const int maxMs = 1200;
   static const double fillRatio = 0.85;
-  
+  static const double candidateRadiusMeters = 3000;
+
   static const int gpsSampleIntervalMs = 100;
   // For OSM etiquette. Replace with your real app id when you set it.
   static const String userAgentPackageName = 'com.example.toll_cam';
