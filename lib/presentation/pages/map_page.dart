@@ -101,7 +101,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _initLocation();
     _loadCameras();
 
-    _unawaited(_initSegmentsIndex());
+    unawaited(_initSegmentsIndex());
   }
 
   @override
@@ -293,8 +293,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       }
     }
   }
-
-  void _unawaited(Future<void> f) {}
 
   // ------------------ build ------------------
   @override
