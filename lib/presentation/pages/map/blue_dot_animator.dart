@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/animation.dart';
 import 'package:geolocator/geolocator.dart' show Geolocator;
 import 'package:latlong2/latlong.dart';
@@ -13,22 +15,24 @@ class BlueDotAnimator {
     _controller = AnimationController(
       vsync: vsync,
       duration: const Duration(milliseconds: 500),
-    );
-    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut)
-      ..addListener(onTick);
+    )..addListener(onTick);
   }
 
   late final AnimationController _controller;
-  late final Animation<double> _curve;
 
   Tween<double>? _latTween;
   Tween<double>? _lngTween;
+  LatLng? _lastRawFix;
+  LatLng? _smoothedTarget;
   DateTime? _lastFixAt;
+
+  static const double _smoothingHalfLifeMs = 1600.0;
+  static const double _catchUpDistanceMeters = 18.0;
 
   /// Current interpolated location.
   LatLng? get position {
     if (_latTween == null || _lngTween == null) return null;
-    final t = _curve.value;
+    final t = _controller.value;
     return LatLng(_latTween!.transform(t), _lngTween!.transform(t));
   }
 
@@ -38,25 +42,39 @@ class BlueDotAnimator {
     final intervalMs = _lastFixAt != null
         ? now.difference(_lastFixAt!).inMilliseconds
         : null;
-    final distanceMeters = Geolocator.distanceBetween(
-      from.latitude,
-      from.longitude,
-      to.latitude,
-      to.longitude,
-    );
+    final double distanceFromLastRaw = (_lastRawFix == null)
+        ? 0.0
+        : Geolocator.distanceBetween(
+            _lastRawFix!.latitude,
+            _lastRawFix!.longitude,
+            to.latitude,
+            to.longitude,
+          );
 
-    if (_shouldTeleport(distanceMeters, intervalMs)) {
+    _lastFixAt = now;
+    _lastRawFix = to;
+
+    if (_shouldTeleport(distanceFromLastRaw, intervalMs)) {
+      _smoothedTarget = to;
       _latTween = Tween<double>(begin: to.latitude, end: to.latitude);
       _lngTween = Tween<double>(begin: to.longitude, end: to.longitude);
-      _lastFixAt = now;
       _controller
         ..stop()
         ..value = 1.0;
       return;
     }
 
-    _latTween = Tween<double>(begin: from.latitude, end: to.latitude);
-    _lngTween = Tween<double>(begin: from.longitude, end: to.longitude);
+    final smoothedTarget = _smoothTarget(
+      raw: to,
+      currentDisplayed: from,
+      intervalMs: intervalMs,
+      distanceFromLastRaw: distanceFromLastRaw,
+    );
+
+    _smoothedTarget = smoothedTarget;
+
+    _latTween = Tween<double>(begin: from.latitude, end: smoothedTarget.latitude);
+    _lngTween = Tween<double>(begin: from.longitude, end: smoothedTarget.longitude);
 
     int ms = 500; //TODO: remove hardcoded value
     if (intervalMs != null) {
@@ -64,13 +82,10 @@ class BlueDotAnimator {
       if (ms < AppConstants.minMs) ms = AppConstants.minMs;
       if (ms > AppConstants.maxMs) ms = AppConstants.maxMs;
     }
-    _lastFixAt = now;
-
     _controller
-      ..duration = Duration(milliseconds: ms)
       ..stop()
-      ..reset()
-      ..forward();
+      ..duration = Duration(milliseconds: ms)
+      ..forward(from: 0.0);
   }
 
   bool _shouldTeleport(double distanceMeters, int? intervalMs) {
@@ -85,6 +100,41 @@ class BlueDotAnimator {
       }
     }
     return false;
+  }
+
+  LatLng _smoothTarget({
+    required LatLng raw,
+    required LatLng currentDisplayed,
+    required int? intervalMs,
+    required double distanceFromLastRaw,
+  }) {
+    final previous = _smoothedTarget ?? currentDisplayed;
+    var alpha = _timeBasedAlpha(intervalMs);
+
+    final distanceToSmoothed = Geolocator.distanceBetween(
+      previous.latitude,
+      previous.longitude,
+      raw.latitude,
+      raw.longitude,
+    );
+    final catchUpMeters = math.max(distanceFromLastRaw, distanceToSmoothed);
+    final catchUp = (catchUpMeters / _catchUpDistanceMeters).clamp(0.0, 1.0);
+    alpha = alpha + (1 - alpha) * catchUp;
+    alpha = alpha.clamp(0.0, 1.0);
+
+    final lat = previous.latitude + alpha * (raw.latitude - previous.latitude);
+    final lng = previous.longitude + alpha * (raw.longitude - previous.longitude);
+    return LatLng(lat, lng);
+  }
+
+  double _timeBasedAlpha(int? intervalMs) {
+    if (intervalMs == null || intervalMs <= 0) {
+      return 1.0;
+    }
+    final ratio = intervalMs / _smoothingHalfLifeMs;
+    final powTerm = math.pow(0.5, ratio).toDouble();
+    final alpha = 1 - powTerm;
+    return alpha.clamp(0.0, 1.0);
   }
 
   void dispose() {
