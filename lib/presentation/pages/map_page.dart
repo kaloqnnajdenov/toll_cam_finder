@@ -17,6 +17,7 @@ import 'package:toll_cam_finder/services/speed_smoother.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
+import 'map/map_heading_controller.dart';
 import 'map/segment_debugger.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
@@ -31,8 +32,6 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
-  static const double _uiDeadbandKmh = 1.0;
-
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
@@ -50,6 +49,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
+  late final MapHeadingController _headingController;
   final AverageSpeedController _avgCtrl = AverageSpeedController();
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
@@ -62,6 +62,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
+    _headingController = MapHeadingController(mapController: _mapController)
+      ..addListener(_onHeadingChanged);
 
     _blueDotAnimator = BlueDotAnimator(
       vsync: this,
@@ -80,9 +83,16 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
+    _headingController.removeListener(_onHeadingChanged);
+    _headingController.dispose();
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
     super.dispose();
+  }
+
+  void _onHeadingChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _initLocation() async {
@@ -114,7 +124,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
     _avgCtrl.addSample(shownKmh);
+    final previous = _userLatLng;
     _moveBlueDot(next);
+    _headingController.updateHeading(
+      previous: previous,
+      next: next,
+      rawHeading: position.heading,
+      speedKmh: smoothedKmh,
+    );
 
     if (kDebugMode && _segmentDebugger.isReady) {
       _segmentDebugger.refresh(next);
@@ -141,20 +158,38 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   double _normalizeSpeed(double metersPerSecond) {
     if (!metersPerSecond.isFinite || metersPerSecond < 0) return 0.0;
     final kmh = metersPerSecond * 3.6;
-    return kmh < _uiDeadbandKmh ? 0.0 : kmh;
+    return kmh < MapHeadingController.speedDeadbandKmh ? 0.0 : kmh;
   }
 
   void _onMapEvent(MapEvent evt) {
     _currentZoom = evt.camera.zoom;
-    if (evt.source != MapEventSource.mapController && _followUser) {
-      setState(() => _followUser = false);
+    final bool external = evt.source != MapEventSource.mapController;
+    final double rotation = evt.camera.rotation;
+
+    _headingController.updateRotationFromMap(rotation);
+
+    bool shouldSetState = false;
+
+    if (external && _followUser) {
+      _followUser = false;
+      shouldSetState = true;
     }
+
+    if (external && _headingController.followHeading) {
+      _headingController.disableFollowHeading();
+    }
+
+    if (shouldSetState && mounted) {
+      setState(() {});
+    }
+
     _updateVisibleCameras();
   }
 
   // ------------------ reset view button ------------------
   void _onMapReady() {
     _mapReady = true;
+    _headingController.onMapReady();
     if (_userLatLng != null) {
       _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
@@ -169,6 +204,29 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         ? AppConstants.zoomWhenFocused
         : _currentZoom;
     _mapController.move(target, zoom);
+  }
+
+  void _toggleFollowHeading() {
+    final bool enable = !_headingController.followHeading;
+    if (enable) {
+      if (mounted) {
+        setState(() {
+          _followUser = true;
+        });
+      } else {
+        _followUser = true;
+      }
+    }
+
+    if (enable) {
+      _headingController.enableFollowHeading();
+      if (_mapReady) {
+        _onResetView();
+      }
+      _headingController.forceRotateToLastHeading();
+    } else {
+      _headingController.disableFollowHeading(resetRotation: true);
+    }
   }
 
   Future<void> _loadCameras() async {
@@ -252,6 +310,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         followUser: _followUser,
         onResetView: _onResetView,
         avgController: _avgCtrl,
+        followHeading: _headingController.followHeading,
+        onToggleHeading: _toggleFollowHeading,
+        mapRotationDeg: _headingController.mapRotationDeg,
       ),
     );
   }
