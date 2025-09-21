@@ -16,6 +16,7 @@ dependencies:
   rbush: ^1.1.1
   url_launcher: ^6.3.2
   http: ^1.5.0
+  test: ^1.26.2
 
 dev_dependencies:
   flutter_test:
