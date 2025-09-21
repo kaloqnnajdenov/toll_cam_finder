@@ -13,12 +13,12 @@ import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
+import 'package:toll_cam_finder/services/segment_tracker.dart';
 
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/map_heading_controller.dart';
-import 'map/segment_debugger.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
@@ -32,7 +32,7 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
-   static const double _mapFollowEpsilonDeg = 1e-6;
+  static const double _mapFollowEpsilonDeg = 1e-6;
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
@@ -54,9 +54,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final AverageSpeedController _avgCtrl = AverageSpeedController();
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
-  final SegmentDebugger _segmentDebugger = SegmentDebugger(
-    SegmentIndexService.instance,
+  final SegmentTracker _segmentTracker = SegmentTracker(
+    indexService: SegmentIndexService.instance,
   );
+
+  SegmentTrackerDebugData _segmentDebugData =
+      const SegmentTrackerDebugData.empty();
 
   double? _speedKmh;
 
@@ -67,10 +70,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _headingController = MapHeadingController(mapController: _mapController)
       ..addListener(_onHeadingChanged);
 
-    _blueDotAnimator = BlueDotAnimator(
-      vsync: this,
-            onTick: _onBlueDotTick,
-    );
+    _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     _initLocation();
@@ -86,6 +86,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _headingController.dispose();
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
+        _segmentTracker.dispose();
     super.dispose();
   }
 
@@ -105,6 +106,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
+    final segEvent = _segmentTracker.handleLocationUpdate(
+      current: firstFix,
+      previous: null,
+      rawHeading: pos.heading,
+      speedKmh: _speedKmh,
+    );
+    if (segEvent.startedSegment) {
+      _avgCtrl.start();
+    } else if (segEvent.endedSegment) {
+      _avgCtrl.reset();
+    }
+    _segmentDebugData = segEvent.debugData;
     if (mounted) setState(() {});
 
     if (_mapReady) {
@@ -132,16 +145,24 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       speedKmh: smoothedKmh,
     );
 
-    if (kDebugMode && _segmentDebugger.isReady) {
-      _segmentDebugger.refresh(next);
+    final segEvent = _segmentTracker.handleLocationUpdate(
+      current: next,
+      previous: previous,
+      rawHeading: position.heading,
+      speedKmh: smoothedKmh,
+    );
+    if (segEvent.startedSegment) {
+      _avgCtrl.start();
+    } else if (segEvent.endedSegment) {
+      _avgCtrl.reset();
     }
 
     if (!mounted) return;
 
     setState(() {
       _speedKmh = smoothedKmh;
+            _segmentDebugData = segEvent.debugData;
     });
-
   }
 
   void _moveBlueDot(LatLng next) {
@@ -201,7 +222,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _mapController.move(target, zoom);
   }
 
-void _onBlueDotTick() {
+  void _onBlueDotTick() {
     if (_followUser && _mapReady) {
       final target = _blueDotAnimator.position;
       if (target != null) {
@@ -280,13 +301,25 @@ void _onBlueDotTick() {
   }
 
   Future<void> _initSegmentsIndex() async {
-    final ready = await _segmentDebugger.initialise(
-      assetPath: AppConstants.pathToTollSegments
+   final ready = await _segmentTracker.initialise(
+      assetPath: AppConstants.pathToTollSegments,
+
     );
     if (!mounted || !ready) return;
 
-    if (kDebugMode && _userLatLng != null) {
-      _segmentDebugger.refresh(_userLatLng!, reason: 'seed');
+    if (_userLatLng != null) {
+      final seedEvent = _segmentTracker.handleLocationUpdate(
+        current: _userLatLng!,
+        previous: null,
+        rawHeading: null,
+        speedKmh: _speedKmh,
+      );
+      if (seedEvent.startedSegment) {
+        _avgCtrl.start();
+      } else if (seedEvent.endedSegment) {
+        _avgCtrl.reset();
+      }
+      _segmentDebugData = seedEvent.debugData;
     }
 
     setState(() {});
@@ -312,10 +345,20 @@ void _onBlueDotTick() {
 
               BlueDotMarker(point: markerPoint),
 
-              if (kDebugMode && _segmentDebugger.querySquare.isNotEmpty)
-                QuerySquareOverlay(points: _segmentDebugger.querySquare),
-              if (kDebugMode && _segmentDebugger.candidates.isNotEmpty)
-                CandidateBoundsOverlay(candidates: _segmentDebugger.candidates),
+              if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
+                QuerySquareOverlay(points: _segmentDebugData.querySquare),
+              if (kDebugMode &&
+                  _segmentDebugData.boundingCandidates.isNotEmpty)
+                CandidateBoundsOverlay(
+                  candidates: _segmentDebugData.boundingCandidates,
+                ),
+              if (kDebugMode &&
+                  _segmentDebugData.candidatePaths.isNotEmpty)
+                SegmentPolylineOverlay(
+                  paths: _segmentDebugData.candidatePaths,
+                  startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
+                  endGeofenceRadius: _segmentDebugData.endGeofenceRadius,
+                ),
               TollCamerasOverlay(cameras: cameraState),
             ],
           ),
@@ -325,8 +368,8 @@ void _onBlueDotTick() {
               child: MapControlsPanel(
                 speedKmh: _speedKmh,
                 avgController: _avgCtrl,
-                showDebugBadge: _segmentDebugger.isReady,
-                segmentCount: _segmentDebugger.candidates.length,
+                showDebugBadge: _segmentTracker.isReady,
+                segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,
               ),
             ),

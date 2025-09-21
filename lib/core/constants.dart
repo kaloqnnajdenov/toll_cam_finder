@@ -79,4 +79,28 @@ class AppConstants {
   /// Asset path to the GeoJSON dataset of toll cameras; changing it swaps the
   /// loaded camera set (or breaks loading if the file is missing).
   static const String camerasAsset = 'assets/data/toll_cameras_points.geojson';
+
+  /// Maximum distance (meters) between the user and a candidate polyline for
+  /// it to be considered a viable match. Values around 30–50 m work well; we
+  /// bias slightly higher to accommodate GPS noise on fast roads.
+  static const double segmentOnPathToleranceMeters = 45.0;
+
+  /// Radius (meters) for the geofence anchored at a segment's start point.
+  /// Crossing this bubble is a strong indicator the user has begun the toll
+  /// segment even if the polyline match is still noisy.
+  static const double segmentStartGeofenceRadiusMeters = 40.0;
+
+  /// Radius (meters) for the geofence at the segment's end marker. When the
+  /// user enters this bubble we treat the segment as complete.
+  static const double segmentEndGeofenceRadiusMeters = 40.0;
+
+  /// Heading difference (degrees) permitted between the user's travel heading
+  /// and the local bearing of the matched polyline when direction checks are
+  /// enforced.
+  static const double segmentDirectionToleranceDegrees = 75.0;
+
+  /// Minimum speed (km/h) before we trust the heading sensor enough to enforce
+  /// direction checks. Below this, heading readings are typically unstable.
+  static const double segmentDirectionMinSpeedKmh = 5.0;
+
 }
