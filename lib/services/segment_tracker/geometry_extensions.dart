@@ -1,6 +1,11 @@
 part of segment_tracker;
 
+/// Geometry helpers used by [SegmentTracker] to reason about distances and
+/// bearings on the earth's surface.
 extension _SegmentTrackerGeometry on SegmentTracker {
+  /// Builds a square around [center] that approximates the radial candidate
+  /// search region. Using a square keeps the debug overlay simple while still
+  /// enclosing the full radius.
   List<LatLng> _computeQuerySquare(LatLng center, double radiusMeters) {
     const double mPerDegLat = 111320.0;
     final double latRad = center.latitude * math.pi / 180.0;
@@ -22,12 +27,15 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     ];
   }
 
+  /// Returns the absolute angular difference between two headings in degrees
+  /// while accounting for wrap-around at 0/360.
   double _angularDifferenceDegrees(double a, double b) {
     double diff = (a - b).abs() % 360.0;
     if (diff > 180.0) diff = 360.0 - diff;
     return diff;
   }
 
+  /// Computes the forward bearing from [from] to [to] in degrees.
   double _bearingBetween(LatLng from, LatLng to) {
     final double lat1 = from.latitude * math.pi / 180.0;
     final double lat2 = to.latitude * math.pi / 180.0;
@@ -40,6 +48,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     return bearing;
   }
 
+  /// Computes the great-circle distance between [a] and [b] using the Haversine
+  /// formula so that distances remain accurate regardless of position.
   double _distanceBetween(GeoPoint a, GeoPoint b) {
     const double earthRadius = 6371000.0; // meters
     final double lat1 = a.lat * math.pi / 180.0;
@@ -54,6 +64,9 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     return earthRadius * c;
   }
 
+  /// Finds the closest point on the polyline [path] to the provided [point],
+  /// returning both the projected point and the direction of travel at that
+  /// location when it can be derived.
   _NearestPointResult _nearestPointOnPath(GeoPoint point, List<GeoPoint> path) {
     const double mPerDegLat = 111320.0;
     final double latRad = point.lat * math.pi / 180.0;
@@ -66,6 +79,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     double bestY = 0;
     double? bestBearingDeg;
 
+    // Convert the path into offsets expressed in metres so we can perform
+    // inexpensive Cartesian projections while keeping reasonable precision.
     final offsets = <math.Point<double>>[];
     for (final p in path) {
       final double x = (p.lon - refLon) * mPerDegLon;
@@ -81,6 +96,7 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       final double lenSq = dx * dx + dy * dy;
       if (lenSq <= 1e-6) continue;
 
+      // Project the point onto the segment, clamping to the segment ends.
       var t = (-(a.x * dx + a.y * dy)) / lenSq;
       if (t < 0) t = 0;
       if (t > 1) t = 1;
@@ -99,6 +115,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       }
     }
 
+    // If the path collapsed to a single point fall back to the first vertex so
+    // we can still report something useful.
     if (bestDistSq.isInfinite && offsets.isNotEmpty) {
       final math.Point<double> first = offsets.first;
       bestX = first.x;
@@ -126,11 +144,13 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     );
   }
 
+  /// Converts the polyline [path] into a [LatLng] list suitable for map widgets.
   List<LatLng> _pathToLatLngList(List<GeoPoint> path) {
     return path.map((p) => LatLng(p.lat, p.lon)).toList(growable: false);
   }
 }
 
+/// Captures the result of projecting a point onto a polyline.
 class _NearestPointResult {
   const _NearestPointResult({
     required this.distanceMeters,
@@ -138,7 +158,12 @@ class _NearestPointResult {
     this.bearingDeg,
   });
 
+  /// Distance in metres from the original point to the projected point.
   final double distanceMeters;
+
+  /// The closest location on the path to the original point.
   final GeoPoint point;
+
+  /// Heading of the path at [point] when it could be derived.
   final double? bearingDeg;
 }
