@@ -41,6 +41,29 @@ class AppConstants {
   /// missing relevant segments.
   static const double candidateRadiusMeters = 3000;
 
+  /// Maximum distance (meters) between the user and a candidate polyline for
+  /// it to be considered a viable match. Values around 30–50 m work well; we
+  /// bias slightly higher to accommodate GPS noise on fast roads.
+  static const double segmentOnPathToleranceMeters = 45.0;
+
+  /// Radius (meters) for the geofence anchored at a segment's start point.
+  /// Crossing this bubble is a strong indicator the user has begun the toll
+  /// segment even if the polyline match is still noisy.
+  static const double segmentStartGeofenceRadiusMeters = 40.0;
+
+  /// Radius (meters) for the geofence at the segment's end marker. When the
+  /// user enters this bubble we treat the segment as complete.
+  static const double segmentEndGeofenceRadiusMeters = 40.0;
+
+  /// Heading difference (degrees) permitted between the user's travel heading
+  /// and the local bearing of the matched polyline when direction checks are
+  /// enforced.
+  static const double segmentDirectionToleranceDegrees = 75.0;
+
+  /// Minimum speed (km/h) before we trust the heading sensor enough to enforce
+  /// direction checks. Below this, heading readings are typically unstable.
+  static const double segmentDirectionMinSpeedKmh = 5.0;
+
   ///Acts as the half-life for the exponential smoothing that blends the previously
   ///displayed position with each new GPS fix. Shortening it makes the blue dot
   ///react quickly (less smoothing, more jitter); lengthening it keeps motion buttery
