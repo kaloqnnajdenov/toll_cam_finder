@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
+import 'package:toll_cam_finder/services/segment_tracker.dart';
 
 /// Wraps the segment index to keep debugging logic out of the page widget.
 class SegmentDebugger {
@@ -16,11 +17,13 @@ class SegmentDebugger {
   bool _segmentsReady = false;
   List<SegmentGeometry> _debugCandidates = const [];
   List<LatLng> _debugQuerySquare = const [];
+  SegmentTrackerDebugSnapshot? _trackerSnapshot;
   DateTime? _lastLog;
 
   bool get isReady => _segmentsReady;
   List<SegmentGeometry> get candidates => _debugCandidates;
   List<LatLng> get querySquare => _debugQuerySquare;
+  SegmentTrackerDebugSnapshot? get trackerSnapshot => _trackerSnapshot;
 
   Future<bool> initialise({required String assetPath}) async {
     await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
@@ -59,6 +62,10 @@ class SegmentDebugger {
       );
       _lastLog = now;
     }
+  }
+
+  void updateTrackerSnapshot(SegmentTrackerDebugSnapshot snapshot) {
+    _trackerSnapshot = snapshot;
   }
 
   List<LatLng> _computeQuerySquare(LatLng c, double radiusMeters) {

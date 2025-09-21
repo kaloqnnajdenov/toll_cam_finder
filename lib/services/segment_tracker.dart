@@ -18,6 +18,7 @@ class SegmentTracker {
     this.minMovementForBearingMeters = 5,
     this.onSegmentEntered,
     this.onSegmentExited,
+    this.onDebugSnapshot,
   }) : _indexService = indexService;
 
   final SegmentIndexService _indexService;
@@ -28,6 +29,7 @@ class SegmentTracker {
   final double minMovementForBearingMeters;
   final void Function(SegmentGeometry segment)? onSegmentEntered;
   final void Function(SegmentGeometry segment)? onSegmentExited;
+  final void Function(SegmentTrackerDebugSnapshot snapshot)? onDebugSnapshot;
 
   SegmentGeometry? _activeSegment;
   static const Distance _distance = Distance();
@@ -55,6 +57,7 @@ class SegmentTracker {
       radiusMeters: candidateRadiusMeters,
     );
 
+    final matches = <_SegmentMatch>[];
     _SegmentMatch? bestMatch;
     for (final segment in candidates) {
       final match = _evaluateSegment(
@@ -62,11 +65,18 @@ class SegmentTracker {
         user: userPoint,
         movementBearing: movementBearing,
       );
+      matches.add(match);
       if (!match.isOnSegment) continue;
       if (bestMatch == null || match.distanceMeters < bestMatch.distanceMeters) {
         bestMatch = match;
       }
     }
+
+    final previousActive = _activeSegment;
+    SegmentGeometry? enteredSegment;
+    SegmentGeometry? exitedSegment;
+    double? distanceToActive;
+    double? startDistanceToActive;
 
     if (bestMatch != null) {
       final isNewSegment = _activeSegment?.id != bestMatch.segment.id;
@@ -79,25 +89,57 @@ class SegmentTracker {
             '${bestMatch.directionDeltaDeg != null ? ', directionΔ=${bestMatch.directionDeltaDeg!.toStringAsFixed(1)}°' : ''})',
           );
         }
-        onSegmentEntered?.call(bestMatch.segment);
+        enteredSegment = bestMatch.segment;
       }
-      return;
-    }
-
-    if (_activeSegment != null) {
-      final distanceToActive =
-          _distanceToPolylineMeters(userPoint, _activeSegment!.path);
-      final startDistance =
+    } else if (_activeSegment != null) {
+      distanceToActive = _distanceToPolylineMeters(userPoint, _activeSegment!.path);
+      startDistanceToActive =
           _distanceBetweenMeters(userPoint, _activeSegment!.path.first);
       if (distanceToActive > distanceThresholdMeters * 1.5 &&
-          startDistance > startGeofenceRadiusMeters * 1.5) {
-        final exited = _activeSegment!;
+          startDistanceToActive > startGeofenceRadiusMeters * 1.5) {
+        exitedSegment = _activeSegment!;
         _activeSegment = null;
         if (kDebugMode) {
-          debugPrint('[SegmentTracker] Exited segment ${exited.id}');
+          debugPrint('[SegmentTracker] Exited segment ${exitedSegment.id}');
         }
-        onSegmentExited?.call(exited);
       }
+    }
+
+    if (kDebugMode && onDebugSnapshot != null) {
+      onDebugSnapshot!(
+        SegmentTrackerDebugSnapshot(
+          userLocation: current,
+          matches: matches
+              .map(
+                (match) => SegmentTrackerDebugMatch(
+                  segment: match.segment,
+                  distanceMeters: match.distanceMeters,
+                  directionDeltaDeg: match.directionDeltaDeg,
+                  onPath: match.onPath,
+                  directionOk: match.directionOk,
+                  geofenceHit: match.geofenceHit,
+                  isOnSegment: match.isOnSegment,
+                  isBestCandidate:
+                      bestMatch != null && match.segment.id == bestMatch.segment.id,
+                ),
+              )
+              .toList(),
+          activeSegment: _activeSegment,
+          previousActiveSegment: previousActive,
+          enteredSegment: enteredSegment,
+          exitedSegment: exitedSegment,
+          distanceToActiveMeters: distanceToActive,
+          startDistanceToActiveMeters: startDistanceToActive,
+        ),
+      );
+    }
+
+    if (enteredSegment != null) {
+      onSegmentEntered?.call(enteredSegment);
+    }
+
+    if (exitedSegment != null) {
+      onSegmentExited?.call(exitedSegment);
     }
   }
 
@@ -116,7 +158,8 @@ class SegmentTracker {
             movementBearing,
             _segmentBearing(segment.path),
           );
-    final directionOk = directionDelta == null || directionDelta <= directionToleranceDeg;
+    final directionOk =
+        directionDelta == null || directionDelta <= directionToleranceDeg;
     final onPath = distanceMeters <= distanceThresholdMeters;
 
     final isOnSegment = (onPath && directionOk) || geofenceHit;
@@ -126,6 +169,9 @@ class SegmentTracker {
       distanceMeters: distanceMeters,
       directionDeltaDeg: directionDelta,
       isOnSegment: isOnSegment,
+      onPath: onPath,
+      directionOk: directionOk,
+      geofenceHit: geofenceHit,
     );
   }
 
@@ -246,12 +292,18 @@ class _SegmentMatch {
     required this.distanceMeters,
     required this.directionDeltaDeg,
     required this.isOnSegment,
+    required this.onPath,
+    required this.directionOk,
+    required this.geofenceHit,
   });
 
   final SegmentGeometry segment;
   final double distanceMeters;
   final double? directionDeltaDeg;
   final bool isOnSegment;
+  final bool onPath;
+  final bool directionOk;
+  final bool geofenceHit;
 }
 
 class _ProjectedPoint {
@@ -259,4 +311,48 @@ class _ProjectedPoint {
 
   final double x;
   final double y;
+}
+
+class SegmentTrackerDebugSnapshot {
+  const SegmentTrackerDebugSnapshot({
+    required this.userLocation,
+    required this.matches,
+    required this.activeSegment,
+    required this.previousActiveSegment,
+    required this.enteredSegment,
+    required this.exitedSegment,
+    required this.distanceToActiveMeters,
+    required this.startDistanceToActiveMeters,
+  });
+
+  final LatLng userLocation;
+  final List<SegmentTrackerDebugMatch> matches;
+  final SegmentGeometry? activeSegment;
+  final SegmentGeometry? previousActiveSegment;
+  final SegmentGeometry? enteredSegment;
+  final SegmentGeometry? exitedSegment;
+  final double? distanceToActiveMeters;
+  final double? startDistanceToActiveMeters;
+}
+
+class SegmentTrackerDebugMatch {
+  const SegmentTrackerDebugMatch({
+    required this.segment,
+    required this.distanceMeters,
+    required this.directionDeltaDeg,
+    required this.onPath,
+    required this.directionOk,
+    required this.geofenceHit,
+    required this.isOnSegment,
+    required this.isBestCandidate,
+  });
+
+  final SegmentGeometry segment;
+  final double distanceMeters;
+  final double? directionDeltaDeg;
+  final bool onPath;
+  final bool directionOk;
+  final bool geofenceHit;
+  final bool isOnSegment;
+  final bool isBestCandidate;
 }

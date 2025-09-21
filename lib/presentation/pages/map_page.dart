@@ -25,6 +25,7 @@ import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
+import 'map/widgets/segment_tracker_debug_panel.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -65,6 +66,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     candidateRadiusMeters: AppConstants.candidateRadiusMeters,
     onSegmentEntered: _onSegmentEntered,
     onSegmentExited: _onSegmentExited,
+    onDebugSnapshot:
+        kDebugMode ? _segmentDebugger.updateTrackerSnapshot : null,
   );
 
   double? _speedKmh;
@@ -348,6 +351,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                 QuerySquareOverlay(points: _segmentDebugger.querySquare),
               if (kDebugMode && _segmentDebugger.candidates.isNotEmpty)
                 CandidateBoundsOverlay(candidates: _segmentDebugger.candidates),
+              if (kDebugMode && _segmentDebugger.trackerSnapshot != null)
+                SegmentTrackerOverlay(
+                  snapshot: _segmentDebugger.trackerSnapshot!,
+                  startGeofenceRadiusMeters:
+                      _segmentTracker.startGeofenceRadiusMeters,
+                ),
               TollCamerasOverlay(cameras: cameraState),
             ],
           ),
@@ -363,6 +372,20 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
+          if (kDebugMode && _segmentDebugger.trackerSnapshot != null)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: SafeArea(
+                child: SegmentTrackerDebugPanel(
+                  snapshot: _segmentDebugger.trackerSnapshot!,
+                  distanceThresholdMeters:
+                      _segmentTracker.distanceThresholdMeters,
+                  startGeofenceRadiusMeters:
+                      _segmentTracker.startGeofenceRadiusMeters,
+                ),
+              ),
+            ),
         ],
       ),
 
