@@ -26,6 +26,11 @@ class SegmentIndexService {
     _index = SegmentSpatialIndex.build(segments);
   }
 
+  @visibleForTesting
+  void resetForTest() {
+    _index = null;
+  }
+
   /// Tries to load from [assetPath]:
   /// - If it's a JSON array: [{id, points:[{lat,lon},...], length_m?}, ...]
   /// - Else, if it's a GeoJSON FeatureCollection with LineString/MultiLineString.
@@ -193,4 +198,13 @@ class SegmentIndexService {
         .map((g) => g.id)
         .toList(growable: false);
   }
+
+  @visibleForTesting
+  List<SegmentGeometry> parsePlainArrayForTest(List list) => _parsePlainArray(list);
+
+  @visibleForTesting
+  List<SegmentGeometry> parseGeoJsonForTest(Map<String, dynamic> fc) => _parseGeoJson(fc);
+
+  @visibleForTesting
+  List<GeoPoint> toGeoPointsFromLonLatListForTest(List coords) => _toGeoPointsFromLonLatList(coords);
 }
