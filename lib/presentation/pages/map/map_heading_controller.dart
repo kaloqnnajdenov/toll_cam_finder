@@ -38,12 +38,14 @@ class MapHeadingController extends ChangeNotifier {
     required LatLng next,
     required double rawHeading,
     required double speedKmh,
+    double? compassHeading,
   }) {
     final heading = _resolveHeading(
       previous: previous,
       next: next,
       rawHeading: rawHeading,
       speedKmh: speedKmh,
+      compassHeading: compassHeading,
     );
 
     if (heading == null) return;
@@ -54,6 +56,20 @@ class MapHeadingController extends ChangeNotifier {
 
     if (_followHeading) {
       _rotateMap(_headingToRotation(smoothed));
+    }
+  }
+
+  void updateCompassHeading(double? compassHeading) {
+    final double? normalized = _normalizeOptionalHeading(compassHeading);
+    if (normalized == null) return;
+
+    final smoothed = _applyHeadingSmoothing(normalized);
+    _lastHeadingDeg = smoothed;
+
+    if (_followHeading) {
+      _rotateMap(_headingToRotation(smoothed));
+    } else {
+      notifyListeners();
     }
   }
 
@@ -96,9 +112,19 @@ class MapHeadingController extends ChangeNotifier {
     required LatLng next,
     required double rawHeading,
     required double speedKmh,
+    double? compassHeading,
   }) {
+    final double? compass = _normalizeOptionalHeading(compassHeading);
+    if (compass != null) {
+      return compass;
+    }
+
+    double? normalizedRaw;
     if (rawHeading.isFinite && rawHeading >= 0) {
-      return rawHeading;
+      normalizedRaw = _normalizeRotation(rawHeading);
+    }
+    if (normalizedRaw != null) {
+      return normalizedRaw;
     }
 
     if (previous == null || speedKmh < speedDeadbandKmh) {
@@ -122,6 +148,11 @@ class MapHeadingController extends ChangeNotifier {
   double _normalizeRotation(double rotationDeg) {
     final normalized = rotationDeg % 360;
     return normalized < 0 ? normalized + 360 : normalized;
+  }
+
+  double? _normalizeOptionalHeading(double? heading) {
+    if (heading == null || !heading.isFinite) return null;
+    return _normalizeRotation(heading);
   }
 
   double _rotationDelta(double fromDeg, double toDeg) {

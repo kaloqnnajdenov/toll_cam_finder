@@ -59,6 +59,9 @@ class SegmentTracker {
   final Map<String, List<GeoPoint>> _pathOverrides = <String, List<GeoPoint>>{};
   final Set<String> _fetchFailures = <String>{};
   final Set<String> _fetching = <String>{};
+  final List<GeoPoint> _headingHistory = <GeoPoint>[];
+  double? _lastCompassHeadingDeg;
+  double? _smoothedHeadingDeg;
 
   bool get isReady => _isReady;
   SegmentTrackerDebugData get debugData => _latestDebugData;
@@ -80,6 +83,7 @@ class SegmentTracker {
     LatLng? previous,
     double? rawHeading,
     double? speedKmh,
+    double? compassHeading,
   }) {
     if (!_isReady) {
       return SegmentTrackerEvent(
@@ -96,6 +100,7 @@ class SegmentTracker {
       previous,
       rawHeading,
       speedKmh,
+      compassHeading,
     );
 
     final List<SegmentGeometry> candidates = _index.candidatesNearLatLng(

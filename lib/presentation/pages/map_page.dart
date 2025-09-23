@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -47,6 +48,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
+  StreamSubscription<CompassEvent>? _compassSub;
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
@@ -62,6 +64,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       const SegmentTrackerDebugData.empty();
 
   double? _speedKmh;
+  double? _compassHeading;
 
   @override
   void initState() {
@@ -73,6 +76,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
+    final compassStream = FlutterCompass.events;
+    if (compassStream != null) {
+      _compassSub = compassStream.listen(_handleCompassEvent);
+    }
     _initLocation();
     _loadCameras();
     unawaited(_initSegmentsIndex());
@@ -82,17 +89,36 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
+    _compassSub?.cancel();
     _headingController.removeListener(_onHeadingChanged);
     _headingController.dispose();
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
-        _segmentTracker.dispose();
+    _segmentTracker.dispose();
     super.dispose();
   }
 
   void _onHeadingChanged() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _handleCompassEvent(CompassEvent event) {
+    if (!mounted) return;
+
+    final double? heading = event.heading;
+    if (heading == null || !heading.isFinite) {
+      _compassHeading = null;
+      return;
+    }
+
+    double normalized = heading % 360;
+    if (normalized < 0) {
+      normalized += 360;
+    }
+
+    _compassHeading = normalized;
+    _headingController.updateCompassHeading(normalized);
   }
 
   Future<void> _initLocation() async {
@@ -111,6 +137,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       previous: null,
       rawHeading: pos.heading,
       speedKmh: _speedKmh,
+      compassHeading: _compassHeading,
     );
     if (segEvent.startedSegment) {
       _avgCtrl.start();
@@ -143,6 +170,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       next: next,
       rawHeading: position.heading,
       speedKmh: smoothedKmh,
+      compassHeading: _compassHeading,
     );
 
     final segEvent = _segmentTracker.handleLocationUpdate(
@@ -150,6 +178,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       previous: previous,
       rawHeading: position.heading,
       speedKmh: smoothedKmh,
+      compassHeading: _compassHeading,
     );
     if (segEvent.startedSegment) {
       _avgCtrl.start();
@@ -161,7 +190,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     setState(() {
       _speedKmh = smoothedKmh;
-            _segmentDebugData = segEvent.debugData;
+      _segmentDebugData = segEvent.debugData;
     });
   }
 
@@ -313,6 +342,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         previous: null,
         rawHeading: null,
         speedKmh: _speedKmh,
+        compassHeading: _compassHeading,
       );
       if (seedEvent.startedSegment) {
         _avgCtrl.start();
