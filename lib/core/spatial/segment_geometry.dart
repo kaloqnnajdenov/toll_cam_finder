@@ -3,16 +3,15 @@ import 'geo.dart';
 
 class SegmentGeometry {
   final String id;
-  final List<GeoPoint> path;      // at least 2 points (start/end or full polyline)
-  final double? lengthMeters;     // optional if you have it
+  final List<GeoPoint> path; // at least 2 points (start/end or full polyline)
+  final double? lengthMeters; // optional if you have it
+  final GeoBounds bounds;
 
-  SegmentGeometry({
-    required this.id,
-    required this.path,
-    this.lengthMeters,
-  }) : assert(path.length >= 2, 'Segment needs ≥ 2 points');
+  SegmentGeometry({required this.id, required this.path, this.lengthMeters})
+    : assert(path.length >= 2, 'Segment needs ≥ 2 points'),
+      bounds = _computeBounds(path);
 
-  GeoBounds get bounds {
+  static GeoBounds _computeBounds(List<GeoPoint> path) {
     double minLat = double.infinity, minLon = double.infinity;
     double maxLat = -double.infinity, maxLon = -double.infinity;
     for (final p in path) {
@@ -21,6 +20,11 @@ class SegmentGeometry {
       if (p.lon < minLon) minLon = p.lon;
       if (p.lon > maxLon) maxLon = p.lon;
     }
-    return GeoBounds(minLat: minLat, minLon: minLon, maxLat: maxLat, maxLon: maxLon);
+    return GeoBounds(
+      minLat: minLat,
+      minLon: minLon,
+      maxLat: maxLat,
+      maxLon: maxLon,
+    );
   }
 }
