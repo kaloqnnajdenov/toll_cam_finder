@@ -13,6 +13,8 @@ class MapHeadingController extends ChangeNotifier {
   static const double _headingDistanceThresholdMeters = 5.0;
   static const double _rotationEpsilonDeg = 0.5;
   static const double _headingSmoothingFactor = 0.2; // Low-pass heading noise.
+  static const double _headingBlendMinSpeedKmh = 2.0;
+  static const double _headingBlendMaxSpeedKmh = 12.0;
   static const double _forwardCameraOffsetDeg =
       -90.0; // Keep the travel direction at the top of the device.
 
@@ -22,6 +24,8 @@ class MapHeadingController extends ChangeNotifier {
   bool _followHeading = false;
   double _mapRotationDeg = 0.0;
   double? _lastHeadingDeg;
+  double? _lastCompassHeadingDeg;
+  double? _lastCourseHeadingDeg;
 
   bool get followHeading => _followHeading;
   double get mapRotationDeg => _mapRotationDeg;
@@ -61,7 +65,12 @@ class MapHeadingController extends ChangeNotifier {
 
   void updateCompassHeading(double? compassHeading) {
     final double? normalized = _normalizeOptionalHeading(compassHeading);
-    if (normalized == null) return;
+    if (normalized == null) {
+      _lastCompassHeadingDeg = null;
+      return;
+    }
+
+    _lastCompassHeadingDeg = normalized;
 
     final smoothed = _applyHeadingSmoothing(normalized);
     _lastHeadingDeg = smoothed;
@@ -114,35 +123,41 @@ class MapHeadingController extends ChangeNotifier {
     required double speedKmh,
     double? compassHeading,
   }) {
-    final double? compass = _normalizeOptionalHeading(compassHeading);
-    if (compass != null) {
-      return compass;
+    final double speed = speedKmh.isFinite ? speedKmh : 0.0;
+
+    final double? normalizedCompass = _normalizeOptionalHeading(compassHeading);
+    if (normalizedCompass != null) {
+      _lastCompassHeadingDeg = normalizedCompass;
     }
 
-    double? normalizedRaw;
-    if (rawHeading.isFinite && rawHeading >= 0) {
-      normalizedRaw = _normalizeRotation(rawHeading);
-    }
-    if (normalizedRaw != null) {
-      return normalizedRaw;
+    double? courseHeading = _resolveCourseHeading(
+      previous: previous,
+      next: next,
+      rawHeading: rawHeading,
+      speedKmh: speed,
+    );
+    if (courseHeading != null) {
+      _lastCourseHeadingDeg = courseHeading;
+    } else {
+      courseHeading = _lastCourseHeadingDeg;
     }
 
-    if (previous == null || speedKmh < speedDeadbandKmh) {
-      return null;
-    }
+    final double? compassForFusion =
+        normalizedCompass ?? _lastCompassHeadingDeg;
 
-    final distance = Geolocator.distanceBetween(
-      previous.latitude,
-      previous.longitude,
-      next.latitude,
-      next.longitude,
+    double? fusedHeading = _fuseCompassAndCourse(
+      compass: compassForFusion,
+      course: courseHeading,
+      speedKmh: speed,
     );
 
-    if (distance < _headingDistanceThresholdMeters) {
+    fusedHeading ??= courseHeading ?? compassForFusion;
+
+    if (fusedHeading == null) {
       return null;
     }
 
-    return _bearingBetween(previous, next);
+    return _normalizeRotation(fusedHeading);
   }
 
   double _normalizeRotation(double rotationDeg) {
@@ -157,6 +172,50 @@ class MapHeadingController extends ChangeNotifier {
 
   double _rotationDelta(double fromDeg, double toDeg) {
     return ((toDeg - fromDeg + 540) % 360) - 180;
+  }
+
+  double? _resolveCourseHeading({
+    required LatLng? previous,
+    required LatLng next,
+    required double rawHeading,
+    required double speedKmh,
+  }) {
+    double? normalizedRaw;
+    if (rawHeading.isFinite && rawHeading >= 0) {
+      normalizedRaw = _normalizeRotation(rawHeading);
+    }
+
+    double? pathHeading;
+    if (previous != null) {
+      final distance = Geolocator.distanceBetween(
+        previous.latitude,
+        previous.longitude,
+        next.latitude,
+        next.longitude,
+      );
+
+      if (distance >= _headingDistanceThresholdMeters) {
+        pathHeading = _bearingBetween(previous, next);
+      }
+    }
+
+    if (pathHeading == null) {
+      return normalizedRaw;
+    }
+
+    if (normalizedRaw == null) {
+      return pathHeading;
+    }
+
+    final double weight = _courseBlendWeight(speedKmh);
+    if (weight <= 0.0) {
+      return pathHeading;
+    }
+    if (weight >= 1.0) {
+      return normalizedRaw;
+    }
+
+    return _interpolateHeadings(pathHeading, normalizedRaw, weight);
   }
 
   double _bearingBetween(LatLng from, LatLng to) {
@@ -210,5 +269,45 @@ class MapHeadingController extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  double? _fuseCompassAndCourse({
+    double? compass,
+    double? course,
+    required double speedKmh,
+  }) {
+    if (course == null) return compass;
+    if (compass == null) return course;
+
+    double weight = _courseBlendWeight(speedKmh);
+    if (weight <= 0.0) return compass;
+    if (weight >= 1.0) return course;
+
+    final double delta = _rotationDelta(compass, course).abs();
+    if (delta > 90.0) {
+      final double severity = ((delta - 90.0).clamp(0.0, 90.0)) / 90.0;
+      weight *= 1 - 0.5 * severity;
+      if (weight <= 0.0) return compass;
+    }
+
+    if (weight >= 1.0) return course;
+
+    return _interpolateHeadings(compass, course, weight);
+  }
+
+  double _courseBlendWeight(double speedKmh) {
+    if (!speedKmh.isFinite) return 0.0;
+    if (speedKmh <= _headingBlendMinSpeedKmh) return 0.0;
+    if (speedKmh >= _headingBlendMaxSpeedKmh) return 1.0;
+    final double range =
+        _headingBlendMaxSpeedKmh - _headingBlendMinSpeedKmh;
+    return (speedKmh - _headingBlendMinSpeedKmh) / range;
+  }
+
+  double _interpolateHeadings(double fromDeg, double toDeg, double t) {
+    final double clamped = t.clamp(0.0, 1.0) as double;
+    final double delta = _rotationDelta(fromDeg, toDeg);
+    final double interpolated = fromDeg + delta * clamped;
+    return _normalizeRotation(interpolated);
   }
 }
