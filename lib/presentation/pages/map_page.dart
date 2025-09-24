@@ -132,6 +132,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
+    _headingController.updateHeading(
+      previous: null,
+      next: firstFix,
+      rawHeading: pos.heading,
+      speedKmh: _speedKmh ?? 0.0,
+      headingAccuracyDeg: pos.headingAccuracy,
+      compassHeading: _compassHeading,
+    );
     final segEvent = _segmentTracker.handleLocationUpdate(
       current: firstFix,
       previous: null,
@@ -170,6 +178,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       next: next,
       rawHeading: position.heading,
       speedKmh: smoothedKmh,
+      headingAccuracyDeg: position.headingAccuracy,
       compassHeading: _compassHeading,
     );
 
@@ -281,7 +290,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return;
     }
 
-    _mapController.move(target, camera.zoom);
+    final LatLng desiredCenter = _headingController.followHeading
+        ? _headingController.lookAheadTarget(userPosition: target)
+        : target;
+
+    _mapController.move(desiredCenter, camera.zoom);
   }
 
   void _toggleFollowHeading() {
