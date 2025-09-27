@@ -10,6 +10,8 @@ class MapControlsPanel extends StatelessWidget {
     super.key,
     required this.speedKmh,
     required this.avgController,
+    required this.hasActiveSegment,
+    this.lastSegmentAvgKmh,
     required this.showDebugBadge,
     required this.segmentCount,
     required this.segmentRadiusMeters,
@@ -17,6 +19,8 @@ class MapControlsPanel extends StatelessWidget {
 
   final double? speedKmh;
   final AverageSpeedController avgController;
+  final bool hasActiveSegment;
+  final double? lastSegmentAvgKmh;
   final bool showDebugBadge;
   final int segmentCount;
   final double segmentRadiusMeters;
@@ -28,7 +32,29 @@ class MapControlsPanel extends StatelessWidget {
       children: [
         CurrentSpeedDial(speedKmh: speedKmh, unit: 'km/h'),
         const SizedBox(height: 12),
-        AverageSpeedDial(controller: avgController, unit: 'km/h'),
+        AverageSpeedDial(
+          controller: avgController,
+          unit: 'km/h',
+          isActive: hasActiveSegment,
+        ),
+        if (lastSegmentAvgKmh != null)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'avg speed for the last segment: '
+              '${lastSegmentAvgKmh!.toStringAsFixed(1)}kph',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         if (showDebugBadge && kDebugMode)
           Container(
             margin: const EdgeInsets.only(top: 12),

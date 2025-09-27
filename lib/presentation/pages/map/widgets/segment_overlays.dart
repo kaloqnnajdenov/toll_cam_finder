@@ -149,6 +149,9 @@ class SegmentPolylineOverlay extends StatelessWidget {
 
   double _estimateMarkerHeight(SegmentDebugPath path) {
     var lineCount = 2; // id + distance
+    if (path.remainingDistanceMeters.isFinite) {
+      lineCount += 1;
+    }
     if (path.headingDiffDeg != null) {
       lineCount += 1;
     }
@@ -246,6 +249,10 @@ class _SegmentDebugMarker extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text('${path.distanceMeters.toStringAsFixed(1)} m'),
+                if (path.remainingDistanceMeters.isFinite)
+                  Text(
+                    '${(path.remainingDistanceMeters / 1000).toStringAsFixed(2)} km left',
+                  ),
                 if (path.headingDiffDeg != null)
                   Text('Δθ=${path.headingDiffDeg!.toStringAsFixed(0)}°'),
                 if (tags.isNotEmpty) Text(tags.join(' · ')),

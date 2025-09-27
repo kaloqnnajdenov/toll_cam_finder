@@ -78,6 +78,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     double bestX = 0;
     double bestY = 0;
     double? bestBearingDeg;
+    int bestSegmentIndex = 0;
+    double bestSegmentFraction = 0.0;
 
     // Convert the path into offsets expressed in metres so we can perform
     // inexpensive Cartesian projections while keeping reasonable precision.
@@ -112,6 +114,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
         double bearingDeg = bearingRad * 180.0 / math.pi;
         if (bearingDeg < 0) bearingDeg += 360.0;
         bestBearingDeg = bearingDeg;
+        bestSegmentIndex = i;
+        bestSegmentFraction = t;
       }
     }
 
@@ -122,6 +126,8 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       bestX = first.x;
       bestY = first.y;
       bestDistSq = bestX * bestX + bestY * bestY;
+      bestSegmentIndex = 0;
+      bestSegmentFraction = 0.0;
       if (offsets.length >= 2) {
         final math.Point<double> next = offsets[1];
         final double dx = next.x - first.x;
@@ -141,12 +147,47 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       distanceMeters: distance,
       point: GeoPoint(nearestLat, nearestLon),
       bearingDeg: bestBearingDeg,
+      segmentIndex: bestSegmentIndex,
+      segmentFraction: bestSegmentFraction,
     );
   }
 
   /// Converts the polyline [path] into a [LatLng] list suitable for map widgets.
   List<LatLng> _pathToLatLngList(List<GeoPoint> path) {
     return path.map((p) => LatLng(p.lat, p.lon)).toList(growable: false);
+  }
+
+  /// Computes the remaining distance along [path] starting from the provided
+  /// segment index and fractional position within that segment.
+  double _distanceToPathEnd(
+    List<GeoPoint> path,
+    int segmentIndex,
+    double segmentFraction,
+  ) {
+    if (path.length < 2) {
+      return 0.0;
+    }
+
+    final int clampedIndex = math.max(0, math.min(segmentIndex, path.length - 2));
+    final double clampedFraction = segmentFraction.clamp(0.0, 1.0);
+
+    double remaining = 0.0;
+
+    final GeoPoint start = path[clampedIndex];
+    final GeoPoint end = path[clampedIndex + 1];
+    final double segmentLength = _distanceBetween(start, end);
+    if (segmentLength.isFinite && segmentLength > 0) {
+      remaining += (1.0 - clampedFraction) * segmentLength;
+    }
+
+    for (int i = clampedIndex + 1; i < path.length - 1; i++) {
+      final double segLen = _distanceBetween(path[i], path[i + 1]);
+      if (segLen.isFinite && segLen > 0) {
+        remaining += segLen;
+      }
+    }
+
+    return remaining;
   }
 }
 
@@ -156,6 +197,8 @@ class _NearestPointResult {
     required this.distanceMeters,
     required this.point,
     this.bearingDeg,
+    required this.segmentIndex,
+    required this.segmentFraction,
   });
 
   /// Distance in metres from the original point to the projected point.
@@ -166,4 +209,10 @@ class _NearestPointResult {
 
   /// Heading of the path at [point] when it could be derived.
   final double? bearingDeg;
+
+  /// Index of the segment containing the projected point.
+  final int segmentIndex;
+
+  /// Fractional position along the segment containing the projected point.
+  final double segmentFraction;
 }

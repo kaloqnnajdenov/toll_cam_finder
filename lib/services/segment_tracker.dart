@@ -114,6 +114,8 @@ class SegmentTracker {
       final nearest = _nearestPointOnPath(userPoint, path);
       final double startDist = _distanceBetween(userPoint, path.first);
       final double endDist = _distanceBetween(userPoint, path.last);
+      final double remainingDist =
+          _distanceToPathEnd(path, nearest.segmentIndex, nearest.segmentFraction);
       final bool detailed = _isPathDetailed(geom, path);
 
       double? headingDiff;
@@ -131,6 +133,7 @@ class SegmentTracker {
           nearestPoint: nearest.point,
           startDistanceMeters: startDist,
           endDistanceMeters: endDist,
+          remainingDistanceMeters: remainingDist,
           headingDiffDeg: headingDiff,
           withinTolerance: nearest.distanceMeters <= onPathToleranceMeters,
           startHit: startDist <= startGeofenceRadiusMeters,
