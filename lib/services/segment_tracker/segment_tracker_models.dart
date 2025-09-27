@@ -73,6 +73,7 @@ class SegmentDebugPath {
     required this.id,
     required this.polyline,
     required this.distanceMeters,
+    required this.remainingDistanceMeters,
     required this.isWithinTolerance,
     required this.passesDirection,
     required this.startHit,
@@ -91,6 +92,9 @@ class SegmentDebugPath {
 
   /// Distance from the vehicle to the segment's closest point.
   final double distanceMeters;
+
+  /// Estimated distance remaining along the segment to its end point.
+  final double remainingDistanceMeters;
 
   /// Whether the candidate fell within the acceptable distance threshold.
   final bool isWithinTolerance;

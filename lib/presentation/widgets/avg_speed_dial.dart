@@ -11,6 +11,7 @@ class AverageSpeedDial extends StatelessWidget {
     this.decimals = 1,
     this.unit = 'km/h',
     this.width = 160,
+    this.isActive = true,
   });
 
   final AverageSpeedController controller;
@@ -18,6 +19,7 @@ class AverageSpeedDial extends StatelessWidget {
   final int decimals;
   final String unit;
   final double width;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -57,26 +59,40 @@ class AverageSpeedDial extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // Big numeric + unit
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        SmoothNumberText(
-                          value: avg,
-                          decimals: decimals,
-                          style: textTheme.displaySmall,
-                        ),
-                        const SizedBox(width: 6),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(unit, style: textTheme.titleSmall),
-                        ),
-                      ],
+                  if (isActive) ...[
+                    // Big numeric + unit
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          SmoothNumberText(
+                            value: avg,
+                            decimals: decimals,
+                            style: textTheme.displaySmall,
+                          ),
+                          const SizedBox(width: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(unit, style: textTheme.titleSmall),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
+                    const SizedBox(height: 6),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        'no active segment',
+                        textAlign: TextAlign.center,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                 ],
               ),
             ),

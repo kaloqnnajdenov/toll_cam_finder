@@ -62,6 +62,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
 
+  double? _lastSegmentAvgKmh;
+
   double? _speedKmh;
   double? _compassHeading;
 
@@ -128,8 +130,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       compassHeading: _compassHeading,
     );
     if (segEvent.startedSegment) {
+      _lastSegmentAvgKmh = null;
       _avgCtrl.start();
     } else if (segEvent.endedSegment) {
+      final double avgForSegment = _avgCtrl.average;
+      _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
       _avgCtrl.reset();
     }
     _segmentDebugData = segEvent.debugData;
@@ -161,8 +166,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       compassHeading: _compassHeading,
     );
     if (segEvent.startedSegment) {
+      _lastSegmentAvgKmh = null;
       _avgCtrl.start();
     } else if (segEvent.endedSegment) {
+      final double avgForSegment = _avgCtrl.average;
+      _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
       _avgCtrl.reset();
     }
 
@@ -279,9 +287,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _initSegmentsIndex() async {
-   final ready = await _segmentTracker.initialise(
+    final ready = await _segmentTracker.initialise(
       assetPath: AppConstants.pathToTollSegments,
-
     );
     if (!mounted || !ready) return;
 
@@ -294,8 +301,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         compassHeading: _compassHeading,
       );
       if (seedEvent.startedSegment) {
+        _lastSegmentAvgKmh = null;
         _avgCtrl.start();
       } else if (seedEvent.endedSegment) {
+        final double avgForSegment = _avgCtrl.average;
+        _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
         _avgCtrl.reset();
       }
       _segmentDebugData = seedEvent.debugData;
@@ -347,6 +357,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               child: MapControlsPanel(
                 speedKmh: _speedKmh,
                 avgController: _avgCtrl,
+                hasActiveSegment: _segmentTracker.activeSegmentId != null,
+                lastSegmentAvgKmh: _lastSegmentAvgKmh,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,
