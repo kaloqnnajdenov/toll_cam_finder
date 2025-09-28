@@ -12,6 +12,7 @@ class MapControlsPanel extends StatelessWidget {
     required this.avgController,
     required this.hasActiveSegment,
     this.lastSegmentAvgKmh,
+    this.segmentProgressLabel,
     required this.showDebugBadge,
     required this.segmentCount,
     required this.segmentRadiusMeters,
@@ -21,6 +22,7 @@ class MapControlsPanel extends StatelessWidget {
   final AverageSpeedController avgController;
   final bool hasActiveSegment;
   final double? lastSegmentAvgKmh;
+  final String? segmentProgressLabel;
   final bool showDebugBadge;
   final int segmentCount;
   final double segmentRadiusMeters;
@@ -37,6 +39,23 @@ class MapControlsPanel extends StatelessWidget {
           unit: 'km/h',
           isActive: hasActiveSegment,
         ),
+        if (segmentProgressLabel != null)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              segmentProgressLabel!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         if (lastSegmentAvgKmh != null)
           Container(
             margin: const EdgeInsets.only(top: 8),

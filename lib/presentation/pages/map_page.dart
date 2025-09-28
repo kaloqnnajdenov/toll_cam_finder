@@ -66,6 +66,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   double? _speedKmh;
   double? _compassHeading;
+  String? _segmentProgressLabel;
 
   @override
   void initState() {
@@ -138,6 +139,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       _avgCtrl.reset();
     }
     _segmentDebugData = segEvent.debugData;
+    _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+
     if (mounted) setState(() {});
 
     if (_mapReady) {
@@ -179,6 +182,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     setState(() {
       _speedKmh = smoothedKmh;
       _segmentDebugData = segEvent.debugData;
+      _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
     });
   }
 
@@ -210,6 +214,71 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
 
     _updateVisibleCameras();
+  }
+
+  String? _buildSegmentProgressLabel(SegmentTrackerEvent event) {
+    final paths = event.debugData.candidatePaths;
+    if (paths.isEmpty) {
+      return null;
+    }
+
+    final String? activeId = event.activeSegmentId;
+    if (activeId != null) {
+      final activePath =
+          _firstPathMatching(paths, (p) => p.id == activeId && p.isActive) ??
+          _firstPathMatching(paths, (p) => p.id == activeId) ??
+          _firstPathMatching(paths, (p) => p.isActive);
+
+      if (activePath != null &&
+          activePath.remainingDistanceMeters.isFinite &&
+          activePath.remainingDistanceMeters >= 0) {
+        final remaining = activePath.remainingDistanceMeters;
+        if (remaining >= 1000) {
+          return '${(remaining / 1000).toStringAsFixed(2)} km to segment end';
+        }
+        if (remaining >= 1) {
+          return '${remaining.toStringAsFixed(0)} m to segment end';
+        }
+        return 'Segment end nearby';
+      }
+      return null;
+    }
+
+    SegmentDebugPath? upcoming;
+    for (final path in paths) {
+      final startDist = path.startDistanceMeters;
+      if (!startDist.isFinite) continue;
+      if (startDist <= 500) {
+        if (upcoming == null || startDist < upcoming!.startDistanceMeters) {
+          upcoming = path;
+        }
+      }
+    }
+
+    if (upcoming == null) {
+      return null;
+    }
+
+    final double distance = upcoming.startDistanceMeters;
+    if (distance >= 1000) {
+      return '${(distance / 1000).toStringAsFixed(2)} km to segment start';
+    }
+    if (distance >= 1) {
+      return '${distance.toStringAsFixed(0)} m to segment start';
+    }
+    return 'Segment start nearby';
+  }
+
+  SegmentDebugPath? _firstPathMatching(
+    Iterable<SegmentDebugPath> paths,
+    bool Function(SegmentDebugPath) predicate,
+  ) {
+    for (final path in paths) {
+      if (predicate(path)) {
+        return path;
+      }
+    }
+    return null;
   }
 
   // ------------------ reset view button ------------------
@@ -336,13 +405,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
               if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
                 QuerySquareOverlay(points: _segmentDebugData.querySquare),
-              if (kDebugMode &&
-                  _segmentDebugData.boundingCandidates.isNotEmpty)
+              if (kDebugMode && _segmentDebugData.boundingCandidates.isNotEmpty)
                 CandidateBoundsOverlay(
                   candidates: _segmentDebugData.boundingCandidates,
                 ),
-              if (kDebugMode &&
-                  _segmentDebugData.candidatePaths.isNotEmpty)
+              if (kDebugMode && _segmentDebugData.candidatePaths.isNotEmpty)
                 SegmentPolylineOverlay(
                   paths: _segmentDebugData.candidatePaths,
                   startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
@@ -359,6 +426,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                 avgController: _avgCtrl,
                 hasActiveSegment: _segmentTracker.activeSegmentId != null,
                 lastSegmentAvgKmh: _lastSegmentAvgKmh,
+                segmentProgressLabel: _segmentProgressLabel,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,

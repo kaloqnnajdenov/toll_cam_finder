@@ -37,12 +37,12 @@ class SegmentTrackerDebugData {
   });
 
   const SegmentTrackerDebugData.empty()
-      : isReady = false,
-        querySquare = const [],
-        boundingCandidates = const [],
-        candidatePaths = const [],
-        startGeofenceRadius = 0,
-        endGeofenceRadius = 0;
+    : isReady = false,
+      querySquare = const [],
+      boundingCandidates = const [],
+      candidatePaths = const [],
+      startGeofenceRadius = 0,
+      endGeofenceRadius = 0;
 
   /// Whether the tracker has performed at least one candidate query.
   final bool isReady;
@@ -73,6 +73,7 @@ class SegmentDebugPath {
     required this.id,
     required this.polyline,
     required this.distanceMeters,
+    required this.startDistanceMeters,
     required this.remainingDistanceMeters,
     required this.isWithinTolerance,
     required this.passesDirection,
@@ -92,6 +93,9 @@ class SegmentDebugPath {
 
   /// Distance from the vehicle to the segment's closest point.
   final double distanceMeters;
+
+  /// Distance from the vehicle to the start of the segment.
+  final double startDistanceMeters;
 
   /// Estimated distance remaining along the segment to its end point.
   final double remainingDistanceMeters;

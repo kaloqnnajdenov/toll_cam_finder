@@ -13,8 +13,10 @@ extension _SegmentTrackerDebugging on SegmentTracker {
   ) {
     // Build a bounding square representing the spatial query that produced the
     // current candidate set. The square is reused by the UI overlay.
-    final List<LatLng> square =
-        _computeQuerySquare(current, candidateRadiusMeters);
+    final List<LatLng> square = _computeQuerySquare(
+      current,
+      candidateRadiusMeters,
+    );
     final activeId = _active?.geometry.id;
     final debugPaths = <SegmentDebugPath>[];
 
@@ -26,6 +28,7 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           id: match.geometry.id,
           polyline: List<LatLng>.unmodifiable(_pathToLatLngList(match.path)),
           distanceMeters: match.distanceMeters,
+          startDistanceMeters: match.startDistanceMeters,
           isWithinTolerance: match.withinTolerance,
           passesDirection: match.passesDirection,
           startHit: match.startHit,
@@ -50,6 +53,7 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           id: match.geometry.id,
           polyline: List<LatLng>.unmodifiable(_pathToLatLngList(match.path)),
           distanceMeters: match.distanceMeters,
+          startDistanceMeters: match.startDistanceMeters,
           isWithinTolerance: match.withinTolerance,
           passesDirection: match.passesDirection,
           startHit: match.startHit,
