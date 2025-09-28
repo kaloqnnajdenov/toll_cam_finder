@@ -28,7 +28,8 @@ class AuthController extends ChangeNotifier {
   String? get currentEmail => _currentEmail;
   String? get pendingEmail => _pendingEmail;
   bool get isConfigured => _client != null;
-
+  SupabaseClient? get client => _client;
+  
   @override
   void dispose() {
     _authSubscription?.cancel();

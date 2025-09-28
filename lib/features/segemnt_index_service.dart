@@ -9,6 +9,11 @@ import 'package:toll_cam_finder/core/spatial/geo.dart';
 // add these if not present:
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/core/spatial/segment_spatial_index.dart';
+import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
+import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
+    if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
+    as fs_impl;
+import 'package:toll_cam_finder/services/toll_segments_paths.dart';
 
 // -----------------------------------------------------------------------------
 // SegmentIndexService
@@ -17,11 +22,13 @@ import 'package:toll_cam_finder/core/spatial/segment_spatial_index.dart';
 // - Exposes candidate lookups near a LatLng
 // -----------------------------------------------------------------------------
 class SegmentIndexService {
-  SegmentIndexService._();
+  SegmentIndexService._({TollSegmentsFileSystem? fileSystem})
+    : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
   static final SegmentIndexService instance = SegmentIndexService._();
 
   SegmentSpatialIndex? _index;
   bool get isReady => _index != null;
+  final TollSegmentsFileSystem _fileSystem;
 
   Future<void> buildFromGeometries(List<SegmentGeometry> segments) async {
     _index = SegmentSpatialIndex.build(segments);
@@ -40,13 +47,15 @@ class SegmentIndexService {
   ///   await _segIndex.tryLoadFromDefaultAsset(
   ///     assetPath: 'assets/data/toll_segments.csv',,
   ///   );
-  Future<void> tryLoadFromDefaultAsset({String assetPath = 'assets/data/segments.json'}) async {
+  Future<void> tryLoadFromDefaultAsset({
+    String assetPath = 'assets/data/segments.json',
+  }) async {
     try {
-      final raw = await rootBundle.loadString(assetPath);
+      final raw = await _loadSegmentsData(assetPath);
 
       List<SegmentGeometry> segments;
 
-           if (assetPath.toLowerCase().endsWith('.csv')) {
+      if (assetPath.toLowerCase().endsWith('.csv')) {
         segments = _parseCsv(raw);
       } else {
         final dynamic decoded = json.decode(raw);
@@ -66,12 +75,16 @@ class SegmentIndexService {
 
       if (segments.isNotEmpty) {
         await buildFromGeometries(segments);
-        debugPrint('Segment index built with ${segments.length} segments from $assetPath.');
+        debugPrint(
+          'Segment index built with ${segments.length} segments from $assetPath.',
+        );
       } else {
         debugPrint('SegmentIndexService: no segments parsed from $assetPath.');
       }
     } catch (e) {
-      debugPrint('SegmentIndexService: $assetPath not loaded (${e.runtimeType}).');
+      debugPrint(
+        'SegmentIndexService: $assetPath not loaded (${e.runtimeType}).',
+      );
     }
   }
 
@@ -111,15 +124,25 @@ class SegmentIndexService {
         final s = m['start'] as Map<String, dynamic>;
         final t = m['end'] as Map<String, dynamic>;
         pts = [
-          GeoPoint((s['lat'] as num).toDouble(), ((s['lon'] ?? s['lng']) as num).toDouble()),
-          GeoPoint((t['lat'] as num).toDouble(), ((t['lon'] ?? t['lng']) as num).toDouble()),
+          GeoPoint(
+            (s['lat'] as num).toDouble(),
+            ((s['lon'] ?? s['lng']) as num).toDouble(),
+          ),
+          GeoPoint(
+            (t['lat'] as num).toDouble(),
+            ((t['lon'] ?? t['lng']) as num).toDouble(),
+          ),
         ];
       } else {
-        debugPrint('SegmentIndexService: skip $id (no geometry in plain array).');
+        debugPrint(
+          'SegmentIndexService: skip $id (no geometry in plain array).',
+        );
         continue;
       }
 
-      final len = (m['length_m'] is num) ? (m['length_m'] as num).toDouble() : null;
+      final len = (m['length_m'] is num)
+          ? (m['length_m'] as num).toDouble()
+          : null;
       segments.add(SegmentGeometry(id: id, path: pts, lengthMeters: len));
     }
     return segments;
@@ -160,7 +183,9 @@ class SegmentIndexService {
         }
       } else {
         // Unsupported geometry types are skipped
-        debugPrint('SegmentIndexService: skip feature $id (geometry type $type).');
+        debugPrint(
+          'SegmentIndexService: skip feature $id (geometry type $type).',
+        );
         continue;
       }
 
@@ -169,7 +194,9 @@ class SegmentIndexService {
         continue;
       }
 
-      segments.add(SegmentGeometry(id: id, path: path, lengthMeters: lengthMeters));
+      segments.add(
+        SegmentGeometry(id: id, path: path, lengthMeters: lengthMeters),
+      );
     }
 
     return segments;
@@ -188,7 +215,7 @@ class SegmentIndexService {
     return out;
   }
 
-   List<SegmentGeometry> _parseCsv(String raw) {
+  List<SegmentGeometry> _parseCsv(String raw) {
     final rows = const CsvToListConverter(
       fieldDelimiter: ';',
       shouldParseNumbers: false,
@@ -276,26 +303,51 @@ class SegmentIndexService {
   // -----------------------------------------------------------------------------
   // Public query helpers (used by MapPage)
   // -----------------------------------------------------------------------------
-  List<SegmentGeometry> candidatesNearLatLng(LatLng p, {double radiusMeters = 150}) {
+  List<SegmentGeometry> candidatesNearLatLng(
+    LatLng p, {
+    double radiusMeters = 150,
+  }) {
     final idx = _index;
     if (idx == null) return const [];
-    return idx.candidatesNear(GeoPoint(p.latitude, p.longitude), radiusMeters: radiusMeters);
+    return idx.candidatesNear(
+      GeoPoint(p.latitude, p.longitude),
+      radiusMeters: radiusMeters,
+    );
     // NOTE: idx returns segment geometries whose bounding boxes intersect the query bbox.
     // Do precise point-to-polyline checks in your Step 3 code after this prefilter.
   }
 
   List<String> candidateIdsNearLatLng(LatLng p, {double radiusMeters = 150}) {
-    return candidatesNearLatLng(p, radiusMeters: radiusMeters)
-        .map((g) => g.id)
-        .toList(growable: false);
+    return candidatesNearLatLng(
+      p,
+      radiusMeters: radiusMeters,
+    ).map((g) => g.id).toList(growable: false);
   }
 
   @visibleForTesting
-  List<SegmentGeometry> parsePlainArrayForTest(List list) => _parsePlainArray(list);
+  List<SegmentGeometry> parsePlainArrayForTest(List list) =>
+      _parsePlainArray(list);
 
   @visibleForTesting
-  List<SegmentGeometry> parseGeoJsonForTest(Map<String, dynamic> fc) => _parseGeoJson(fc);
+  List<SegmentGeometry> parseGeoJsonForTest(Map<String, dynamic> fc) =>
+      _parseGeoJson(fc);
 
   @visibleForTesting
-  List<GeoPoint> toGeoPointsFromLonLatListForTest(List coords) => _toGeoPointsFromLonLatList(coords);
+  List<GeoPoint> toGeoPointsFromLonLatListForTest(List coords) =>
+      _toGeoPointsFromLonLatList(coords);
+
+  Future<String> _loadSegmentsData(String assetPath) async {
+    if (!kIsWeb && assetPath == kTollSegmentsAssetPath) {
+      try {
+        final localPath = await resolveTollSegmentsDataPath();
+        if (await _fileSystem.exists(localPath)) {
+          return await _fileSystem.readAsString(localPath);
+        }
+      } catch (error) {
+        debugPrint('SegmentIndexService: falling back to asset ($error).');
+      }
+    }
+
+    return rootBundle.loadString(assetPath);
+  }
 }

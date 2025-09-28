@@ -16,6 +16,7 @@ import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
+import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
 
 import '../../app/app_routes.dart';
 import '../../services/auth_controller.dart';
@@ -70,6 +71,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   double? _speedKmh;
   double? _compassHeading;
   String? _segmentProgressLabel;
+  bool _isSyncing = false;
+  final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
 
   @override
   void initState() {
@@ -476,6 +479,19 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
             ListTile(
+              leading: const Icon(Icons.sync),
+              title: const Text('Sync'),
+              enabled: !_isSyncing,
+              trailing: _isSyncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
+              onTap: _isSyncing ? null : _onSyncSelected,
+            ),
+            ListTile(
               leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () {
@@ -526,5 +542,78 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         );
       },
     );
+  }
+
+  void _onSyncSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_performSync());
+    });
+  }
+
+  Future<void> _performSync() async {
+    if (_isSyncing) return;
+
+    final auth = context.read<AuthController>();
+    final client = auth.client;
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (client == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Supabase is not configured. Please add credentials to enable sync.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      final result = await _syncService.sync(client: client);
+      await SegmentIndexService.instance.tryLoadFromDefaultAsset(
+        assetPath: AppConstants.pathToTollSegments,
+      );
+      final message = _buildSyncSuccessMessage(result);
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } on TollSegmentsSyncException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (error, stackTrace) {
+      debugPrint('Failed to sync toll segments: $error\n$stackTrace');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unexpected error while syncing toll segments.'),
+        ),
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isSyncing = false;
+      });
+    }
+  }
+
+  String _buildSyncSuccessMessage(TollSegmentsSyncResult result) {
+    final parts = <String>[];
+    if (result.addedSegments > 0) {
+      final label = result.addedSegments == 1 ? 'segment' : 'segments';
+      parts.add('${result.addedSegments} $label added');
+    }
+    if (result.removedSegments > 0) {
+      final label = result.removedSegments == 1 ? 'segment' : 'segments';
+      parts.add('${result.removedSegments} $label removed');
+    }
+
+    final changesSummary = parts.isEmpty
+        ? 'No changes detected.'
+        : parts.join(', ') + '.';
+    return 'Sync complete. $changesSummary ${result.totalSegments} total segments available.';
   }
 }
