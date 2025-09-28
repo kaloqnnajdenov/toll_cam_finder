@@ -492,6 +492,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               onTap: _isSyncing ? null : _onSyncSelected,
             ),
             ListTile(
+              leading: const Icon(Icons.segment),
+              title: const Text('Segments'),
+              onTap: () {
+                Navigator.of(context).pop();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  Navigator.of(context).pushNamed(AppRoutes.segments);
+                });
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () {
