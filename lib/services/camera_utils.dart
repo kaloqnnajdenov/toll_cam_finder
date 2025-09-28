@@ -1,5 +1,6 @@
 // services/camera_utils.dart
 import 'dart:convert';
+import 'package:csv/csv.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
@@ -28,24 +29,11 @@ class CameraUtils {
     _error = null;
 
     try {
-      final jsonStr = await rootBundle.loadString(assetPath);
-      final obj = json.decode(jsonStr) as Map<String, dynamic>;
-      final features = (obj['features'] as List?) ?? const [];
+      final data = await rootBundle.loadString(assetPath);
 
-      final pts = <LatLng>[];
-      for (final f in features) {
-        final feat = (f as Map).cast<String, dynamic>();
-        final geom = (feat['geometry'] as Map?)?.cast<String, dynamic>();
-        if (geom == null) continue;
-        if (geom['type'] != 'Point') continue;
-
-        final coords = (geom['coordinates'] as List?) ?? const [];
-        if (coords.length < 2) continue;
-
-        final lon = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        pts.add(LatLng(lat, lon));
-      }
+      final pts = assetPath.toLowerCase().endsWith('.csv')
+          ? _parseCamerasFromCsv(data)
+          : _parseCamerasFromGeoJson(data);
 
       _allCameras = pts;
       _visibleCameras = pts;
@@ -73,7 +61,83 @@ class CameraUtils {
   }
 
   // --- helpers ---
+  List<LatLng> _parseCamerasFromGeoJson(String jsonStr) {
+    final obj = json.decode(jsonStr) as Map<String, dynamic>;
+    final features = (obj['features'] as List?) ?? const [];
 
+    final pts = <LatLng>[];
+    for (final f in features) {
+      final feat = (f as Map).cast<String, dynamic>();
+      final geom = (feat['geometry'] as Map?)?.cast<String, dynamic>();
+      if (geom == null) continue;
+      if (geom['type'] != 'Point') continue;
+
+      final coords = (geom['coordinates'] as List?) ?? const [];
+      if (coords.length < 2) continue;
+
+      final lon = (coords[0] as num).toDouble();
+      final lat = (coords[1] as num).toDouble();
+      pts.add(LatLng(lat, lon));
+    }
+
+    return pts;
+  }
+
+  List<LatLng> _parseCamerasFromCsv(String raw) {
+    final rows = const CsvToListConverter(
+      fieldDelimiter: ';',
+      shouldParseNumbers: false,
+    ).convert(raw);
+
+    if (rows.isEmpty) {
+      return const [];
+    }
+
+    final header = rows.first
+        .map((e) => e.toString().trim().toLowerCase())
+        .toList(growable: false);
+    final startIdx = header.indexOf('start');
+    final endIdx = header.indexOf('end');
+
+    if (startIdx == -1 || endIdx == -1) {
+      throw const FormatException('CSV must contain "Start" and "End" columns');
+    }
+
+    final pts = <LatLng>[];
+    final seen = <String>{};
+
+    for (final row in rows.skip(1)) {
+      if (row.length <= startIdx || row.length <= endIdx) continue;
+
+      final start = _latLngFromCsvValue(row[startIdx]);
+      final end = _latLngFromCsvValue(row[endIdx]);
+
+      if (start != null && seen.add('${start.latitude},${start.longitude}')) {
+        pts.add(start);
+      }
+      if (end != null && seen.add('${end.latitude},${end.longitude}')) {
+        pts.add(end);
+      }
+    }
+
+    return pts;
+  }
+
+  LatLng? _latLngFromCsvValue(Object? value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+
+    final parts = text.split(',').map((p) => p.trim()).toList();
+    if (parts.length < 2) return null;
+
+    final lat = double.tryParse(parts[0]);
+    final lon = double.tryParse(parts[1]);
+    if (lat == null || lon == null) return null;
+
+    return LatLng(lat, lon);
+  }
+  
   LatLngBounds _padBounds(LatLngBounds b, double delta) {
     return LatLngBounds(
       LatLng(b.south - delta, b.west - delta),

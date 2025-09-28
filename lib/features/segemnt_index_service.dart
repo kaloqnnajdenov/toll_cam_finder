@@ -1,5 +1,6 @@
 // imports you likely already have:
 import 'dart:convert';
+import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:latlong2/latlong.dart';
@@ -37,25 +38,30 @@ class SegmentIndexService {
   ///
   /// Example call from MapPage:
   ///   await _segIndex.tryLoadFromDefaultAsset(
-  ///     assetPath: 'assets/data/toll_segments.geojson',
+  ///     assetPath: 'assets/data/toll_segments.csv',,
   ///   );
   Future<void> tryLoadFromDefaultAsset({String assetPath = 'assets/data/segments.json'}) async {
     try {
       final raw = await rootBundle.loadString(assetPath);
-      final dynamic decoded = json.decode(raw);
 
       List<SegmentGeometry> segments;
 
-      if (decoded is List) {
-        // Plain JSON array path
-        segments = _parsePlainArray(decoded);
-      } else if (decoded is Map<String, dynamic> &&
-          decoded['type'] == 'FeatureCollection' &&
-          decoded['features'] is List) {
-        // GeoJSON FeatureCollection path
-        segments = _parseGeoJson(decoded);
+           if (assetPath.toLowerCase().endsWith('.csv')) {
+        segments = _parseCsv(raw);
       } else {
-        throw const FormatException('Unknown segment format');
+        final dynamic decoded = json.decode(raw);
+
+        if (decoded is List) {
+          // Plain JSON array path
+          segments = _parsePlainArray(decoded);
+        } else if (decoded is Map<String, dynamic> &&
+            decoded['type'] == 'FeatureCollection' &&
+            decoded['features'] is List) {
+          // GeoJSON FeatureCollection path
+          segments = _parseGeoJson(decoded);
+        } else {
+          throw const FormatException('Unknown segment format');
+        }
       }
 
       if (segments.isNotEmpty) {
@@ -180,6 +186,91 @@ class SegmentIndexService {
       }
     }
     return out;
+  }
+
+   List<SegmentGeometry> _parseCsv(String raw) {
+    final rows = const CsvToListConverter(
+      fieldDelimiter: ';',
+      shouldParseNumbers: false,
+    ).convert(raw);
+
+    if (rows.isEmpty) {
+      return const [];
+    }
+
+    final header = rows.first
+        .map((e) => e.toString().trim().toLowerCase())
+        .toList(growable: false);
+    final startIdx = header.indexOf('start');
+    final endIdx = header.indexOf('end');
+
+    if (startIdx == -1 || endIdx == -1) {
+      throw const FormatException('CSV must contain "Start" and "End" columns');
+    }
+
+    final roadIdx = header.indexOf('road');
+    final startNameIdx = header.indexOf('start name');
+    final endNameIdx = header.indexOf('end name');
+
+    final segments = <SegmentGeometry>[];
+
+    var rowIdx = 0;
+    for (final row in rows.skip(1)) {
+      rowIdx++;
+      if (row.length <= startIdx || row.length <= endIdx) {
+        continue;
+      }
+
+      final start = _latLngFromCsv(row[startIdx]);
+      final end = _latLngFromCsv(row[endIdx]);
+      if (start == null || end == null) {
+        continue;
+      }
+
+      final idParts = <String>[];
+      if (roadIdx != -1 && row.length > roadIdx) {
+        final road = row[roadIdx].toString().trim();
+        if (road.isNotEmpty) idParts.add(road);
+      }
+      if (startNameIdx != -1 && row.length > startNameIdx) {
+        final sName = row[startNameIdx].toString().trim();
+        if (sName.isNotEmpty) idParts.add(sName);
+      }
+      if (endNameIdx != -1 && row.length > endNameIdx) {
+        final eName = row[endNameIdx].toString().trim();
+        if (eName.isNotEmpty) idParts.add(eName);
+      }
+
+      idParts.add('row$rowIdx');
+      final id = idParts.join('::');
+
+      segments.add(
+        SegmentGeometry(
+          id: id,
+          path: [
+            GeoPoint(start.latitude, start.longitude),
+            GeoPoint(end.latitude, end.longitude),
+          ],
+        ),
+      );
+    }
+
+    return segments;
+  }
+
+  LatLng? _latLngFromCsv(Object? value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+
+    final parts = text.split(',').map((e) => e.trim()).toList();
+    if (parts.length < 2) return null;
+
+    final lat = double.tryParse(parts[0]);
+    final lon = double.tryParse(parts[1]);
+    if (lat == null || lon == null) return null;
+
+    return LatLng(lat, lon);
   }
 
   // -----------------------------------------------------------------------------

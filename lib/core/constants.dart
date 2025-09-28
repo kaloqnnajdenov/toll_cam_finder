@@ -54,8 +54,15 @@ class AppConstants {
   /// preserving smoothing longer.
   static const double catchUpDistanceMeters = 20.0;
 
-  ///asset path
-  static const String pathToTollSegments = 'assets/data/toll_segments.geojson';
+ /// Asset path for the toll-road segments dataset (CSV format).
+  static const String pathToTollSegments = 'assets/data/toll_segments.csv';
+
+/// Asset path to the toll segments dataset. Camera markers are derived from
+  /// the start and end points of each segment in this CSV file.
+  static const String camerasAsset = pathToTollSegments;
+  //TODO: mertge camera assets with pathtotollsegments????
+
+
 
   /// The animation controller starts with, and falls back to, a 500 ms duration for
   /// each interpolation run. Increasing that duration makes movements appear slower
@@ -76,9 +83,6 @@ class AppConstants {
   /// real app id to stay within OpenStreetMap usage policy.
   static const String mapURL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  /// Asset path to the GeoJSON dataset of toll cameras; changing it swaps the
-  /// loaded camera set (or breaks loading if the file is missing).
-  static const String camerasAsset = 'assets/data/toll_cameras_points.geojson';
 
   /// Maximum distance (meters) between the user and a candidate polyline for
   /// it to be considered a viable match. Values around 30–50 m work well; we

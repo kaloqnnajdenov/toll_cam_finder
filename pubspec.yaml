@@ -18,6 +18,7 @@ dependencies:
   url_launcher: ^6.3.2
   http: ^1.5.0
   test: ^1.26.2
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -27,5 +28,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/data/toll_segments.geojson
-    - assets/data/toll_cameras_points.geojson
+    - assets/data/toll_segments.csv
