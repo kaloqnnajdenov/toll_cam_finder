@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
@@ -16,6 +17,8 @@ import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
+import '../../app/app_routes.dart';
+import '../../services/auth_controller.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
@@ -389,6 +392,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final cameraState = _cameraController.state;
 
     return Scaffold(
+      endDrawer: _buildOptionsDrawer(),
       body: Stack(
         children: [
           FlutterMap(
@@ -433,6 +437,27 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, right: 16),
+                child: Builder(
+                  builder: (context) {
+                    return Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        onPressed: () => Scaffold.of(context).openEndDrawer(),
+                        icon: const Icon(Icons.menu, color: Colors.white),
+                        tooltip: 'Open menu',
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         ],
       ),
 
@@ -441,6 +466,65 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         onResetView: _onResetView,
         avgController: _avgCtrl,
       ),
+    );
+  }
+
+  Drawer _buildOptionsDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.of(context).pop();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _onProfileSelected();
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onProfileSelected() {
+    final auth = context.read<AuthController>();
+    if (auth.isLoggedIn) {
+      Navigator.of(context).pushNamed(AppRoutes.profile);
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.login),
+                title: const Text('Log in'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).pushNamed(AppRoutes.login);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_add_alt),
+                title: const Text('Create an account'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).pushNamed(AppRoutes.signUp);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
