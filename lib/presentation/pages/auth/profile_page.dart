@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/app_routes.dart';
@@ -41,10 +42,24 @@ class ProfilePage extends StatelessWidget {
               const Spacer(),
               ElevatedButton(
                 onPressed: () async {
-                  await context.read<AuthController>().logOut();
-                  Navigator.of(context).popUntil(
-                    ModalRoute.withName(AppRoutes.map),
-                  );
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    await context.read<AuthController>().logOut();
+                    Navigator.of(context).popUntil(
+                      ModalRoute.withName(AppRoutes.map),
+                    );
+                  } on AuthFailure catch (error) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(error.message)),
+                    );
+                  } catch (error, stackTrace) {
+                    debugPrint('Logout error: $error\n$stackTrace');
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Unable to log out. Please try again.'),
+                      ),
+                    );
+                  }
                 },
                 child: const Text('Log out'),
               ),

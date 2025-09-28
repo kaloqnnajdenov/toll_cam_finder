@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/app_routes.dart';
@@ -16,7 +17,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _initializedEmail = false;
-
+  bool _isSubmitting = false;
+  
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -36,18 +38,44 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isSubmitting || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSubmitting = true;
+    });
+   
     final auth = context.read<AuthController>();
-    await auth.logIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    
+     try {
+      await auth.logIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.profile,
-      ModalRoute.withName(AppRoutes.map),
-    );
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.profile,
+        ModalRoute.withName(AppRoutes.map),
+      );
+    } on AuthFailure catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Login error: $error\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -66,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 32),
                 Text(
-                  'Welcome back',
+                  'Welcome',
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -102,8 +130,14 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Continue'),
+                 onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Continue'),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../services/auth_controller.dart';
@@ -16,7 +17,9 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -28,20 +31,52 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final auth = context.read<AuthController>();
-    await auth.register(email: _emailController.text.trim());
+    if (_isSubmitting || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSubmitting = true;
+    });
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+    final auth = context.read<AuthController>();
+    try {
+      final messenger = ScaffoldMessenger.of(context);
+      await auth.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _nameController.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Account created! Check your email to confirm it.'),
+        ),
+      );
+    } on AuthFailure catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (error, stackTrace) {
+      debugPrint('Sign up error: $error\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create account'),
-      ),
+      appBar: AppBar(title: const Text('Create account')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -124,8 +159,14 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Create account'),
+                 onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Create account'),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
