@@ -6,12 +6,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
+import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
@@ -44,6 +47,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   LatLng? _userLatLng;
   bool _mapReady = false;
   bool _followUser = false;
+  bool _menuOpen = false;
   double _currentZoom = AppConstants.initialZoom;
 
   StreamSubscription<Position>? _posSub;
@@ -281,6 +285,113 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     return null;
   }
 
+  void _toggleMenu() {
+    setState(() {
+      _menuOpen = !_menuOpen;
+    });
+  }
+
+  void _closeMenu() {
+    if (_menuOpen) {
+      setState(() => _menuOpen = false);
+    }
+  }
+
+  Future<void> _handleProfileOption() async {
+    _closeMenu();
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = context.read<AuthController>();
+
+    if (!auth.isAvailable) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Authentication is unavailable in this build.'),
+          ),
+        );
+      return;
+    }
+
+    if (auth.isAuthenticated) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamed(AppRoutes.profile);
+      return;
+    }
+
+    if (!mounted) return;
+
+    final action = await showModalBottomSheet<_AuthSheetAction>(
+      context: context,
+      builder: (_) => const _AuthOptionsSheet(),
+    );
+
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case _AuthSheetAction.login:
+        Navigator.of(context).pushNamed(AppRoutes.login);
+        break;
+      case _AuthSheetAction.signUp:
+        Navigator.of(context).pushNamed(AppRoutes.signUp);
+        break;
+    }
+  }
+
+  Widget _buildMenuButton(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      elevation: 3,
+      color: theme.colorScheme.surface.withOpacity(0.92),
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: _toggleMenu,
+        tooltip: 'Options',
+      ),
+    );
+  }
+
+  Widget _buildSlideOutMenu(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: Alignment.topRight,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 72, right: 16),
+        child: IgnorePointer(
+          ignoring: !_menuOpen,
+          child: AnimatedSlide(
+            offset: _menuOpen ? Offset.zero : const Offset(1.1, 0),
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: AnimatedOpacity(
+              opacity: _menuOpen ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Material(
+                borderRadius: BorderRadius.circular(16),
+                elevation: 6,
+                color: theme.colorScheme.surface,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 180),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.person_outline),
+                        title: const Text('Profile'),
+                        onTap: _handleProfileOption,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ------------------ reset view button ------------------
   void _onMapReady() {
     _mapReady = true;
@@ -433,6 +544,23 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, right: 16),
+                child: _buildMenuButton(context),
+              ),
+            ),
+          ),
+          if (_menuOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeMenu,
+              ),
+            ),
+          _buildSlideOutMenu(context),
         ],
       ),
 
@@ -440,6 +568,37 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         followUser: _followUser,
         onResetView: _onResetView,
         avgController: _avgCtrl,
+      ),
+    );
+  }
+}
+
+enum _AuthSheetAction { login, signUp }
+
+class _AuthOptionsSheet extends StatelessWidget {
+  const _AuthOptionsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('Log in'),
+              onTap: () => Navigator.of(context).pop(_AuthSheetAction.login),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add_alt),
+              title: const Text('Create account'),
+              onTap: () => Navigator.of(context).pop(_AuthSheetAction.signUp),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
