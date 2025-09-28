@@ -136,16 +136,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       speedKmh: _speedKmh,
       compassHeading: _compassHeading,
     );
-    if (segEvent.startedSegment) {
-      _lastSegmentAvgKmh = null;
-      _avgCtrl.start();
-    } else if (segEvent.endedSegment) {
-      final double avgForSegment = _avgCtrl.average;
-      _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
-      _avgCtrl.reset();
-    }
-    _segmentDebugData = segEvent.debugData;
-    _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+    _applySegmentEvent(segEvent);
 
     if (mounted) setState(() {});
 
@@ -174,6 +165,22 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       speedKmh: smoothedKmh,
       compassHeading: _compassHeading,
     );
+    _applySegmentEvent(segEvent);
+
+    if (!mounted) return;
+
+    setState(() {
+      _speedKmh = smoothedKmh;
+    });
+  }
+
+  void _moveBlueDot(LatLng next) {
+    final from = _blueDotAnimator.position ?? _userLatLng ?? _center;
+    _userLatLng = next;
+    _blueDotAnimator.animate(from: from, to: next);
+  }
+
+  void _applySegmentEvent(SegmentTrackerEvent segEvent) {
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
@@ -183,19 +190,15 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       _avgCtrl.reset();
     }
 
-    if (!mounted) return;
-
-    setState(() {
-      _speedKmh = smoothedKmh;
-      _segmentDebugData = segEvent.debugData;
-      _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
-    });
+    _segmentDebugData = segEvent.debugData;
+    _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
   }
 
-  void _moveBlueDot(LatLng next) {
-    final from = _blueDotAnimator.position ?? _userLatLng ?? _center;
-    _userLatLng = next;
-    _blueDotAnimator.animate(from: from, to: next);
+  void _resetSegmentState() {
+    _segmentDebugData = const SegmentTrackerDebugData.empty();
+    _segmentProgressLabel = null;
+    _lastSegmentAvgKmh = null;
+    _avgCtrl.reset();
   }
 
   double _normalizeSpeed(double metersPerSecond) {
@@ -367,6 +370,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
     if (!mounted || !ready) return;
 
+    _resetSegmentState();
     if (_userLatLng != null) {
       final seedEvent = _segmentTracker.handleLocationUpdate(
         current: _userLatLng!,
@@ -375,15 +379,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         speedKmh: _speedKmh,
         compassHeading: _compassHeading,
       );
-      if (seedEvent.startedSegment) {
-        _lastSegmentAvgKmh = null;
-        _avgCtrl.start();
-      } else if (seedEvent.endedSegment) {
-        final double avgForSegment = _avgCtrl.average;
-        _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
-        _avgCtrl.reset();
-      }
-      _segmentDebugData = seedEvent.debugData;
+      _applySegmentEvent(seedEvent);
     }
 
     setState(() {});
@@ -587,9 +583,20 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     try {
       final result = await _syncService.sync(client: client);
-      await SegmentIndexService.instance.tryLoadFromDefaultAsset(
+      final reloaded = await _segmentTracker.reload(
         assetPath: AppConstants.pathToTollSegments,
       );
+      _resetSegmentState();
+      if (reloaded && _userLatLng != null) {
+        final segEvent = _segmentTracker.handleLocationUpdate(
+          current: _userLatLng!,
+          previous: null,
+          rawHeading: null,
+          speedKmh: _speedKmh,
+          compassHeading: _compassHeading,
+        );
+        _applySegmentEvent(segEvent);
+      }
       final message = _buildSyncSuccessMessage(result);
       messenger.showSnackBar(SnackBar(content: Text(message)));
     } on TollSegmentsSyncException catch (error) {

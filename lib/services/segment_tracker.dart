@@ -68,6 +68,7 @@ class SegmentTracker {
   String? get activeSegmentId => _active?.geometry.id;
 
   Future<bool> initialise({required String assetPath}) async {
+        _resetTrackingState();
     if (!_index.isReady) {
       await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     }
@@ -78,6 +79,15 @@ class SegmentTracker {
     return _isReady;
   }
 
+Future<bool> reload({required String assetPath}) async {
+    _resetTrackingState();
+    await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
+    _isReady = _index.isReady;
+    if (!_isReady) {
+      _latestDebugData = const SegmentTrackerDebugData.empty();
+    }
+    return _isReady;
+  }
   SegmentTrackerEvent handleLocationUpdate({
     required LatLng current,
     LatLng? previous,
@@ -162,6 +172,20 @@ class SegmentTracker {
     if (_ownsHttpClient) {
       _httpClient.close();
     }
+  }
+
+   void _resetTrackingState() {
+    if (_active != null) {
+      _clearActiveSegment(reason: 'reset');
+    }
+    _isReady = false;
+    _pathOverrides.clear();
+    _fetchFailures.clear();
+    _fetching.clear();
+    _headingHistory.clear();
+    _lastCompassHeadingDeg = null;
+    _smoothedHeadingDeg = null;
+    _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
   _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {

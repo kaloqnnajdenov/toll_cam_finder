@@ -1,15 +1,24 @@
 // services/camera_utils.dart
 import 'dart:convert';
-import 'package:csv/csv.dart';
 
+
+import 'package:csv/csv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
+import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
+    if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
+    as fs_impl;
+import 'package:toll_cam_finder/services/toll_segments_paths.dart';
 class CameraUtils {
-  CameraUtils({this.boundsPaddingDeg = 0.05});
+CameraUtils({this.boundsPaddingDeg = 0.05, TollSegmentsFileSystem? fileSystem})
+      : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
 
   final double boundsPaddingDeg;
+  final TollSegmentsFileSystem _fileSystem;
 
   List<LatLng> _allCameras = [];
   List<LatLng> _visibleCameras = [];
@@ -29,7 +38,7 @@ class CameraUtils {
     _error = null;
 
     try {
-      final data = await rootBundle.loadString(assetPath);
+      final data = await _loadCameraData(assetPath);
 
       final pts = assetPath.toLowerCase().endsWith('.csv')
           ? _parseCamerasFromCsv(data)
@@ -150,5 +159,20 @@ class CameraUtils {
         p.latitude <= b.north &&
         p.longitude >= b.west &&
         p.longitude <= b.east;
+  }
+
+  Future<String> _loadCameraData(String assetPath) async {
+    if (!kIsWeb && assetPath == kTollSegmentsAssetPath) {
+      try {
+        final localPath = await resolveTollSegmentsDataPath();
+        if (await _fileSystem.exists(localPath)) {
+          return await _fileSystem.readAsString(localPath);
+        }
+      } catch (error) {
+        debugPrint('CameraUtils: falling back to asset ($error).');
+      }
+    }
+
+    return rootBundle.loadString(assetPath);
   }
 }
