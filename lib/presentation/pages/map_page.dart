@@ -16,10 +16,8 @@ import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
-import '../../app/app_routes.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
-import '../../services/supabase_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
@@ -69,44 +67,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   double? _speedKmh;
   double? _compassHeading;
   String? _segmentProgressLabel;
-
-  void _openProfile(BuildContext context) {
-    final navigator = Navigator.of(context);
-    navigator.pop();
-
-    if (!SupabaseService.isConfigured) {
-      navigator.pushNamed(AppRoutes.authPrompt);
-      return;
-    }
-
-    final session = SupabaseService.clientOrNull?.auth.currentSession;
-    final route = session == null ? AppRoutes.authPrompt : AppRoutes.profile;
-
-    navigator.pushNamed(route);
-  }
-
-  Drawer _buildEndDrawer(BuildContext context) {
-    return Drawer(
-      child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const ListTile(
-              title: Text(
-                'Options',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('Profile'),
-              onTap: () => _openProfile(context),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -473,24 +433,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16, right: 16),
-                child: Builder(
-                  builder: (context) => Material(
-                    color: Colors.transparent,
-                    child: IconButton(
-                      icon: const Icon(Icons.menu),
-                      tooltip: 'Open options',
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
 
@@ -499,7 +441,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         onResetView: _onResetView,
         avgController: _avgCtrl,
       ),
-      endDrawer: _buildEndDrawer(context),
     );
   }
 }
