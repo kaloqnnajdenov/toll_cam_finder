@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker_map.dart';
 
 class CreateSegmentPage extends StatefulWidget {
   const CreateSegmentPage({super.key});
@@ -62,8 +63,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
-              const _InteractiveMapPlaceholder(),
-              const SizedBox(height: 32),
+              SegmentPickerMap(
+                startController: _startController,
+                endController: _endController,
+              ),              const SizedBox(height: 32),
               Center(
                 child: FilledButton(
                   onPressed: _onSavePressed,
@@ -164,54 +167,6 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     );
   }
 }
-
-class _InteractiveMapPlaceholder extends StatelessWidget {
-  const _InteractiveMapPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AspectRatio(
-      aspectRatio: 3 / 2,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.colorScheme.outline),
-          color: theme.colorScheme.surfaceVariant,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.map_outlined,
-                size: 48,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Interactive map placeholder',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap to set the start and end points of the segment.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LabeledTextField extends StatelessWidget {
   const _LabeledTextField({
     required this.controller,
