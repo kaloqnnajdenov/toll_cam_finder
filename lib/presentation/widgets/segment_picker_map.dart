@@ -20,6 +20,9 @@ class SegmentPickerMap extends StatefulWidget {
 }
 
 class _SegmentPickerMapState extends State<SegmentPickerMap> {
+  static const double _minZoom = 3;
+  static const double _maxZoom = 19;
+  static const double _zoomStep = 1.0;
   late final MapController _mapController;
   final Distance _distance = const Distance();
   LatLng? _start;
@@ -50,35 +53,28 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     final theme = Theme.of(context);
 
     if (_start != null) {
-  markers.add(
-    Marker(
-      point: _start!,
-      width: 60,
-      height: 60,
-      alignment: Alignment.topCenter,
-      child: _SegmentMarker(
-        label: 'A',
-        color: theme.colorScheme.primary,
-      ),
-    ),
-  );
-}
-
+      markers.add(
+        Marker(
+          point: _start!,
+          width: 60,
+          height: 60,
+          alignment: Alignment.topCenter,
+          child: _SegmentMarker(label: 'A', color: theme.colorScheme.primary),
+        ),
+      );
+    }
 
     if (_end != null) {
       markers.add(
-       Marker(
-      point: _start!,
-      width: 60,
-      height: 60,
-      alignment: Alignment.topCenter,
-      child: _SegmentMarker(
-        label: 'B',
-        color: theme.colorScheme.primary,
-      ),
-    ),
-  );
-}
+        Marker(
+          point: _end!,
+          width: 60,
+          height: 60,
+          alignment: Alignment.topCenter,
+          child: _SegmentMarker(label: 'B', color: theme.colorScheme.primary),
+        ),
+      );
+    }
 
     return AspectRatio(
       aspectRatio: 3 / 2,
@@ -91,8 +87,8 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
               options: MapOptions(
                 initialCenter: _initialCenter,
                 initialZoom: AppConstants.initialZoom,
-                minZoom: 3,
-                maxZoom: 19,
+                minZoom: _minZoom,
+                maxZoom: _maxZoom,
                 onTap: _handleMapTap,
                 onMapReady: _handleMapReady,
               ),
@@ -108,10 +104,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
                       ),
                     ],
                   ),
-                if (markers.isNotEmpty)
-                  MarkerLayer(
-                    markers: markers,
-                  ),
+                if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],
             ),
             Positioned(
@@ -121,6 +114,24 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
               child: _MapHintCard(
                 hasStart: _start != null,
                 hasEnd: _end != null,
+              ),
+            ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ZoomButton(
+                    icon: Icons.add,
+                    onPressed: () => _zoomBy(_zoomStep),
+                  ),
+                  const SizedBox(height: 12),
+                  _ZoomButton(
+                    icon: Icons.remove,
+                    onPressed: () => _zoomBy(-_zoomStep),
+                  ),
+                ],
               ),
             ),
           ],
@@ -196,6 +207,11 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     _writeToController(widget.endController, latLng);
   }
 
+ void _zoomBy(double delta) {
+    final camera = _mapController.camera;
+    final targetZoom = (camera.zoom + delta).clamp(_minZoom, _maxZoom);
+    _mapController.move(camera.center, targetZoom);
+  }
   void _writeToController(TextEditingController controller, LatLng latLng) {
     _updatingControllers = true;
     controller.text = _formatLatLng(latLng);
@@ -214,10 +230,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
 
     final bounds = LatLngBounds.fromPoints(points);
     _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(48),
-      ),
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(48)),
     );
   }
 
@@ -237,10 +250,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
 }
 
 class _SegmentMarker extends StatelessWidget {
-  const _SegmentMarker({
-    required this.label,
-    required this.color,
-  });
+  const _SegmentMarker({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -265,28 +275,44 @@ class _SegmentMarker extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Container(
-          width: 2,
-          height: 12,
-          color: Colors.white,
-        ),
+        Container(width: 2, height: 12, color: Colors.white),
       ],
     );
   }
 }
 
-class _MapHintCard extends StatelessWidget {
-  const _MapHintCard({
-    required this.hasStart,
-    required this.hasEnd,
+class _ZoomButton extends StatelessWidget {
+  const _ZoomButton({
+    required this.icon,
+    required this.onPressed,
   });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface.withOpacity(0.9),
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: IconButton(
+        icon: Icon(icon, color: theme.colorScheme.onSurface),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+class _MapHintCard extends StatelessWidget {
+  const _MapHintCard({required this.hasStart, required this.hasEnd});
 
   final bool hasStart;
   final bool hasEnd;
