@@ -28,13 +28,15 @@ class SegmentTracker {
     http.Client? httpClient,
     this.candidateRadiusMeters = AppConstants.candidateRadiusMeters,
     this.onPathToleranceMeters = AppConstants.segmentOnPathToleranceMeters,
-    this.startGeofenceRadiusMeters = AppConstants.segmentStartGeofenceRadiusMeters,
+    this.startGeofenceRadiusMeters =
+        AppConstants.segmentStartGeofenceRadiusMeters,
     this.endGeofenceRadiusMeters = AppConstants.segmentEndGeofenceRadiusMeters,
-    this.directionToleranceDegrees = AppConstants.segmentDirectionToleranceDegrees,
+    this.directionToleranceDegrees =
+        AppConstants.segmentDirectionToleranceDegrees,
     this.directionMinSpeedKmh = AppConstants.segmentDirectionMinSpeedKmh,
-  })  : _index = indexService,
-        _httpClient = httpClient ?? http.Client(),
-        _ownsHttpClient = httpClient == null;
+  }) : _index = indexService,
+       _httpClient = httpClient ?? http.Client(),
+       _ownsHttpClient = httpClient == null;
 
   static const int _strictMissThreshold = 3;
   static const int _looseMissThreshold = 6;
@@ -53,7 +55,8 @@ class SegmentTracker {
   final double directionMinSpeedKmh;
 
   bool _isReady = false;
-  SegmentTrackerDebugData _latestDebugData = const SegmentTrackerDebugData.empty();
+  SegmentTrackerDebugData _latestDebugData =
+      const SegmentTrackerDebugData.empty();
   _ActiveSegmentState? _active;
 
   final Map<String, List<GeoPoint>> _pathOverrides = <String, List<GeoPoint>>{};
@@ -68,7 +71,7 @@ class SegmentTracker {
   String? get activeSegmentId => _active?.geometry.id;
 
   Future<bool> initialise({required String assetPath}) async {
-        _resetTrackingState();
+    _resetTrackingState();
     if (!_index.isReady) {
       await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     }
@@ -79,7 +82,7 @@ class SegmentTracker {
     return _isReady;
   }
 
-Future<bool> reload({required String assetPath}) async {
+  Future<bool> reload({required String assetPath}) async {
     _resetTrackingState();
     await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     _isReady = _index.isReady;
@@ -88,6 +91,7 @@ Future<bool> reload({required String assetPath}) async {
     }
     return _isReady;
   }
+
   SegmentTrackerEvent handleLocationUpdate({
     required LatLng current,
     LatLng? previous,
@@ -124,8 +128,11 @@ Future<bool> reload({required String assetPath}) async {
       final nearest = _nearestPointOnPath(userPoint, path);
       final double startDist = _distanceBetween(userPoint, path.first);
       final double endDist = _distanceBetween(userPoint, path.last);
-      final double remainingDist =
-          _distanceToPathEnd(path, nearest.segmentIndex, nearest.segmentFraction);
+      final double remainingDist = _distanceToPathEnd(
+        path,
+        nearest.segmentIndex,
+        nearest.segmentFraction,
+      );
       final bool detailed = _isPathDetailed(geom, path);
 
       double? headingDiff;
@@ -174,7 +181,7 @@ Future<bool> reload({required String assetPath}) async {
     }
   }
 
-   void _resetTrackingState() {
+  void _resetTrackingState() {
     if (_active != null) {
       _clearActiveSegment(reason: 'reset');
     }
@@ -223,11 +230,14 @@ Future<bool> reload({required String assetPath}) async {
       return const _SegmentTransition(ended: true);
     }
 
-    final double looseExitDistance = onPathToleranceMeters * _looseExitMultiplier;
+    final double looseExitDistance =
+        onPathToleranceMeters * _looseExitMultiplier;
     final bool distanceOk = active.forceKeepUntilEnd
         ? current.distanceMeters <= looseExitDistance
         : current.withinTolerance;
-    final bool directionOk = active.enforceDirection ? current.passesDirection : true;
+    final bool directionOk = active.enforceDirection
+        ? current.passesDirection
+        : true;
 
     if (distanceOk && directionOk) {
       active.consecutiveMisses = 0;
@@ -235,7 +245,9 @@ Future<bool> reload({required String assetPath}) async {
     }
 
     active.consecutiveMisses++;
-    final int threshold = active.forceKeepUntilEnd ? _looseMissThreshold : _strictMissThreshold;
+    final int threshold = active.forceKeepUntilEnd
+        ? _looseMissThreshold
+        : _strictMissThreshold;
     if (active.consecutiveMisses >= threshold) {
       _clearActiveSegment(reason: 'lost track');
       return const _SegmentTransition(ended: true);
@@ -247,21 +259,13 @@ Future<bool> reload({required String assetPath}) async {
   SegmentMatch? _chooseEntryMatch(List<SegmentMatch> matches) {
     if (matches.isEmpty) return null;
 
-    final startCandidates = matches
-        .where((m) => m.startHit && _entryDirectionAllowed(m))
-        .toList()
-      ..sort((a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters));
+    final startCandidates =
+        matches.where((m) => m.startHit && _entryDirectionAllowed(m)).toList()
+          ..sort(
+            (a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters),
+          );
 
-    if (startCandidates.isNotEmpty) {
-      return startCandidates.first;
-    }
-
-    final onPath = matches
-        .where((m) => m.withinTolerance && _entryDirectionAllowed(m))
-        .toList()
-      ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
-
-    return onPath.isNotEmpty ? onPath.first : null;
+    return startCandidates.isNotEmpty ? startCandidates.first : null;
   }
 
   bool _entryDirectionAllowed(SegmentMatch match) {
@@ -279,8 +283,7 @@ Future<bool> reload({required String assetPath}) async {
       forceKeepUntilEnd: !entry.isDetailed,
       enforceDirection: entry.isDetailed,
       enteredAt: DateTime.now(),
-    )
-      ..lastMatch = entry;
+    )..lastMatch = entry;
 
     _active = active;
 
@@ -295,8 +298,10 @@ Future<bool> reload({required String assetPath}) async {
     }
 
     if (kDebugMode) {
-      debugPrint('[SEG] entered segment ${entry.geometry.id} '
-          '(detailed=${entry.isDetailed}, fetchFailed=$fetchFailed)');
+      debugPrint(
+        '[SEG] entered segment ${entry.geometry.id} '
+        '(detailed=${entry.isDetailed}, fetchFailed=$fetchFailed)',
+      );
     }
   }
 
