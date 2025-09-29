@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
+import '../../app/app_routes.dart';
+
 class SegmentsPage extends StatefulWidget {
   const SegmentsPage({super.key});
 
@@ -22,9 +24,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Segments'),
-      ),
+      appBar: AppBar(title: const Text('Segments')),
       body: FutureBuilder<List<SegmentInfo>>(
         future: _segmentsFuture,
         builder: (context, snapshot) {
@@ -58,7 +58,16 @@ class _SegmentsPageState extends State<SegmentsPage> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _onCreateSegmentPressed,
+        icon: const Icon(Icons.add),
+        label: const Text('Create segment'),
+      ),
     );
+  }
+
+  void _onCreateSegmentPressed() {
+    Navigator.of(context).pushNamed(AppRoutes.createSegment);
   }
 }
 
@@ -76,31 +85,19 @@ class _SegmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Segment ${segment.id}',
-              style: theme.textTheme.labelMedium,
-            ),
+            Text('Segment ${segment.id}', style: theme.textTheme.labelMedium),
             const SizedBox(height: 4),
-            Text(
-              segment.name,
-              style: theme.textTheme.titleMedium,
-            ),
+            Text(segment.name, style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _SegmentLocation(
-                    label: 'Start',
-                    value: segment.start,
-                  ),
+                  child: _SegmentLocation(label: 'Start', value: segment.start),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _SegmentLocation(
-                    label: 'End',
-                    value: segment.end,
-                  ),
+                  child: _SegmentLocation(label: 'End', value: segment.end),
                 ),
               ],
             ),
@@ -123,15 +120,9 @@ class _SegmentLocation extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall,
-        ),
+        Text(label, style: theme.textTheme.labelSmall),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium,
-        ),
+        Text(value, style: theme.textTheme.bodyMedium),
       ],
     );
   }
@@ -142,9 +133,7 @@ class _EmptySegmentsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('No segments available.'),
-    );
+    return const Center(child: Text('No segments available.'));
   }
 }
 
@@ -161,10 +150,7 @@ class _ErrorView extends StatelessWidget {
         children: [
           const Text('Failed to load segments.'),
           const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+          ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );

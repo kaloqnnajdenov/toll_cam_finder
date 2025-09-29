@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../presentation/pages/auth/login_page.dart';
 import '../presentation/pages/auth/profile_page.dart';
 import '../presentation/pages/auth/sign_up_page.dart';
+import '../presentation/pages/create_segment_page.dart';
 import '../presentation/pages/map_page.dart';
 import '../presentation/pages/segments_page.dart';
 
@@ -11,6 +12,7 @@ class AppRoutes {
   static const String signUp = '/sign-up';
   static const String profile = '/profile';
   static const String segments = '/segments';
+  static const String createSegment = '/segments/create';
 
   static Map<String, WidgetBuilder> get routes => {
     map: (_) => const MapPage(),
@@ -18,5 +20,6 @@ class AppRoutes {
     signUp: (_) => const SignUpPage(),
     profile: (_) => const ProfilePage(),
     segments: (_) => const SegmentsPage(),
+    createSegment: (_) => const CreateSegmentPage(),
   };
 }
