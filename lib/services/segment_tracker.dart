@@ -12,6 +12,7 @@ import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
+import 'package:toll_cam_finder/services/osrm_path_fetcher.dart';
 
 part 'segment_tracker/segment_tracker_models.dart';
 part 'segment_tracker/segment_match.dart';

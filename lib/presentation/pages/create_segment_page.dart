@@ -66,7 +66,8 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
               SegmentPickerMap(
                 startController: _startController,
                 endController: _endController,
-              ),              const SizedBox(height: 32),
+              ),
+              const SizedBox(height: 32),
               Center(
                 child: FilledButton(
                   onPressed: _onSavePressed,
