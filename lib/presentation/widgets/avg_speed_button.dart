@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
 /// Mini FAB that toggles Start/Reset for average speed.
@@ -18,7 +19,9 @@ class AverageSpeedButton extends StatelessWidget {
           onPressed: () => running ? controller.reset() : controller.start(),
           tooltip: running ? 'Reset Avg' : 'Start Avg',
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
+            duration: const Duration(
+              milliseconds: AppConstants.avgSpeedButtonAnimationMs,
+            ),
             transitionBuilder: (child, anim) =>
                 ScaleTransition(scale: anim, child: child),
             child: Icon(

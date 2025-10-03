@@ -1,6 +1,8 @@
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 
+import 'package:toll_cam_finder/core/constants.dart';
+
 /// - Internal lat/lng smoothing (1-D Kalman per coord; moved here from LocationService)
 /// - 2-state KF on [velocity, acceleration]
 /// - dt-scaled process noise (white-jerk model) + covariance fading + floors
@@ -13,11 +15,15 @@ class SpeedEstimator {
   final _LocationFilter _lngFilter = _LocationFilter();
 
   final _KF _kf = _KF(
-    sigmaJerk: 3.0, // m/s^3 process noise (higher => more responsive)
-    fading: 1.15, // >1 inflates P each predict (forgetting); 1.1–1.3 works well
-    pFloorV: 0.10, // min var for speed state (m/s)^2
-    pFloorA: 0.25, // min var for accel state (m/s^2)^2
-    maxSpeed: 80.0, // cap estimate (m/s) ~288 km/h
+    sigmaJerk:
+        AppConstants.speedEstimatorSigmaJerk, // m/s^3 process noise (higher => more responsive)
+    fading:
+        AppConstants.speedEstimatorFadingFactor, // >1 inflates P each predict (forgetting); 1.1–1.3 works well
+    pFloorV:
+        AppConstants.speedEstimatorVelocityVarianceFloor, // min var for speed state (m/s)^2
+    pFloorA:
+        AppConstants.speedEstimatorAccelerationVarianceFloor, // min var for accel state (m/s^2)^2
+    maxSpeed: AppConstants.speedEstimatorMaxSpeed, // cap estimate (m/s) ~288 km/h
   );
 
   // Store previous SMOOTHED coordinate + accuracy for derived-speed & stationary logic
@@ -28,23 +34,25 @@ class SpeedEstimator {
   int _stationaryCount = 0;
 
   // Tunables (as before)
-  final double horizAccBad = 30.0; // m: ignore derived speed if poor
-  final double minDt = 0.12; // s: minimum dt to trust derived speed
-  final double maxDt = 2.5; // s: clamp dt to avoid huge jumps
-  final double stationaryDisp = 1.0; // m
-  final int stationaryDebounceCount = 3; // frames
-  final double smallSpeed = 0.3; // m/s: tiny motion threshold
-  final double stationaryExitInflate = 4.0; // inflate P when leaving stationary
+  final double horizAccBad = AppConstants.speedEstimatorHorizAccBadMeters; // m: ignore derived speed if poor
+  final double minDt = AppConstants.speedEstimatorMinDtSeconds; // s: minimum dt to trust derived speed
+  final double maxDt = AppConstants.speedEstimatorMaxDtSeconds; // s: clamp dt to avoid huge jumps
+  final double stationaryDisp = AppConstants.speedEstimatorStationaryDispMeters; // m
+  final int stationaryDebounceCount = AppConstants.speedEstimatorStationaryDebounceCount; // frames
+  final double smallSpeed = AppConstants.speedEstimatorSmallSpeedMps; // m/s: tiny motion threshold
+  final double stationaryExitInflate = AppConstants.speedEstimatorStationaryExitInflate; // inflate P when leaving stationary
 
   // Treat tiny/0 Doppler accuracy as "clamp up", not "unknown"
-  final double devAccClampFloor = 0.15; // m/s: min Doppler σ we accept
+  final double devAccClampFloor =
+      AppConstants.speedEstimatorDevAccClampFloor; // m/s: min Doppler σ we accept
 
   // Extra noise added to derived-speed variance to cover curvature/nonlinearity
-  final double drvExtraNoise = 0.20; // m/s (added in quadrature)
+  final double drvExtraNoise =
+      AppConstants.speedEstimatorDrvExtraNoise; // m/s (added in quadrature)
 
   // --- zero-lock (hysteresis) ---
   bool _zeroLocked = false;
-  final double zeroExit = 0.90; // m/s (~3.2 km/h) to LEAVE zero-lock
+  final double zeroExit = AppConstants.speedEstimatorZeroExitSpeedMps; // m/s (~3.2 km/h) to LEAVE zero-lock
 
   /// Fuse a raw geolocator Position. Returns a Position whose lat/lng are the
   /// internally smoothed coordinates and whose speed is the robust KF estimate.
@@ -60,7 +68,8 @@ class SpeedEstimator {
     final lngSm = _lngFilter.filter(raw.longitude);
 
     // Prepare an accuracy figure for derived-speed/stationary (use raw.accuracy if finite)
-    final accNow = _finiteOr(raw.accuracy, 999.0);
+    final accNow =
+        _finiteOr(raw.accuracy, AppConstants.speedEstimatorAccuracyFallbackMeters);
 
     // --- Measurements -------------------------------------------------------
 
@@ -89,7 +98,8 @@ class SpeedEstimator {
         lngSm,
       );
 
-      final acc1 = _finiteOr(_lastAcc, 999.0);
+      final acc1 =
+          _finiteOr(_lastAcc, AppConstants.speedEstimatorAccuracyFallbackMeters);
       final acc2 = accNow;
       final accOk = (acc1 <= horizAccBad && acc2 <= horizAccBad);
 
@@ -102,8 +112,12 @@ class SpeedEstimator {
         drvSpeed = v;
         drvR = _boundedVar(sigma * sigma);
         // If dt is very small, derived becomes unstable; inflate R
-        if (dtRaw < 0.25) {
-          final scale = (0.25 / dtRaw).clamp(1.0, 4.0);
+        if (dtRaw < AppConstants.speedEstimatorShortDtSeconds) {
+          final scale = (AppConstants.speedEstimatorShortDtSeconds / dtRaw)
+              .clamp(
+            AppConstants.speedEstimatorShortDtInflateMin,
+            AppConstants.speedEstimatorShortDtInflateMax,
+          );
           drvR = _boundedVar(drvR * scale);
         }
       }
@@ -123,7 +137,8 @@ class SpeedEstimator {
         lngSm,
       );
 
-      final acc1 = _finiteOr(_lastAcc, 999.0);
+      final acc1 =
+          _finiteOr(_lastAcc, AppConstants.speedEstimatorAccuracyFallbackMeters);
       final acc2 = accNow;
 
       final dTiny = dispMeters <= math.max(stationaryDisp, 0.5 * (acc1 + acc2));
@@ -136,9 +151,10 @@ class SpeedEstimator {
           // Softly pull to zero, but keep enough uncertainty to leave quickly
           stationarySoftUpdate = true;
           zStationary = 0.0;
-          rStationary = 0.12 * 0.12; // stronger pull (σ=0.12 m/s)
+          rStationary =
+              AppConstants.speedEstimatorStationaryVariance; // stronger pull (σ=0.12 m/s)
           // Keep some "readiness" to move: gentle inflate every stationary tick
-          _kf.inflate(1.3);
+          _kf.inflate(AppConstants.speedEstimatorStationaryInflateFactor);
           _zeroLocked = true; // engage zero-lock
         }
       } else {
@@ -158,7 +174,9 @@ class SpeedEstimator {
     // Initialize sensibly on first call
     if (!_kf.initialized) {
       final z0 = devSpeed ?? drvSpeed ?? 0.0;
-      final r0 = (devR ?? drvR ?? 25.0); // very loose if unknown
+      final r0 = (devR ?? drvR ??
+          AppConstants
+              .speedEstimatorInitialMeasurementVariance); // very loose if unknown
       _kf.init(z0.clamp(0.0, _kf.maxSpeed), r0);
     }
 
@@ -226,8 +244,8 @@ class SpeedEstimator {
 
   static double _boundedVar(
     double v, {
-    double minVar = 0.25 * 0.25,
-    double maxVar = 400.0,
+    double minVar = AppConstants.speedEstimatorMinVariance,
+    double maxVar = AppConstants.speedEstimatorMaxVariance,
   }) {
     if (!v.isFinite) return minVar;
     return v.clamp(minVar, maxVar);
@@ -236,11 +254,11 @@ class SpeedEstimator {
 
 /// 1-D scalar Kalman filter for coordinates (moved from LocationService)
 class _LocationFilter {
-  double _errorEstimate = 1.0;
-  double _lastEstimate = 0.0;
-  double _kalmanGain = 0.0;
-  final double _errorMeasure = 0.1;
-  final double _errorProcess = 0.01;
+  double _errorEstimate = AppConstants.locationFilterInitialErrorEstimate;
+  double _lastEstimate = AppConstants.locationFilterInitialEstimate;
+  double _kalmanGain = AppConstants.locationFilterInitialKalmanGain;
+  final double _errorMeasure = AppConstants.locationFilterMeasurementError;
+  final double _errorProcess = AppConstants.locationFilterProcessError;
   bool _initialized = false;
 
   double filter(double currentMeasurement) {
@@ -265,9 +283,9 @@ class _LocationFilter {
   }
 
   void reset() {
-    _errorEstimate = 1.0;
-    _lastEstimate = 0.0;
-    _kalmanGain = 0.0;
+    _errorEstimate = AppConstants.locationFilterInitialErrorEstimate;
+    _lastEstimate = AppConstants.locationFilterInitialEstimate;
+    _kalmanGain = AppConstants.locationFilterInitialKalmanGain;
     _initialized = false;
   }
 }
@@ -298,14 +316,18 @@ class _KF {
   double a = 0.0;
 
   // Covariance P
-  double p00 = 10.0, p01 = 0.0, p10 = 0.0, p11 = 10.0;
+  double p00 = AppConstants.speedEstimatorInitialCovariance,
+      p01 = 0.0,
+      p10 = 0.0,
+      p11 = AppConstants.speedEstimatorInitialCovariance;
 
   void init(double v0, double r0) {
     v = v0.clamp(0.0, maxSpeed);
     a = 0.0;
     // Seed P from measurement variance; allow acceleration to be quite uncertain
     p00 = math.max(r0, pFloorV);
-    p11 = math.max(4.0, pFloorA); // start with loose accel variance
+    p11 = math.max(AppConstants.speedEstimatorInitialAccelerationVariance,
+        pFloorA); // start with loose accel variance
     p01 = 0.0;
     p10 = 0.0;
     initialized = true;
@@ -346,13 +368,15 @@ class _KF {
   void updateRobust(
     double z,
     double r, {
-    double gateSoft = 3.0,
-    double gateHard = 8.0,
+    double gateSoft = AppConstants.speedEstimatorGateSoftSigma,
+    double gateHard = AppConstants.speedEstimatorGateHardSigma,
   }) {
     if (!initialized) return;
 
     final s = p00 + r; // innovation variance (scalar)
-    final sigma = math.sqrt(math.max(s, 1e-12));
+    final sigma = math.sqrt(
+      math.max(s, AppConstants.speedEstimatorInnovationVarianceFloor),
+    );
     final y = z - v; // innovation
 
     final ay = y.abs();
@@ -362,10 +386,12 @@ class _KF {
         return;
       }
       // Soft accept: encourage responsiveness (more aggressively for drops).
-      inflate(y >= 0 ? 2.5 : 1.8);
+      inflate(y >= 0
+          ? AppConstants.speedEstimatorPositiveSurpriseInflate
+          : AppConstants.speedEstimatorNegativeSurpriseInflate);
     } else if (ay > gateSoft * sigma) {
       // Soft accept: inflate P so the gain is higher for this surprise
-      inflate(2.5);
+      inflate(AppConstants.speedEstimatorPositiveSurpriseInflate);
     }
 
     // K = P H^T / S, with H = [1, 0]
@@ -405,7 +431,9 @@ class _KF {
   /// Multiply covariance by a factor (>=1).
   void inflate(double factor) {
     if (!initialized) return;
-    final f = factor.isFinite && factor >= 1.0 ? factor : 1.0;
+    final f = factor.isFinite && factor >= AppConstants.speedEstimatorInflateFloor
+        ? factor
+        : AppConstants.speedEstimatorInflateFloor;
     p00 *= f;
     p01 *= f;
     p10 *= f;

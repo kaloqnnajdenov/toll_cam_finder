@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
@@ -8,9 +9,9 @@ class AverageSpeedDial extends StatelessWidget {
     super.key,
     required this.controller,
     this.title = 'Avg Speed',
-    this.decimals = 1,
+    this.decimals = AppConstants.speedDialDefaultDecimals,
     this.unit = 'km/h',
-    this.width = 160,
+    this.width = AppConstants.speedDialDefaultWidth,
     this.isActive = true,
   });
 
@@ -37,10 +38,11 @@ class AverageSpeedDial extends StatelessWidget {
           child: Card(
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius:
+                  BorderRadius.circular(AppConstants.speedDialCardRadius),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(AppConstants.speedDialCardPadding),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -58,7 +60,7 @@ class AverageSpeedDial extends StatelessWidget {
                       const Icon(Icons.auto_awesome_motion, size: 16),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppConstants.speedDialHeaderGap),
                   if (isActive) ...[
                     // Big numeric + unit
                     FittedBox(
@@ -71,15 +73,17 @@ class AverageSpeedDial extends StatelessWidget {
                             decimals: decimals,
                             style: textTheme.displaySmall,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: AppConstants.speedDialValueUnitSpacing),
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.only(
+                              bottom: AppConstants.speedDialUnitBaselinePadding,
+                            ),
                             child: Text(unit, style: textTheme.titleSmall),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppConstants.speedDialValueUnitSpacing),
                   ] else ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -91,7 +95,7 @@ class AverageSpeedDial extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppConstants.speedDialValueUnitSpacing),
                   ],
                 ],
               ),

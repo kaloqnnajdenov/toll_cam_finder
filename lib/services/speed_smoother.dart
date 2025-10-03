@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
+import 'package:toll_cam_finder/core/constants.dart';
+
 /// Smooths instantaneous speed readings for a steadier UI while keeping
 /// stop/slowdown response snappy.
 class SpeedSmoother {
   SpeedSmoother({
-    this.riseTimeSeconds = 1.2,
-    this.fallTimeSeconds = 0.45,
-    this.stopSnapKmh = 1.0,
+    this.riseTimeSeconds = AppConstants.speedSmootherRiseTimeSeconds,
+    this.fallTimeSeconds = AppConstants.speedSmootherFallTimeSeconds,
+    this.stopSnapKmh = AppConstants.speedSmootherStopSnapKmh,
   }) : assert(riseTimeSeconds >= 0),
         assert(fallTimeSeconds >= 0),
         assert(stopSnapKmh >= 0);
