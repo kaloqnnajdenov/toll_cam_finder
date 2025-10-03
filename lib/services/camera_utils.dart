@@ -8,14 +8,18 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
 import 'package:toll_cam_finder/services/toll_segments_paths.dart';
+
 class CameraUtils {
-CameraUtils({this.boundsPaddingDeg = 0.05, TollSegmentsFileSystem? fileSystem})
-      : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
+  CameraUtils({
+    this.boundsPaddingDeg = AppConstants.cameraUtilsBoundsPaddingDeg,
+    TollSegmentsFileSystem? fileSystem,
+  }) : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
 
   final double boundsPaddingDeg;
   final TollSegmentsFileSystem _fileSystem;

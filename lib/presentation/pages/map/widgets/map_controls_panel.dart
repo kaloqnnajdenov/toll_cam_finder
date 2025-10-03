@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
@@ -33,7 +34,7 @@ class MapControlsPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CurrentSpeedDial(speedKmh: speedKmh, unit: 'km/h'),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppConstants.speedDialStackSpacing),
         AverageSpeedDial(
           controller: avgController,
           unit: 'km/h',
@@ -42,10 +43,14 @@ class MapControlsPanel extends StatelessWidget {
         if (segmentProgressLabel != null)
           Container(
             margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.speedDialBannerHorizontalPadding,
+              vertical: AppConstants.speedDialBannerVerticalPadding,
+            ),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius:
+                  BorderRadius.circular(AppConstants.speedDialBannerRadius),
             ),
             child: Text(
               segmentProgressLabel!,
@@ -59,10 +64,14 @@ class MapControlsPanel extends StatelessWidget {
         if (lastSegmentAvgKmh != null)
           Container(
             margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.speedDialBannerHorizontalPadding,
+              vertical: AppConstants.speedDialBannerVerticalPadding,
+            ),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius:
+                  BorderRadius.circular(AppConstants.speedDialBannerRadius),
             ),
             child: Text(
               'avg speed for the last segment: '
@@ -77,10 +86,14 @@ class MapControlsPanel extends StatelessWidget {
         if (showDebugBadge && kDebugMode)
           Container(
             margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.speedDialDebugBadgeHorizontalPadding,
+              vertical: AppConstants.speedDialDebugBadgeVerticalPadding,
+            ),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius:
+                  BorderRadius.circular(AppConstants.speedDialDebugBadgeRadius),
             ),
             child: Text(
               'Segments: $segmentCount  r=${segmentRadiusMeters.toInt()}m',

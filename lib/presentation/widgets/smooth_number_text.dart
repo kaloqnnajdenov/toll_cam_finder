@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/constants.dart';
 
 /// Text widget that animates numeric changes smoothly without the flicker of
 /// swapping entire Text widgets via [AnimatedSwitcher].
@@ -9,7 +10,9 @@ class SmoothNumberText extends StatefulWidget {
     required this.decimals,
     this.placeholder = '—',
     this.style,
-    this.duration = const Duration(milliseconds: 240),
+    this.duration = const Duration(
+      milliseconds: AppConstants.smoothNumberTextAnimationMs,
+    ),
     this.curve = Curves.easeOutCubic,
   });
 

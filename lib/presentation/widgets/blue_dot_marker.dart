@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:toll_cam_finder/core/constants.dart';
 
 /// Draws a subtle blue accuracy dot at [point].
 /// Defaults match previous visuals; added params for future flexibility.
@@ -13,9 +14,9 @@ class BlueDotMarker extends StatelessWidget {
   const BlueDotMarker({
     super.key,
     required this.point,
-    this.size = 40,
-    this.innerSize = 12,
-    this.outerOpacity = 0.25,
+    this.size = AppConstants.blueDotMarkerSize,
+    this.innerSize = AppConstants.blueDotMarkerInnerSize,
+    this.outerOpacity = AppConstants.blueDotMarkerOuterOpacity,
   });
 
   @override

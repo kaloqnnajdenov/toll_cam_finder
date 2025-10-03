@@ -9,10 +9,11 @@ import 'package:url_launcher/url_launcher.dart';
 class BaseTileLayer extends StatelessWidget {
   const BaseTileLayer({
     super.key,
-    this.attributionLeft = 6,
-    this.attributionBottom = 6,
+    this.attributionLeft = AppConstants.mapAttributionLeftInset,
+    this.attributionBottom = AppConstants.mapAttributionBottomInset,
     this.respectSafeArea = true,
-    this.overlapBottomPx = 10, // positive moves it LOWER (toward/into inset)
+    this.overlapBottomPx =
+        AppConstants.mapAttributionOverlap, // positive moves it LOWER (toward/into inset)
   });
 
   /// Distance from the left screen edge.
@@ -85,9 +86,9 @@ class _OsmAttributionText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseStyle = TextStyle(
-      fontSize: 11,
-      color: Colors.black.withOpacity(0.75),
-      height: 1.1,
+      fontSize: AppConstants.mapAttributionFontSize,
+      color: Colors.black.withOpacity(AppConstants.mapAttributionBaseOpacity),
+      height: AppConstants.mapAttributionLineHeight,
     );
     final linkStyle = baseStyle.copyWith(
       color: Theme.of(context).colorScheme.primary,
