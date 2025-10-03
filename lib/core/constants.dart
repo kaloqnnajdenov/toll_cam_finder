@@ -1,6 +1,71 @@
 import 'package:latlong2/latlong.dart';
 
 class AppConstants {
+  /// Minimum zoom allowed on the segment picker map; prevents zooming so far
+  /// out that the draggable markers become impractically small.
+  static const double segmentPickerMinZoom = 3.0;
+
+  /// Maximum zoom allowed on the segment picker map; avoids extreme zoom-in
+  /// levels where tiles may no longer be available.
+  static const double segmentPickerMaxZoom = 19.0;
+
+  /// Amount the map zoom changes when the user presses the zoom controls.
+  static const double segmentPickerZoomStep = 1.0;
+
+  /// Width of the polyline that previews the OSRM route between A and B.
+  static const double segmentPickerPolylineWidth = 4.0;
+
+  /// Diameter of the Flutter Map marker widget that hosts the draggable
+  /// endpoint controls.
+  static const double segmentPickerMarkerOuterDiameter = 44.0;
+
+  /// Diameter of the circular marker decoration that renders the A/B label.
+  static const double segmentPickerMarkerInnerDiameter = 36.0;
+
+  /// Blur radius applied to the endpoint marker's drop shadow.
+  static const double segmentPickerMarkerShadowBlurRadius = 6.0;
+
+  /// Vertical offset (in logical pixels) of the endpoint marker's shadow.
+  static const double segmentPickerMarkerShadowOffsetY = 4.0;
+
+  /// Border radius used by the inline map preview container.
+  static const double segmentPickerClipRadius = 16.0;
+
+  /// Aspect ratio for the inline map preview, matching the original design.
+  static const double segmentPickerInlineAspectRatio = 3 / 2;
+
+  /// Gap between stacked zoom buttons in the bottom-right corner.
+  static const double segmentPickerZoomButtonSpacing = 12.0;
+
+  /// Standard inset applied to floating controls positioned on the map.
+  static const double segmentPickerOverlayInset = 16.0;
+
+  /// Inset applied to the hint card's right edge, leaving room for the
+  /// fullscreen toggle.
+  static const double segmentPickerHintRightInset = 72.0;
+
+  /// Additional space reserved around the bounds when fitting the camera.
+  static const double segmentPickerCameraPadding = 48.0;
+
+  /// Opacity applied to floating surfaces rendered over the map.
+  static const double segmentPickerSurfaceOpacity = 0.9;
+
+  /// Elevation used by circular action buttons layered on top of the map.
+  static const double segmentPickerControlElevation = 2.0;
+
+  /// Horizontal padding inside the hint card displayed at the top of the map.
+  static const double segmentPickerHintHorizontalPadding = 16.0;
+
+  /// Vertical padding inside the hint card displayed at the top of the map.
+  static const double segmentPickerHintVerticalPadding = 12.0;
+
+  /// Corner radius applied to the hint card to match the rest of the UI.
+  static const double segmentPickerHintCornerRadius = 12.0;
+
+  /// Distance (in meters) under which two coordinates are considered equal for
+  /// route refresh comparisons.
+  static const double segmentPickerEqualityThresholdMeters = 0.5;
+
   /// Geographic center used before a GPS fix is available; shifting it moves the
   /// initial map focus to another country or region.
   static const LatLng initialCenter = LatLng(42.7339, 25.4858);
