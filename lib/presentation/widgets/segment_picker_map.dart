@@ -29,6 +29,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
   static const double _maxZoom = 19;
   static const double _zoomStep = 1.0;
   late final MapController _mapController;
+  final GlobalKey _mapKey = GlobalKey();
   late final http.Client _httpClient;
   final Distance _distance = const Distance();
   LatLng? _start;
@@ -74,7 +75,17 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          child: _SegmentMarker(label: 'A', color: theme.colorScheme.primary),
+          child: _DraggableMapMarker(
+            mapKey: _mapKey,
+            mapController: _mapController,
+            onDragStart: (position) => _updateStart(position, refreshRoute: false),
+            onDragUpdate: (position) => _updateStart(position, refreshRoute: false),
+            onDragEnd: (position) => _updateStart(position),
+            child: _SegmentMarker(
+              label: 'A',
+              color: theme.colorScheme.primary,
+            ),
+          ),
         ),
       );
     }
@@ -86,7 +97,17 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          child: _SegmentMarker(label: 'B', color: theme.colorScheme.primary),
+          child: _DraggableMapMarker(
+            mapKey: _mapKey,
+            mapController: _mapController,
+            onDragStart: (position) => _updateEnd(position, refreshRoute: false),
+            onDragUpdate: (position) => _updateEnd(position, refreshRoute: false),
+            onDragEnd: (position) => _updateEnd(position),
+            child: _SegmentMarker(
+              label: 'B',
+              color: theme.colorScheme.primary,
+            ),
+          ),
         ),
       );
     }
@@ -97,6 +118,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     final map = Stack(
       children: [
         FlutterMap(
+          key: _mapKey,
           mapController: _mapController,
           options: MapOptions(
             initialCenter: _initialCenter,
@@ -232,20 +254,38 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     _fitCamera();
   }
 
-  void _updateStart(LatLng latLng) {
+  void _updateStart(
+    LatLng latLng, {
+    bool refreshRoute = true,
+  }) {
     setState(() {
       _start = latLng;
+      if (!refreshRoute) {
+        _routePoints =
+            _end != null ? <LatLng>[_start!, _end!] : null;
+      }
     });
     _writeToController(widget.startController, latLng);
-    _refreshRoute();
+    if (refreshRoute) {
+      _refreshRoute();
+    }
   }
 
-  void _updateEnd(LatLng latLng) {
+  void _updateEnd(
+    LatLng latLng, {
+    bool refreshRoute = true,
+  }) {
     setState(() {
       _end = latLng;
+      if (!refreshRoute) {
+        _routePoints =
+            _start != null ? <LatLng>[_start!, _end!] : null;
+      }
     });
     _writeToController(widget.endController, latLng);
-    _refreshRoute();
+    if (refreshRoute) {
+      _refreshRoute();
+    }
   }
 
   void _zoomBy(double delta) {
@@ -419,6 +459,84 @@ class _SegmentMarker extends StatelessWidget {
   }
 }
 
+class _DraggableMapMarker extends StatefulWidget {
+  const _DraggableMapMarker({
+    required this.child,
+    required this.mapKey,
+    required this.mapController,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+  });
+
+  final Widget child;
+  final GlobalKey mapKey;
+  final MapController mapController;
+  final ValueChanged<LatLng> onDragStart;
+  final ValueChanged<LatLng> onDragUpdate;
+  final ValueChanged<LatLng> onDragEnd;
+
+  @override
+  State<_DraggableMapMarker> createState() => _DraggableMapMarkerState();
+}
+
+class _DraggableMapMarkerState extends State<_DraggableMapMarker> {
+  bool _dragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPressStart: _handleLongPressStart,
+      onLongPressMoveUpdate: _handleLongPressMoveUpdate,
+      onLongPressEnd: _handleLongPressEnd,
+      child: widget.child,
+    );
+  }
+
+  void _handleLongPressStart(LongPressStartDetails details) {
+    final latLng = _positionToLatLng(details.globalPosition);
+    if (latLng == null) {
+      return;
+    }
+    widget.onDragStart(latLng);
+    setState(() {
+      _dragging = true;
+    });
+  }
+
+  void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
+    if (!_dragging) return;
+    final latLng = _positionToLatLng(details.globalPosition);
+    if (latLng == null) {
+      return;
+    }
+    widget.onDragUpdate(latLng);
+  }
+
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    if (!_dragging) return;
+    final latLng = _positionToLatLng(details.globalPosition);
+    if (latLng != null) {
+      widget.onDragEnd(latLng);
+    }
+    setState(() {
+      _dragging = false;
+    });
+  }
+
+  LatLng? _positionToLatLng(Offset globalPosition) {
+    final mapContext = widget.mapKey.currentContext;
+    if (mapContext == null) return null;
+    final renderObject = mapContext.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) {
+      return null;
+    }
+    final localOffset = renderObject.globalToLocal(globalPosition);
+    return widget.mapController.camera.screenOffsetToLatLng(localOffset);
+  }
+}
+
 class _ZoomButton extends StatelessWidget {
   const _ZoomButton({
     required this.icon,
@@ -510,7 +628,8 @@ class _MapHintCard extends StatelessWidget {
     } else if (hasStart && !hasEnd) {
       message = 'Tap a second location to place point B.';
     } else {
-      message = 'Tap near A or B to reposition that point.';
+      message =
+          'Touch and hold A or B for 0.5s, then drag to reposition that point.';
     }
 
     return DecoratedBox(
