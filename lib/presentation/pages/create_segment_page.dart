@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:toll_cam_finder/presentation/widgets/segment_picker_map.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
 
 class CreateSegmentPage extends StatefulWidget {
   const CreateSegmentPage({super.key});
