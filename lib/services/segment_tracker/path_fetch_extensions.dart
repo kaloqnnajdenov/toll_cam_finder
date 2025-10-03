@@ -68,72 +68,17 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
   /// Requests a detailed polyline between [start] and [end] from the public
   /// OSRM demo server. The result is decoded into a list of [GeoPoint]s when the
   /// request succeeds.
-  Future<List<GeoPoint>?> _fetchDetailedPath(GeoPoint start, GeoPoint end) async {
-    final uri = Uri.parse(
-      'https://router.project-osrm.org/route/v1/driving/'
-      '${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson',
-    );
-
-    try {
-      final response = await _httpClient.get(uri, headers: const {
-        'User-Agent': 'toll_cam_finder/segment-tracker',
-        'Accept': 'application/json',
-      });
-
-      if (response.statusCode != 200) {
+  Future<List<GeoPoint>?> _fetchDetailedPath(GeoPoint start, GeoPoint end) {
+    return fetchOsrmRoute(
+      client: _httpClient,
+      start: start,
+      end: end,
+      onDebug: (message) {
         if (kDebugMode) {
-          debugPrint('[SEG] enhanced path status ${response.statusCode} for '
-              '${uri.path}');
+          debugPrint('[SEG] enhanced path $message');
         }
-        return null;
-      }
-
-      final dynamic decoded = json.decode(response.body);
-      if (decoded is! Map<String, dynamic>) return null;
-
-      final routes = decoded['routes'];
-      if (routes is! List || routes.isEmpty) return null;
-      final route = routes.first;
-      if (route is! Map<String, dynamic>) return null;
-
-      dynamic geometry = route['geometry'];
-      List? coords;
-      if (geometry is Map<String, dynamic> && geometry['coordinates'] is List) {
-        coords = geometry['coordinates'] as List;
-      } else if (geometry is List) {
-        coords = geometry;
-      }
-      if (coords == null) return null;
-
-      final path = <GeoPoint>[];
-      for (final coord in coords) {
-        if (coord is List && coord.length >= 2) {
-          final lon = (coord[0] as num).toDouble();
-          final lat = (coord[1] as num).toDouble();
-          path.add(GeoPoint(lat, lon));
-        }
-      }
-
-      if (path.length < 2) {
-        return null;
-      }
-
-      // Ensure the OSRM polyline starts/ends exactly at our segment anchors so
-      // later distance checks do not suffer from a small gap.
-      if (_distanceBetween(path.first, start) > 5) {
-        path.insert(0, start);
-      }
-      if (_distanceBetween(path.last, end) > 5) {
-        path.add(end);
-      }
-
-      return path;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[SEG] failed to fetch enhanced path: $e');
-      }
-      return null;
-    }
+      },
+    );
   }
 
   /// Returns the best available path for [geom], preferring enhanced overrides
