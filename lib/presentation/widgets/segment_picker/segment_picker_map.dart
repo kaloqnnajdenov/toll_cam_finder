@@ -6,6 +6,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker/map_icon_button.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map_full_screen_page.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map_hint_card.dart';
+import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_point_marker.dart';
 import 'package:toll_cam_finder/services/osrm_path_fetcher.dart';
 
 class SegmentPickerMap extends StatefulWidget {
@@ -22,6 +26,12 @@ class SegmentPickerMap extends StatefulWidget {
 
   @override
   State<SegmentPickerMap> createState() => _SegmentPickerMapState();
+}
+
+enum _SegmentPoint { start, end }
+
+extension on _SegmentPoint {
+  String get label => this == _SegmentPoint.start ? 'A' : 'B';
 }
 
 class _SegmentPickerMapState extends State<SegmentPickerMap> {
@@ -65,7 +75,6 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
 
   @override
   Widget build(BuildContext context) {
-    final markers = <Marker>[];
     final theme = Theme.of(context);
 
     if (_start != null) {
@@ -147,7 +156,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
           left: 16,
           right: 72,
           top: 16,
-          child: _MapHintCard(
+          child: SegmentPickerMapHintCard(
             hasStart: _start != null,
             hasEnd: _end != null,
           ),
@@ -158,12 +167,12 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ZoomButton(
+              MapIconButton(
                 icon: Icons.add,
                 onPressed: () => _zoomBy(_zoomStep),
               ),
               const SizedBox(height: 12),
-              _ZoomButton(
+              MapIconButton(
                 icon: Icons.remove,
                 onPressed: () => _zoomBy(-_zoomStep),
               ),
@@ -173,8 +182,8 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
         Positioned(
           top: 16,
           right: 16,
-          child: _FullScreenButton(
-            isFullScreen: widget.isFullScreen,
+          child: MapIconButton(
+            icon: widget.isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
             onPressed: widget.isFullScreen ? _exitFullScreen : _openFullScreen,
           ),
         ),
@@ -215,45 +224,46 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
     if (!_mapReady) return;
 
-    if (_start == null) {
-      _updateStart(latLng);
-    } else if (_end == null) {
-      _updateEnd(latLng);
+    final start = _start;
+    final end = _end;
+
+    if (start == null) {
+      _updatePoint(_SegmentPoint.start, latLng);
+    } else if (end == null) {
+      _updatePoint(_SegmentPoint.end, latLng);
     } else {
-      final double distToStart = _distance(_start!, latLng);
-      final double distToEnd = _distance(_end!, latLng);
-      if (distToStart <= distToEnd) {
-        _updateStart(latLng);
-      } else {
-        _updateEnd(latLng);
-      }
+      final double distToStart = _distance(start, latLng);
+      final double distToEnd = _distance(end, latLng);
+      final target =
+          distToStart <= distToEnd ? _SegmentPoint.start : _SegmentPoint.end;
+      _updatePoint(target, latLng);
     }
 
     _fitCamera();
   }
 
   void _handleStartTextChanged() {
-    if (_updatingControllers || _suspendUpdates) return;
-    final parsed = _parseLatLng(widget.startController.text);
-    if (_positionsEqual(_start, parsed)) return;
-    setState(() {
-      _start = parsed;
-    });
-    _refreshRoute();
-    _fitCamera();
+    _handleControllerChanged(_SegmentPoint.start);
   }
 
   void _handleEndTextChanged() {
+    _handleControllerChanged(_SegmentPoint.end);
+  }
+
+  void _handleControllerChanged(_SegmentPoint point) {
     if (_updatingControllers || _suspendUpdates) return;
-    final parsed = _parseLatLng(widget.endController.text);
-    if (_positionsEqual(_end, parsed)) return;
+    final controller = _controllerFor(point);
+    final parsed = _parseLatLng(controller.text);
+    final current = _positionFor(point);
+    if (_positionsEqual(current, parsed)) return;
     setState(() {
-      _end = parsed;
+      _setPosition(point, parsed);
     });
     _refreshRoute();
     _fitCamera();
   }
 
+<<<<<<< HEAD:lib/presentation/widgets/segment_picker_map.dart
  void _updateStart(
     LatLng latLng, {
     bool refreshRoute = true,
@@ -286,6 +296,15 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
  if (refreshRoute) {
       _refreshRoute();
     }  }
+=======
+  void _updatePoint(_SegmentPoint point, LatLng latLng) {
+    setState(() {
+      _setPosition(point, latLng);
+    });
+    _writeToController(_controllerFor(point), latLng);
+    _refreshRoute();
+  }
+>>>>>>> 887f9feac92965ddaabc0c8fe519f03fd39a7d98:lib/presentation/widgets/segment_picker/segment_picker_map.dart
 
   void _zoomBy(double delta) {
     final camera = _mapController.camera;
@@ -305,8 +324,11 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => SegmentPickerMapFullScreenPage(
-          startController: widget.startController,
-          endController: widget.endController,
+          mapBuilder: (context) => SegmentPickerMap(
+            startController: widget.startController,
+            endController: widget.endController,
+            isFullScreen: true,
+          ),
         ),
       ),
     );
@@ -321,11 +343,15 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
   }
 
   void _syncFromControllers() {
-    final parsedStart = _parseLatLng(widget.startController.text);
-    final parsedEnd = _parseLatLng(widget.endController.text);
     setState(() {
-      _start = parsedStart;
-      _end = parsedEnd;
+      _setPosition(
+        _SegmentPoint.start,
+        _parseLatLng(widget.startController.text),
+      );
+      _setPosition(
+        _SegmentPoint.end,
+        _parseLatLng(widget.endController.text),
+      );
     });
     _refreshRoute();
     _fitCamera();
@@ -418,46 +444,14 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
   String _formatLatLng(LatLng value) {
     return '${value.latitude.toStringAsFixed(6)}, ${value.longitude.toStringAsFixed(6)}';
   }
-}
 
-class _SegmentMarker extends StatelessWidget {
-  const _SegmentMarker({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 6,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: 36,
-        height: 36,
-        child: Center(
-          child: Text(
-            label,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
+  TextEditingController _controllerFor(_SegmentPoint point) {
+    return point == _SegmentPoint.start
+        ? widget.startController
+        : widget.endController;
   }
-}
 
+<<<<<<< HEAD:lib/presentation/widgets/segment_picker_map.dart
 class _DraggableMapMarker extends StatefulWidget {
   const _DraggableMapMarker({
     required this.child,
@@ -557,96 +551,43 @@ class _ZoomButton extends StatelessWidget {
         onPressed: onPressed,
       ),
     );
+=======
+  LatLng? _positionFor(_SegmentPoint point) {
+    return point == _SegmentPoint.start ? _start : _end;
+>>>>>>> 887f9feac92965ddaabc0c8fe519f03fd39a7d98:lib/presentation/widgets/segment_picker/segment_picker_map.dart
   }
-}
 
-class _FullScreenButton extends StatelessWidget {
-  const _FullScreenButton({
-    required this.isFullScreen,
-    required this.onPressed,
-  });
-
-  final bool isFullScreen;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface.withOpacity(0.9),
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: IconButton(
-        icon: Icon(
-          isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-          color: theme.colorScheme.onSurface,
-        ),
-        onPressed: onPressed,
-      ),
-    );
-  }
-}
-
-class SegmentPickerMapFullScreenPage extends StatelessWidget {
-  const SegmentPickerMapFullScreenPage({
-    super.key,
-    required this.startController,
-    required this.endController,
-  });
-
-  final TextEditingController startController;
-  final TextEditingController endController;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: SegmentPickerMap(
-          startController: startController,
-          endController: endController,
-          isFullScreen: true,
-        ),
-      ),
-    );
-  }
-}
-
-class _MapHintCard extends StatelessWidget {
-  const _MapHintCard({required this.hasStart, required this.hasEnd});
-
-  final bool hasStart;
-  final bool hasEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    String message;
-    if (!hasStart && !hasEnd) {
-      message = 'Tap anywhere on the map to place point A.';
-    } else if (hasStart && !hasEnd) {
-      message = 'Tap a second location to place point B.';
+  void _setPosition(_SegmentPoint point, LatLng? value) {
+    if (point == _SegmentPoint.start) {
+      _start = value;
     } else {
+<<<<<<< HEAD:lib/presentation/widgets/segment_picker_map.dart
        message =
           'Touch and hold A or B for 0.5s, then drag to reposition that point.';
+=======
+      _end = value;
+>>>>>>> 887f9feac92965ddaabc0c8fe519f03fd39a7d98:lib/presentation/widgets/segment_picker/segment_picker_map.dart
     }
+  }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Text(
-          message,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
+  List<Marker> _buildMarkers(ThemeData theme) {
+    final color = theme.colorScheme.primary;
+    return _SegmentPoint.values
+        .map((point) {
+          final position = _positionFor(point);
+          if (position == null) return null;
+          return Marker(
+            point: position,
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            child: SegmentPointMarker(
+              label: point.label,
+              color: color,
+            ),
+          );
+        })
+        .whereType<Marker>()
+        .toList(growable: false);
   }
 }
