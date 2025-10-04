@@ -27,8 +27,8 @@ class RemoteSegmentsService {
     try {
       await client.from(tableName).insert(<String, dynamic>{
         'road': draft.name,
-        'start_name': draft.startDisplayName,
-        'end_name': draft.endDisplayName,
+        'Start name': draft.startDisplayName,
+        'End name': draft.endDisplayName,
         'Start': draft.startCoordinates,
         'End': draft.endCoordinates,
         _moderationStatusColumn: _pendingStatus,
