@@ -26,6 +26,9 @@ class TollSegmentsSyncService {
   final TollSegmentsFileSystem _fileSystem;
   final TollSegmentsPathResolver? _localPathResolver;
 
+  static const String _moderationStatusColumn = 'moderation_status';
+  static const String _approvedStatus = 'approved';
+
   /// Performs the synchronization flow.
   ///
   /// 1. Downloads the latest table contents from Supabase.
@@ -82,13 +85,7 @@ class TollSegmentsSyncService {
 
     for (final candidate in _candidateTableNames) {
       try {
-        final response =
-            await client.from(candidate).select('*');
-
-        if (response.isEmpty) {
-          attemptedTables.add(candidate);
-          continue;
-        }
+        final response = await _selectApprovedRows(client, candidate);
 
         if (candidate != tableName) {
           debugPrint(
@@ -99,6 +96,8 @@ class TollSegmentsSyncService {
         return response
             .map((record) => _toCanonicalRow(record))
             .toList(growable: false);
+      } on TollSegmentsSyncException {
+        rethrow;
       } on PostgrestException catch (error) {
         if (_isMissingTableError(error)) {
           attemptedTables.add(candidate);
@@ -121,6 +120,28 @@ class TollSegmentsSyncService {
       '${attemptedTables.join(', ')}. Ensure your account has access to the data.',
       cause: lastMissingTableException,
     );
+  }
+
+  Future<List<Map<String, dynamic>>> _selectApprovedRows(
+    SupabaseClient client,
+    String table,
+  ) async {
+    try {
+      final List<dynamic> response = await client
+          .from(table)
+          .select('*')
+          .eq(_moderationStatusColumn, _approvedStatus);
+
+      return response.cast<Map<String, dynamic>>();
+    } on PostgrestException catch (error) {
+      if (_isMissingColumnError(error, _moderationStatusColumn)) {
+        throw TollSegmentsSyncException(
+          'The "$table" table is missing the "$_moderationStatusColumn" column required for moderation.',
+          cause: error,
+        );
+      }
+      rethrow;
+    }
   }
 
   Iterable<String> get _candidateTableNames {
@@ -148,6 +169,19 @@ class TollSegmentsSyncService {
     return message.contains('does not exist') ||
         message.contains('not exist') ||
         message.contains('unknown table');
+  }
+
+  bool _isMissingColumnError(PostgrestException error, String column) {
+    final code = error.code?.toUpperCase();
+    if (code == '42703') {
+      return true;
+    }
+
+    final normalizedMessage = error.message.toLowerCase();
+    return normalizedMessage.contains('column') &&
+        normalizedMessage.contains(column.toLowerCase()) &&
+        (normalizedMessage.contains('does not exist') ||
+            normalizedMessage.contains('not exist'));
   }
 
   String _toSnakeCase(String value) {

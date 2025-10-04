@@ -27,15 +27,42 @@ class LocalSegmentsService {
     required String startCoordinates,
     required String endCoordinates,
   }) async {
+    final draft = prepareDraft(
+      name: name,
+      startCoordinates: startCoordinates,
+      endCoordinates: endCoordinates,
+    );
+
+    await saveDraft(draft);
+  }
+
+  /// Normalizes the provided input fields and returns a [SegmentDraft] that can
+  /// be stored locally or submitted to the backend.
+  SegmentDraft prepareDraft({
+    required String name,
+    required String startCoordinates,
+    required String endCoordinates,
+  }) {
+    final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
+    final normalizedStart = _normalizeCoordinates(startCoordinates);
+    final normalizedEnd = _normalizeCoordinates(endCoordinates);
+
+    return SegmentDraft(
+      name: normalizedName,
+      startDisplayName: '$normalizedName start',
+      endDisplayName: '$normalizedName end',
+      startCoordinates: normalizedStart,
+      endCoordinates: normalizedEnd,
+    );
+  }
+
+  /// Persists a [SegmentDraft] locally and returns the generated identifier.
+  Future<String> saveDraft(SegmentDraft draft) async {
     if (kIsWeb) {
       throw const LocalSegmentsServiceException(
         'Saving local segments is not supported on the web.',
       );
     }
-
-    final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
-    final normalizedStart = _normalizeCoordinates(startCoordinates);
-    final normalizedEnd = _normalizeCoordinates(endCoordinates);
 
     final csvPath = await resolveTollSegmentsDataPath(
       overrideResolver: _pathResolver,
@@ -49,13 +76,14 @@ class LocalSegmentsService {
       rows.insert(0, TollSegmentsCsvSchema.header);
     }
 
+    final localId = _generateLocalId();
     final newRow = <String>[
-      _generateLocalId(),
-      normalizedName,
-      '$normalizedName start',
-      '$normalizedName end',
-      normalizedStart,
-      normalizedEnd,
+      localId,
+      draft.name,
+      draft.startDisplayName,
+      draft.endDisplayName,
+      draft.startCoordinates,
+      draft.endCoordinates,
     ];
 
     rows.add(newRow);
@@ -67,6 +95,7 @@ class LocalSegmentsService {
     ).convert(rows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    return localId;
   }
 
   Future<bool> deleteLocalSegment(String id) async {
@@ -196,4 +225,21 @@ class LocalSegmentsServiceException implements Exception {
 
   @override
   String toString() => 'LocalSegmentsServiceException: $message';
+}
+
+/// Normalized representation of a user-created segment.
+class SegmentDraft {
+  const SegmentDraft({
+    required this.name,
+    required this.startDisplayName,
+    required this.endDisplayName,
+    required this.startCoordinates,
+    required this.endCoordinates,
+  });
+
+  final String name;
+  final String startDisplayName;
+  final String endDisplayName;
+  final String startCoordinates;
+  final String endCoordinates;
 }
