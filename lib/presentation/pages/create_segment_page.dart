@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
+import 'package:toll_cam_finder/services/local_segments_service.dart';
 
 class CreateSegmentPage extends StatefulWidget {
   const CreateSegmentPage({super.key});
@@ -12,6 +13,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
+  final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
 
   @override
   void dispose() {
@@ -115,7 +117,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           message: 'Are you sure that you want to keep the segment only to yourself?',
         );
         if (confirmPrivate == true) {
-          _handlePrivateSegmentSaved();
+          await _handlePrivateSegmentSaved();
         }
         break;
       case _SegmentVisibilityChoice.public:
@@ -150,13 +152,28 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     );
   }
 
-  void _handlePrivateSegmentSaved() {
-    // TODO: Persist the segment locally so it remains after synchronisation.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Segment saved locally.'),
-      ),
-    );
+  Future<void> _handlePrivateSegmentSaved() async {
+    if (!_validateInputs()) {
+      return;
+    }
+
+    try {
+      await _localSegmentsService.saveLocalSegment(
+        name: _nameController.text,
+        startCoordinates: _startController.text,
+        endCoordinates: _endController.text,
+      );
+    } on LocalSegmentsServiceException catch (error) {
+      _showSnackBar(error.message);
+      return;
+    } catch (_) {
+      _showSnackBar('Failed to save the segment locally.');
+      return;
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pop(true);
   }
 
   void _handlePublicSegmentSaved() {
@@ -165,6 +182,21 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       const SnackBar(
         content: Text('Segment submitted for public review.'),
       ),
+    );
+  }
+
+  bool _validateInputs() {
+    if (_startController.text.trim().isEmpty ||
+        _endController.text.trim().isEmpty) {
+      _showSnackBar('Start and end coordinates are required.');
+      return false;
+    }
+    return true;
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }
