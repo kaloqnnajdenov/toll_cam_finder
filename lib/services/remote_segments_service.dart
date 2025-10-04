@@ -18,6 +18,9 @@ class RemoteSegmentsService {
   static const String _idColumn = 'id';
   static const int _smallIntMax = 32767;
   static const String _addedByUserColumn = 'added_by_user';
+  static const String _roadColumn = 'road';
+  static const String _startColumn = 'Start';
+  static const String _endColumn = 'End';
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(
@@ -58,6 +61,90 @@ class RemoteSegmentsService {
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
         'Unexpected error while submitting the segment for moderation.',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Returns whether there is a pending moderation request for the provided
+  /// segment created by the supplied user.
+  Future<bool> hasPendingSubmission({
+    required String addedByUserId,
+    required String name,
+    required String startCoordinates,
+    required String endCoordinates,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw const RemoteSegmentsServiceException(
+        'Supabase is not configured. Unable to manage public submissions.',
+      );
+    }
+
+    try {
+      final List<dynamic> rows = await client
+          .from(tableName)
+          .select('$_idColumn')
+          .match(<String, dynamic>{
+        _moderationStatusColumn: _pendingStatus,
+        _addedByUserColumn: addedByUserId,
+        _roadColumn: name,
+        _startColumn: startCoordinates,
+        _endColumn: endCoordinates,
+      }).limit(1);
+
+      return rows.isNotEmpty;
+    } on PostgrestException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'Failed to check the public submission status: ${error.message}',
+        cause: error,
+      );
+    } catch (error, stackTrace) {
+      throw RemoteSegmentsServiceException(
+        'Unexpected error while checking the public submission status.',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Deletes the pending moderation request that matches the provided segment
+  /// for the supplied user. Returns `true` if a submission was deleted.
+  Future<bool> deletePendingSubmission({
+    required String addedByUserId,
+    required String name,
+    required String startCoordinates,
+    required String endCoordinates,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw const RemoteSegmentsServiceException(
+        'Supabase is not configured. Unable to manage public submissions.',
+      );
+    }
+
+    try {
+      final List<dynamic> deleted = await client
+          .from(tableName)
+          .delete()
+          .match(<String, dynamic>{
+        _moderationStatusColumn: _pendingStatus,
+        _addedByUserColumn: addedByUserId,
+        _roadColumn: name,
+        _startColumn: startCoordinates,
+        _endColumn: endCoordinates,
+      }).select('$_idColumn');
+
+      return deleted.isNotEmpty;
+    } on PostgrestException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'Failed to cancel the public submission: ${error.message}',
+        cause: error,
+      );
+    } catch (error, stackTrace) {
+      throw RemoteSegmentsServiceException(
+        'Unexpected error while cancelling the public submission.',
         cause: error,
         stackTrace: stackTrace,
       );
