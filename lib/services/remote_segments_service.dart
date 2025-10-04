@@ -57,7 +57,7 @@ class RemoteSegmentsService {
     final List<dynamic> rows = await client
         .from(tableName)
         .select('$_idColumn')
-        .in_(_moderationStatusColumn, const <String>[_pendingStatus, _approvedStatus])
+        .inFilter(_moderationStatusColumn, const <String>[_pendingStatus, _approvedStatus])
         .order(_idColumn, ascending: false)
         .limit(1);
 
