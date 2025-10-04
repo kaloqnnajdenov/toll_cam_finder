@@ -195,7 +195,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deleteSubmission(
+      final deleted = await remoteService.deletePendingSubmission(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.start,
@@ -533,7 +533,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deleteSubmission(
+      final deleted = await remoteService.deletePendingSubmission(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.start,
