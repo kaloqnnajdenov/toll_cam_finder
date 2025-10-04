@@ -20,6 +20,7 @@ dependencies:
   test: ^1.26.2
   csv: ^6.0.0
   supabase_flutter: ^2.10.1
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:
