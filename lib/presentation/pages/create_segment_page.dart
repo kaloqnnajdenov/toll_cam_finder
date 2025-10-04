@@ -240,10 +240,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           _isNavigatingToLogin = true;
           try {
             final navigator = Navigator.of(context, rootNavigator: true);
-            final loggedIn = await navigator.pushNamed<bool>(
+            final result = await navigator.pushNamed(
               AppRoutes.login,
-              arguments: true,
             );
+            final loggedIn = result is bool ? result : null;
             if (loggedIn == true && mounted) {
               _showSnackBar(
                 'Logged in successfully. Tap "Save segment" again to submit the segment.',
