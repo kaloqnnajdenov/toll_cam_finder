@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
-    if (dart.library.io) 'toll_segments_file_system_io.dart' as fs_impl;
+    if (dart.library.io) 'toll_segments_file_system_io.dart'
+    as fs_impl;
 import 'toll_segments_paths.dart';
 import 'toll_segments_csv_constants.dart';
 
@@ -17,8 +18,8 @@ class TollSegmentsSyncService {
     this.tableName = 'Toll_Segments',
     TollSegmentsFileSystem? fileSystem,
     TollSegmentsPathResolver? localPathResolver,
-  })  : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
-        _localPathResolver = localPathResolver;
+  }) : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
+       _localPathResolver = localPathResolver;
 
   /// Supabase table that stores the toll segment rows.
   final String tableName;
@@ -34,9 +35,7 @@ class TollSegmentsSyncService {
   /// 1. Downloads the latest table contents from Supabase.
   /// 2. Compares them to the current local CSV, calculating additions/removals.
   /// 3. Writes the downloaded data to the local CSV file.
-  Future<TollSegmentsSyncResult> sync({
-    required SupabaseClient client,
-  }) async {
+  Future<TollSegmentsSyncResult> sync({required SupabaseClient client}) async {
     if (kIsWeb) {
       throw const TollSegmentsSyncException(
         'Syncing toll segments is not supported on the web.',
@@ -50,11 +49,19 @@ class TollSegmentsSyncService {
       final remoteRows = await _fetchRemoteRows(client);
 
       final localRows = await _readLocalRows(localCsvPath);
-      final diff = _calculateDiff(localRows.remoteRows, remoteRows);
+      final approvalOutcome = _filterApprovedLocalSegments(
+        remoteRows,
+        localRows.localRows,
+      );
+      final diff = _calculateDiff(
+        localRows.remoteRows,
+        remoteRows,
+        approvedLocalSegments: approvalOutcome.approvedCount,
+      );
       await _writeRowsToLocal(
         localCsvPath,
         remoteRows,
-        localRows.localRows,
+        approvalOutcome.remainingLocalRows,
       );
 
       return diff;
@@ -152,12 +159,8 @@ class TollSegmentsSyncService {
         ? lower
         : lower[0].toUpperCase() + lower.substring(1);
 
-    return <String>{
-      normalized,
-      lower,
-      title,
-      snake,
-    }..removeWhere((name) => name.isEmpty);
+    return <String>{normalized, lower, title, snake}
+      ..removeWhere((name) => name.isEmpty);
   }
 
   bool _isMissingTableError(PostgrestException error) {
@@ -191,7 +194,8 @@ class TollSegmentsSyncService {
 
     for (final rune in value.runes) {
       final char = String.fromCharCode(rune);
-      final isUppercase = char.toUpperCase() == char && char.toLowerCase() != char;
+      final isUppercase =
+          char.toUpperCase() == char && char.toLowerCase() != char;
       final isAlphabetic = char.toLowerCase() != char.toUpperCase();
       final isNumeric = int.tryParse(char) != null;
 
@@ -239,8 +243,9 @@ class TollSegmentsSyncService {
     final localRows = <List<String>>[];
 
     for (final row in parsed.skip(1)) {
-      final normalized =
-          row.map((value) => value.toString()).toList(growable: false);
+      final normalized = row
+          .map((value) => value.toString())
+          .toList(growable: false);
       if (normalized.isEmpty) {
         continue;
       }
@@ -253,10 +258,7 @@ class TollSegmentsSyncService {
       }
     }
 
-    return _PartitionedLocalRows(
-      remoteRows: remoteRows,
-      localRows: localRows,
-    );
+    return _PartitionedLocalRows(remoteRows: remoteRows, localRows: localRows);
   }
 
   Future<void> _writeRowsToLocal(
@@ -294,8 +296,9 @@ class TollSegmentsSyncService {
 
   TollSegmentsSyncResult _calculateDiff(
     List<List<String>> localRows,
-    List<List<String>> remoteRows,
-  ) {
+    List<List<String>> remoteRows, {
+    int approvedLocalSegments = 0,
+  }) {
     final localSet = localRows.map(_canonicalizeForDiff).toSet();
     final remoteSet = remoteRows.map(_canonicalizeForDiff).toSet();
 
@@ -306,7 +309,66 @@ class TollSegmentsSyncService {
       addedSegments: added,
       removedSegments: removed,
       totalSegments: remoteRows.length,
+      approvedLocalSegments: approvedLocalSegments,
     );
+  }
+
+  _ApprovedLocalSegmentsOutcome _filterApprovedLocalSegments(
+    List<List<String>> remoteRows,
+    List<List<String>> localRows,
+  ) {
+    if (remoteRows.isEmpty || localRows.isEmpty) {
+      return _ApprovedLocalSegmentsOutcome(
+        remainingLocalRows: localRows,
+        approvedCount: 0,
+      );
+    }
+
+    final remoteCounts = <String, int>{};
+    for (final row in remoteRows) {
+      final signature = _signatureExcludingId(row);
+      if (signature.isEmpty) {
+        continue;
+      }
+      remoteCounts.update(signature, (value) => value + 1, ifAbsent: () => 1);
+    }
+
+    final remainingLocalRows = <List<String>>[];
+    var approvedCount = 0;
+
+    for (final row in localRows) {
+      final signature = _signatureExcludingId(row);
+      if (signature.isEmpty) {
+        remainingLocalRows.add(row);
+        continue;
+      }
+
+      final available = remoteCounts[signature];
+      if (available != null && available > 0) {
+        approvedCount++;
+        if (available == 1) {
+          remoteCounts.remove(signature);
+        } else {
+          remoteCounts[signature] = available - 1;
+        }
+        continue;
+      }
+
+      remainingLocalRows.add(row);
+    }
+
+    return _ApprovedLocalSegmentsOutcome(
+      remainingLocalRows: remainingLocalRows,
+      approvedCount: approvedCount,
+    );
+  }
+
+  String _signatureExcludingId(List<String> row) {
+    if (row.length <= 1) {
+      return '';
+    }
+
+    return row.skip(1).map((value) => value.trim().toLowerCase()).join('|');
   }
 
   List<String> _toCanonicalRow(Map<String, dynamic> record) {
@@ -354,14 +416,15 @@ class TollSegmentsSyncService {
     return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
-  static const Map<String, List<String>> _columnAliases = <String, List<String>>{
-    'ID': <String>['id'],
-    'road': <String>['road_name'],
-    'Start name': <String>['start_name', 'startname'],
-    'End name': <String>['end_name', 'endname'],
-    'Start': <String>['start_point', 'start_coordinates'],
-    'End': <String>['end_point', 'end_coordinates'],
-  };
+  static const Map<String, List<String>> _columnAliases =
+      <String, List<String>>{
+        'ID': <String>['id'],
+        'road': <String>['road_name'],
+        'Start name': <String>['start_name', 'startname'],
+        'End name': <String>['end_name', 'endname'],
+        'Start': <String>['start_point', 'start_coordinates'],
+        'End': <String>['end_point', 'end_coordinates'],
+      };
 }
 
 /// Result of synchronizing toll segments from Supabase to the local CSV.
@@ -370,11 +433,13 @@ class TollSegmentsSyncResult {
     required this.addedSegments,
     required this.removedSegments,
     required this.totalSegments,
+    required this.approvedLocalSegments,
   });
 
   final int addedSegments;
   final int removedSegments;
   final int totalSegments;
+  final int approvedLocalSegments;
 }
 
 /// Error raised when synchronizing toll segments fails.
@@ -397,4 +462,14 @@ class _PartitionedLocalRows {
 
   final List<List<String>> remoteRows;
   final List<List<String>> localRows;
+}
+
+class _ApprovedLocalSegmentsOutcome {
+  const _ApprovedLocalSegmentsOutcome({
+    required this.remainingLocalRows,
+    required this.approvedCount,
+  });
+
+  final List<List<String>> remainingLocalRows;
+  final int approvedCount;
 }

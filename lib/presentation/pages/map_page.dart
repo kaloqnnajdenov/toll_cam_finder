@@ -671,6 +671,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final changesSummary = parts.isEmpty
         ? 'No changes detected.'
         : parts.join(', ') + '.';
-    return 'Sync complete. $changesSummary ${result.totalSegments} total segments available.';
+     final buffer = StringBuffer(
+      'Sync complete. $changesSummary ${result.totalSegments} total segments available.',
+    );
+
+    if (result.approvedLocalSegments > 0) {
+      final verb = result.approvedLocalSegments == 1 ? 'was' : 'were';
+      final visibilityVerb = result.approvedLocalSegments == 1 ? 'is' : 'are';
+      buffer.write(' ${result.approvedLocalSegments} of your submitted segments ');
+      buffer.write('$verb approved and now $visibilityVerb visible to everyone.');
+    }
+
+    return buffer.toString();
   }
 }
