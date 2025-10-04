@@ -14,6 +14,9 @@ class RemoteSegmentsService {
 
   static const String _moderationStatusColumn = 'moderation_status';
   static const String _pendingStatus = 'pending';
+  static const String _approvedStatus = 'approved';
+  static const String _idColumn = 'id';
+  static const int _smallIntMax = 32767;
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(SegmentDraft draft) async {
@@ -24,8 +27,11 @@ class RemoteSegmentsService {
       );
     }
 
+    final pendingId = await _computeNextRemoteId(client);
+
     try {
       await client.from(tableName).insert(<String, dynamic>{
+        'id': pendingId,
         'road': draft.name,
         'Start name': draft.startDisplayName,
         'End name': draft.endDisplayName,
@@ -45,6 +51,53 @@ class RemoteSegmentsService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  Future<int> _computeNextRemoteId(SupabaseClient client) async {
+    final List<dynamic> rows = await client
+        .from(tableName)
+        .select('$_idColumn')
+        .in_(_moderationStatusColumn, const <String>[_pendingStatus, _approvedStatus])
+        .order(_idColumn, ascending: false)
+        .limit(1);
+
+    final maxId = rows.isEmpty
+        ? null
+        : _parseId((rows.first as Map<String, dynamic>)[_idColumn]);
+    final nextId = (maxId ?? 0) + 1;
+
+    if (nextId > _smallIntMax) {
+      throw const RemoteSegmentsServiceException(
+        'Unable to assign a new segment id: all smallint values are exhausted.',
+      );
+    }
+
+    return nextId;
+  }
+
+  int _parseId(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    throw const RemoteSegmentsServiceException(
+      'Encountered an existing segment with a non-numeric id.',
+    );
   }
 }
 

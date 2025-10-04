@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -8,6 +6,7 @@ import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
     if (dart.library.io) 'toll_segments_file_system_io.dart' as fs_impl;
 import 'toll_segments_paths.dart';
+import 'segment_id_generator.dart';
 
 /// Persists user-created segments to the local toll segments CSV.
 class LocalSegmentsService {
@@ -76,7 +75,7 @@ class LocalSegmentsService {
       rows.insert(0, TollSegmentsCsvSchema.header);
     }
 
-    final localId = _generateLocalId();
+    final localId = SegmentIdGenerator.generateLocalId();
     final newRow = <String>[
       localId,
       draft.name,
@@ -190,12 +189,6 @@ class LocalSegmentsService {
       }
     }
     return true;
-  }
-
-  String _generateLocalId() {
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final random = Random().nextInt(0xFFFFFF);
-    return '${TollSegmentsCsvSchema.localSegmentIdPrefix}$timestamp-$random';
   }
 
   String _normalizeCoordinates(String input) {
