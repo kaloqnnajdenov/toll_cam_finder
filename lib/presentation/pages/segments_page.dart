@@ -195,11 +195,11 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deletePendingSubmission(
+      final deleted = await remoteService.deleteSubmission(
         addedByUserId: userId,
         name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
+        startCoordinates: segment.startCoordinates,
+        endCoordinates: segment.endCoordinates,
       );
 
       if (deleted) {
@@ -310,12 +310,17 @@ class _SegmentCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child:
-                        _SegmentLocation(label: 'Start', value: segment.start),
+                    child: _SegmentLocation(
+                      label: 'Start',
+                      value: segment.startLabel,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _SegmentLocation(label: 'End', value: segment.end),
+                    child: _SegmentLocation(
+                      label: 'End',
+                      value: segment.endLabel,
+                    ),
                   ),
                 ],
               ),
@@ -533,11 +538,11 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deletePendingSubmission(
+      final deleted = await remoteService.deleteSubmission(
         addedByUserId: userId,
         name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
+        startCoordinates: segment.startCoordinates,
+        endCoordinates: segment.endCoordinates,
       );
 
       if (deleted) {
