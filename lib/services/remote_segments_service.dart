@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'local_segments_service.dart';
+import 'segment_id_generator.dart';
 
 /// Handles submitting user-created segments to Supabase for moderation.
 class RemoteSegmentsService {
@@ -24,8 +25,11 @@ class RemoteSegmentsService {
       );
     }
 
+    final pendingId = SegmentIdGenerator.generateRemoteId();
+
     try {
       await client.from(tableName).insert(<String, dynamic>{
+        'id': pendingId,
         'road': draft.name,
         'Start name': draft.startDisplayName,
         'End name': draft.endDisplayName,
