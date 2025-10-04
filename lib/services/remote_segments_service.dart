@@ -86,7 +86,7 @@ class RemoteSegmentsService {
       final List<dynamic> rows = await client
           .from(tableName)
           .select('$_idColumn')
-          .match(<String, dynamic>{
+          .match(<String, Object>{
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
         _roadColumn: name,
@@ -128,7 +128,7 @@ class RemoteSegmentsService {
       final List<dynamic> deleted = await client
           .from(tableName)
           .delete()
-          .match(<String, dynamic>{
+          .match(<String, Object>{
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
         _roadColumn: name,
