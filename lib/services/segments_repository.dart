@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -16,6 +18,7 @@ class SegmentInfo {
     required this.start,
     required this.end,
     this.isLocalOnly = false,
+    this.isMarkedPublic = false,
   });
 
   final String id;
@@ -23,6 +26,7 @@ class SegmentInfo {
   final String start;
   final String end;
   final bool isLocalOnly;
+  final bool isMarkedPublic;
 
   String get displayId {
     if (!isLocalOnly) {
@@ -52,6 +56,8 @@ class SegmentsRepository {
     if (rows.isEmpty) {
       return const [];
     }
+
+    final publicFlags = await _loadPublicFlags();
 
     final header = rows.first.map((cell) => '$cell'.trim().toLowerCase()).toList();
     final idIndex = header.indexOf('id');
@@ -92,6 +98,7 @@ class SegmentsRepository {
           start: start,
           end: end,
           isLocalOnly: isLocalOnly,
+          isMarkedPublic: publicFlags[id] ?? false,
         ),
       );
     }
@@ -172,4 +179,32 @@ class SegmentsRepository {
 
     return rootBundle.loadString(assetPath);
   }
+
+  Future<Map<String, bool>> _loadPublicFlags() async {
+    if (kIsWeb) {
+      return const <String, bool>{};
+    }
+
+    try {
+      final metadataPath = await resolveTollSegmentsMetadataPath();
+      if (!await _fileSystem.exists(metadataPath)) {
+        return const <String, bool>{};
+      }
+
+      final contents = await _fileSystem.readAsString(metadataPath);
+      if (contents.trim().isEmpty) {
+        return const <String, bool>{};
+      }
+
+      final dynamic decoded = jsonDecode(contents);
+      if (decoded is! Map<String, dynamic>) {
+        return const <String, bool>{};
+      }
+
+      return decoded.map((key, value) => MapEntry(key, value == true));
+    } catch (_) {
+      return const <String, bool>{};
+    }
+  }
 }
+

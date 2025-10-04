@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -41,6 +43,7 @@ class LocalSegmentsService {
     required String name,
     required String startCoordinates,
     required String endCoordinates,
+    bool isPublic = false,
   }) {
     final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
     final normalizedStart = _normalizeCoordinates(startCoordinates);
@@ -52,6 +55,7 @@ class LocalSegmentsService {
       endDisplayName: '$normalizedName end',
       startCoordinates: normalizedStart,
       endCoordinates: normalizedEnd,
+      isPublic: isPublic,
     );
   }
 
@@ -94,6 +98,7 @@ class LocalSegmentsService {
     ).convert(rows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _updateVisibilityFlag(localId, draft.isPublic);
     return localId;
   }
 
@@ -146,6 +151,7 @@ class LocalSegmentsService {
 
     if (updatedRows.isEmpty) {
       await _fileSystem.writeAsString(csvPath, '');
+      await _updateVisibilityFlag(id, false);
       return true;
     }
 
@@ -156,6 +162,7 @@ class LocalSegmentsService {
     ).convert(updatedRows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _updateVisibilityFlag(id, false);
     return true;
   }
 
@@ -189,6 +196,53 @@ class LocalSegmentsService {
       }
     }
     return true;
+  }
+
+  Future<void> _updateVisibilityFlag(String id, bool isPublic) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+    await _fileSystem.ensureParentDirectory(metadataPath);
+
+    final flags = await _readVisibilityFlags(metadataPath);
+    if (isPublic) {
+      flags[id] = true;
+    } else {
+      flags.remove(id);
+    }
+
+    if (flags.isEmpty) {
+      await _fileSystem.writeAsString(metadataPath, '');
+      return;
+    }
+
+    await _fileSystem.writeAsString(metadataPath, jsonEncode(flags));
+  }
+
+  Future<Map<String, bool>> _readVisibilityFlags(String path) async {
+    if (!await _fileSystem.exists(path)) {
+      return <String, bool>{};
+    }
+
+    final contents = await _fileSystem.readAsString(path);
+    if (contents.trim().isEmpty) {
+      return <String, bool>{};
+    }
+
+    try {
+      final dynamic decoded = jsonDecode(contents);
+      if (decoded is! Map<String, dynamic>) {
+        return <String, bool>{};
+      }
+
+      return decoded.map((key, value) => MapEntry(key, value == true));
+    } catch (_) {
+      return <String, bool>{};
+    }
   }
 
   String _normalizeCoordinates(String input) {
@@ -228,6 +282,7 @@ class SegmentDraft {
     required this.endDisplayName,
     required this.startCoordinates,
     required this.endCoordinates,
+    this.isPublic = false,
   });
 
   final String name;
@@ -235,4 +290,5 @@ class SegmentDraft {
   final String endDisplayName;
   final String startCoordinates;
   final String endCoordinates;
+  final bool isPublic;
 }

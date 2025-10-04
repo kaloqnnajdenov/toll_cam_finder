@@ -144,49 +144,58 @@ class _SegmentsPageState extends State<SegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
+    if (!segment.isMarkedPublic) {
+      return true;
+    }
+
+    final shouldWithdraw =
+        await _showCancelRemoteSubmissionDialog(context, segment);
+    if (!mounted) {
+      return false;
+    }
+
+    if (shouldWithdraw != true) {
+      return true;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
     AuthController auth;
     try {
       auth = context.read<AuthController>();
     } catch (_) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     final userId = auth.currentUserId;
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
-      final deleted = await remoteService.deletePendingSubmission(
+      final deleted = await remoteService.deleteSubmission(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.start,
@@ -199,13 +208,6 @@ class _SegmentsPageState extends State<SegmentsPage> {
             content: Text(
               'Segment ${segment.displayId} will no longer be reviewed for public release.',
             ),
-          ),
-        );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
           ),
         );
       }
@@ -480,49 +482,58 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
+    if (!segment.isMarkedPublic) {
+      return true;
+    }
+
+    final shouldWithdraw =
+        await _showCancelRemoteSubmissionDialog(context, segment);
+    if (!mounted) {
+      return false;
+    }
+
+    if (shouldWithdraw != true) {
+      return true;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
     AuthController auth;
     try {
       auth = context.read<AuthController>();
     } catch (_) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     final userId = auth.currentUserId;
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
-      final deleted = await remoteService.deletePendingSubmission(
+      final deleted = await remoteService.deleteSubmission(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.start,
@@ -535,13 +546,6 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
             content: Text(
               'Segment ${segment.displayId} will no longer be reviewed for public release.',
             ),
-          ),
-        );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
           ),
         );
       }
@@ -705,20 +709,19 @@ Future<bool> _showCancelRemoteSubmissionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Cancel public submission?'),
-        content: Text(
-          'Segment ${segment.displayId} was submitted for public review. '
-          'Cancelling the public submission will prevent it from being published. '
-          'Do you want to cancel the public submission as well?',
+        title: const Text('Withdraw public submission?'),
+        content: const Text(
+          'You have submitted this segment for review. '
+          'Do you want to withdraw the submission?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep submission'),
+            child: const Text('No'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel submission'),
+            child: const Text('Yes'),
           ),
         ],
       );
