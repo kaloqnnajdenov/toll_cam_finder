@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -18,6 +20,8 @@ class LocalSegmentsService {
 
   final TollSegmentsFileSystem _fileSystem;
   final TollSegmentsPathResolver? _pathResolver;
+
+  static const String _metadataSuffix = '.metadata.json';
 
   /// Stores a user-created segment on disk. The resulting row is marked with a
   /// local identifier so that it survives future synchronisation runs.
@@ -94,6 +98,7 @@ class LocalSegmentsService {
     ).convert(rows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _clearPublicSubmissionFlag(localId);
     return localId;
   }
 
@@ -146,6 +151,7 @@ class LocalSegmentsService {
 
     if (updatedRows.isEmpty) {
       await _fileSystem.writeAsString(csvPath, '');
+      await _clearPublicSubmissionFlag(id);
       return true;
     }
 
@@ -156,7 +162,69 @@ class LocalSegmentsService {
     ).convert(updatedRows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _clearPublicSubmissionFlag(id);
     return true;
+  }
+
+  Future<void> markPublicSubmission(String id, {required bool isPublic}) async {
+    if (kIsWeb) {
+      throw const LocalSegmentsServiceException(
+        'Managing public submissions is not supported on the web.',
+      );
+    }
+
+    if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+      throw const LocalSegmentsServiceException(
+        'Only segments saved locally can be marked for public submission.',
+      );
+    }
+
+    try {
+      final metadataPath = await _resolveMetadataPath();
+      await _fileSystem.ensureParentDirectory(metadataPath);
+
+      final metadata = await _readMetadata(metadataPath);
+      var changed = false;
+
+      if (isPublic) {
+        if (metadata[id] != true) {
+          metadata[id] = true;
+          changed = true;
+        }
+      } else {
+        changed = metadata.remove(id) != null;
+      }
+
+      if (!changed) {
+        return;
+      }
+
+      await _writeMetadata(metadataPath, metadata);
+    } on LocalSegmentsServiceException {
+      rethrow;
+    } catch (_) {
+      throw const LocalSegmentsServiceException(
+        'Failed to update the submission status for local segments.',
+      );
+    }
+  }
+
+  Future<bool> isMarkedPublic(String id) async {
+    if (kIsWeb) {
+      return false;
+    }
+
+    if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+      return false;
+    }
+
+    final metadataPath = await _resolveMetadataPath();
+    if (!await _fileSystem.exists(metadataPath)) {
+      return false;
+    }
+
+    final metadata = await _readMetadata(metadataPath);
+    return metadata[id] == true;
   }
 
   Future<List<List<String>>> _readExistingRows(String path) async {
@@ -208,6 +276,69 @@ class LocalSegmentsService {
     }
 
     return '${lat.toStringAsFixed(6)}, ${lon.toStringAsFixed(6)}';
+  }
+
+  Future<void> _clearPublicSubmissionFlag(String id) async {
+    try {
+      await markPublicSubmission(id, isPublic: false);
+    } catch (error) {
+      debugPrint('Failed to clear submission flag for $id: $error');
+    }
+  }
+
+  Future<String> _resolveMetadataPath() async {
+    final csvPath = await resolveTollSegmentsDataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    if (csvPath == kTollSegmentsAssetPath) {
+      throw const LocalSegmentsServiceException(
+        'Unable to resolve metadata path for toll segments.',
+      );
+    }
+
+    return '$csvPath$_metadataSuffix';
+  }
+
+  Future<Map<String, bool>> _readMetadata(String path) async {
+    if (!await _fileSystem.exists(path)) {
+      return <String, bool>{};
+    }
+
+    try {
+      final contents = await _fileSystem.readAsString(path);
+      if (contents.trim().isEmpty) {
+        return <String, bool>{};
+      }
+
+      try {
+        final decoded = jsonDecode(contents);
+        if (decoded is! Map<String, dynamic>) {
+          throw const LocalSegmentsServiceException(
+            'Invalid metadata format for toll segments.',
+          );
+        }
+
+        final result = <String, bool>{};
+        for (final entry in decoded.entries) {
+          result['${entry.key}'] = entry.value == true;
+        }
+        return result;
+      } on FormatException {
+        throw const LocalSegmentsServiceException(
+          'Invalid metadata format for toll segments.',
+        );
+      }
+    } on TollSegmentsFileSystemException {
+      throw const LocalSegmentsServiceException(
+        'Failed to read the submission metadata for local segments.',
+      );
+    }
+  }
+
+  Future<void> _writeMetadata(String path, Map<String, bool> metadata) async {
+    final encoded = jsonEncode(metadata);
+    await _fileSystem.writeAsString(path, '$encoded\n');
   }
 }
 

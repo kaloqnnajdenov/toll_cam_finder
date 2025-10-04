@@ -289,7 +289,22 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
 
     try {
       await remoteService.submitForModeration(draft, addedByUserId: userId);
+      await _localSegmentsService.markPublicSubmission(localId, isPublic: true);
     } on RemoteSegmentsServiceException catch (error) {
+      await _rollbackLocalDraft(localId);
+      _showSnackBar(error.message);
+      return;
+    } on LocalSegmentsServiceException catch (error) {
+      try {
+        await remoteService.deletePendingSubmission(
+          addedByUserId: userId,
+          name: draft.name,
+          startCoordinates: draft.startCoordinates,
+          endCoordinates: draft.endCoordinates,
+        );
+      } catch (_) {
+        debugPrint('Failed to rollback public submission for $localId');
+      }
       await _rollbackLocalDraft(localId);
       _showSnackBar(error.message);
       return;

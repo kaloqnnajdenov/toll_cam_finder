@@ -144,48 +144,69 @@ class _SegmentsPageState extends State<SegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
+    final messenger = ScaffoldMessenger.of(context);
+    bool isMarkedPublic;
+    try {
+      isMarkedPublic = await _localSegmentsService.isMarkedPublic(segment.id);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to determine the submission status for this segment.'),
+        ),
+      );
+      return false;
+    }
+
+    if (!isMarkedPublic) {
+      return true;
+    }
+
+    final withdraw = await _showWithdrawSubmissionDialog(context, segment);
+    if (!mounted) {
+      return false;
+    }
+
+    if (withdraw != true) {
+      return true;
+    }
+
     AuthController auth;
     try {
       auth = context.read<AuthController>();
     } catch (_) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission without a signed in user.'),
+        ),
+      );
+      return false;
     }
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     final userId = auth.currentUserId;
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission right now.'),
+        ),
+      );
+      return false;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final remoteService = RemoteSegmentsService(client: client);
-
     try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
       final deleted = await remoteService.deletePendingSubmission(
         addedByUserId: userId,
         name: segment.name,
@@ -197,7 +218,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              'Segment ${segment.displayId} submission withdrawn.',
             ),
           ),
         );
@@ -209,8 +230,6 @@ class _SegmentsPageState extends State<SegmentsPage> {
           ),
         );
       }
-
-      return true;
     } on RemoteSegmentsServiceException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
       return false;
@@ -222,6 +241,22 @@ class _SegmentsPageState extends State<SegmentsPage> {
       );
       return false;
     }
+
+    try {
+      await _localSegmentsService.markPublicSubmission(segment.id, isPublic: false);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update the submission status for this segment.'),
+        ),
+      );
+      return false;
+    }
+
+    return true;
   }
 
   Future<void> _deleteSegment(SegmentInfo segment) async {
@@ -480,48 +515,69 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
+    final messenger = ScaffoldMessenger.of(context);
+    bool isMarkedPublic;
+    try {
+      isMarkedPublic = await _localSegmentsService.isMarkedPublic(segment.id);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to determine the submission status for this segment.'),
+        ),
+      );
+      return false;
+    }
+
+    if (!isMarkedPublic) {
+      return true;
+    }
+
+    final withdraw = await _showWithdrawSubmissionDialog(context, segment);
+    if (!mounted) {
+      return false;
+    }
+
+    if (withdraw != true) {
+      return true;
+    }
+
     AuthController auth;
     try {
       auth = context.read<AuthController>();
     } catch (_) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission without a signed in user.'),
+        ),
+      );
+      return false;
     }
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to withdraw the public submission.'),
+        ),
+      );
+      return false;
     }
 
     final userId = auth.currentUserId;
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
-      return true;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission right now.'),
+        ),
+      );
+      return false;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final remoteService = RemoteSegmentsService(client: client);
-
     try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
       final deleted = await remoteService.deletePendingSubmission(
         addedByUserId: userId,
         name: segment.name,
@@ -533,7 +589,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              'Segment ${segment.displayId} submission withdrawn.',
             ),
           ),
         );
@@ -545,8 +601,6 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
           ),
         );
       }
-
-      return true;
     } on RemoteSegmentsServiceException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
       return false;
@@ -558,6 +612,22 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       );
       return false;
     }
+
+    try {
+      await _localSegmentsService.markPublicSubmission(segment.id, isPublic: false);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update the submission status for this segment.'),
+        ),
+      );
+      return false;
+    }
+
+    return true;
   }
 
   Future<void> _deleteSegment(SegmentInfo segment) async {
@@ -697,7 +767,7 @@ Future<bool> _showDeleteConfirmationDialog(
   return result ?? false;
 }
 
-Future<bool> _showCancelRemoteSubmissionDialog(
+Future<bool> _showWithdrawSubmissionDialog(
   BuildContext context,
   SegmentInfo segment,
 ) async {
@@ -705,20 +775,19 @@ Future<bool> _showCancelRemoteSubmissionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Cancel public submission?'),
+        title: const Text('Withdraw public submission?'),
         content: Text(
-          'Segment ${segment.displayId} was submitted for public review. '
-          'Cancelling the public submission will prevent it from being published. '
-          'Do you want to cancel the public submission as well?',
+          'You have submitted segment ${segment.displayId} for review. '
+          'Do you want to withdraw the submission?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep submission'),
+            child: const Text('No'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel submission'),
+            child: const Text('Yes'),
           ),
         ],
       );
