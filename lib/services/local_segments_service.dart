@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -56,7 +58,10 @@ class LocalSegmentsService {
   }
 
   /// Persists a [SegmentDraft] locally and returns the generated identifier.
-  Future<String> saveDraft(SegmentDraft draft) async {
+  Future<String> saveDraft(
+    SegmentDraft draft, {
+    bool submittedForPublicReview = false,
+  }) async {
     if (kIsWeb) {
       throw const LocalSegmentsServiceException(
         'Saving local segments is not supported on the web.',
@@ -94,6 +99,10 @@ class LocalSegmentsService {
     ).convert(rows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _updatePublicSubmissionFlag(
+      segmentId: localId,
+      submittedForPublicReview: submittedForPublicReview,
+    );
     return localId;
   }
 
@@ -146,6 +155,7 @@ class LocalSegmentsService {
 
     if (updatedRows.isEmpty) {
       await _fileSystem.writeAsString(csvPath, '');
+      await _clearPublicSubmissionFlag(id);
       return true;
     }
 
@@ -156,7 +166,26 @@ class LocalSegmentsService {
     ).convert(updatedRows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+    await _clearPublicSubmissionFlag(id);
     return true;
+  }
+
+  /// Returns the identifiers of locally stored segments that were submitted for
+  /// public review.
+  Future<Set<String>> loadPublicSubmissionIds() async {
+    if (kIsWeb) {
+      return const <String>{};
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    final metadata = await _readMetadata(metadataPath);
+    return metadata.entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toSet();
   }
 
   Future<List<List<String>>> _readExistingRows(String path) async {
@@ -208,6 +237,94 @@ class LocalSegmentsService {
     }
 
     return '${lat.toStringAsFixed(6)}, ${lon.toStringAsFixed(6)}';
+  }
+
+  Future<void> _updatePublicSubmissionFlag({
+    required String segmentId,
+    required bool submittedForPublicReview,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    if (!submittedForPublicReview) {
+      await _removeSubmissionFlag(metadataPath, segmentId);
+      return;
+    }
+
+    final metadata = await _readMetadata(metadataPath);
+    if (metadata[segmentId] == true) {
+      return;
+    }
+
+    await _fileSystem.ensureParentDirectory(metadataPath);
+    metadata[segmentId] = true;
+    await _fileSystem.writeAsString(
+      metadataPath,
+      jsonEncode(metadata),
+    );
+  }
+
+  Future<void> _clearPublicSubmissionFlag(String segmentId) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+    await _removeSubmissionFlag(metadataPath, segmentId);
+  }
+
+  Future<void> _removeSubmissionFlag(String metadataPath, String segmentId) async {
+    final metadata = await _readMetadata(metadataPath);
+    if (!metadata.containsKey(segmentId)) {
+      return;
+    }
+
+    metadata.remove(segmentId);
+    if (metadata.isEmpty) {
+      await _fileSystem.ensureParentDirectory(metadataPath);
+      await _fileSystem.writeAsString(metadataPath, '');
+      return;
+    }
+
+    await _fileSystem.ensureParentDirectory(metadataPath);
+    await _fileSystem.writeAsString(
+      metadataPath,
+      jsonEncode(metadata),
+    );
+  }
+
+  Future<Map<String, bool>> _readMetadata(String metadataPath) async {
+    if (!await _fileSystem.exists(metadataPath)) {
+      return <String, bool>{};
+    }
+
+    final contents = await _fileSystem.readAsString(metadataPath);
+    if (contents.trim().isEmpty) {
+      return <String, bool>{};
+    }
+
+    try {
+      final decoded = jsonDecode(contents);
+      if (decoded is Map<String, dynamic>) {
+        return decoded.map((key, value) => MapEntry(key, value == true));
+      }
+    } on FormatException catch (error) {
+      debugPrint('Invalid local segment metadata format: $error');
+      return <String, bool>{};
+    } catch (error) {
+      debugPrint('Failed to read local segment metadata: $error');
+      return <String, bool>{};
+    }
+
+    debugPrint('Unexpected metadata structure for local segments.');
+    return <String, bool>{};
   }
 }
 

@@ -275,7 +275,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       return;
     }
 
-    final localId = await _saveDraftLocally(draft);
+    final localId = await _saveDraftLocally(
+      draft,
+      submittedForPublicReview: true,
+    );
     if (localId == null) {
       return;
     }
@@ -327,9 +330,15 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     }
   }
 
-  Future<String?> _saveDraftLocally(SegmentDraft draft) async {
+  Future<String?> _saveDraftLocally(
+    SegmentDraft draft, {
+    bool submittedForPublicReview = false,
+  }) async {
     try {
-      return await _localSegmentsService.saveDraft(draft);
+      return await _localSegmentsService.saveDraft(
+        draft,
+        submittedForPublicReview: submittedForPublicReview,
+      );
     } on LocalSegmentsServiceException catch (error) {
       _showSnackBar(error.message);
     } catch (_) {

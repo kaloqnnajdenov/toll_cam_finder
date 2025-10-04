@@ -17,7 +17,7 @@ class SegmentsPage extends StatefulWidget {
 
 enum _SegmentAction { delete }
 
-class _SegmentsPageState extends State<SegmentsPage> {
+class _SegmentsPageState extends State<SegmentsPage> with _PublicSubmissionWithdrawal {
   final SegmentsRepository _repository = SegmentsRepository();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   late Future<List<SegmentInfo>> _segmentsFuture;
@@ -135,93 +135,12 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return;
     }
 
-    final proceed = await _handleRemoteSubmissionCancellation(segment);
+    final proceed = await _maybeHandlePublicSubmissionWithdrawal(segment);
     if (!mounted || !proceed) {
       return;
     }
 
     await _deleteSegment(segment);
-  }
-
-  Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
-    AuthController auth;
-    try {
-      auth = context.read<AuthController>();
-    } catch (_) {
-      return true;
-    }
-
-    if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
-    }
-
-    final userId = auth.currentUserId;
-    final client = auth.client;
-    if (userId == null || userId.isEmpty || client == null) {
-      return true;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-    final remoteService = RemoteSegmentsService(client: client);
-
-    try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
-      final deleted = await remoteService.deletePendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (deleted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
-            ),
-          ),
-        );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
-          ),
-        );
-      }
-
-      return true;
-    } on RemoteSegmentsServiceException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-      return false;
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to cancel the public review for this segment.'),
-        ),
-      );
-      return false;
-    }
   }
 
   Future<void> _deleteSegment(SegmentInfo segment) async {
@@ -374,7 +293,8 @@ class LocalSegmentsPage extends StatefulWidget {
   State<LocalSegmentsPage> createState() => _LocalSegmentsPageState();
 }
 
-class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
+class _LocalSegmentsPageState extends State<LocalSegmentsPage>
+    with _PublicSubmissionWithdrawal {
   final SegmentsRepository _repository = SegmentsRepository();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   late Future<List<SegmentInfo>> _segmentsFuture;
@@ -471,93 +391,12 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return;
     }
 
-    final proceed = await _handleRemoteSubmissionCancellation(segment);
+    final proceed = await _maybeHandlePublicSubmissionWithdrawal(segment);
     if (!mounted || !proceed) {
       return;
     }
 
     await _deleteSegment(segment);
-  }
-
-  Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
-    AuthController auth;
-    try {
-      auth = context.read<AuthController>();
-    } catch (_) {
-      return true;
-    }
-
-    if (!auth.isLoggedIn || !auth.isConfigured) {
-      return true;
-    }
-
-    final userId = auth.currentUserId;
-    final client = auth.client;
-    if (userId == null || userId.isEmpty || client == null) {
-      return true;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-    final remoteService = RemoteSegmentsService(client: client);
-
-    try {
-      final hasPending = await remoteService.hasPendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (!hasPending) {
-        return true;
-      }
-
-      final shouldCancel =
-          await _showCancelRemoteSubmissionDialog(context, segment);
-      if (!mounted) {
-        return false;
-      }
-
-      if (shouldCancel != true) {
-        return true;
-      }
-
-      final deleted = await remoteService.deletePendingSubmission(
-        addedByUserId: userId,
-        name: segment.name,
-        startCoordinates: segment.start,
-        endCoordinates: segment.end,
-      );
-
-      if (deleted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
-            ),
-          ),
-        );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
-          ),
-        );
-      }
-
-      return true;
-    } on RemoteSegmentsServiceException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-      return false;
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to cancel the public review for this segment.'),
-        ),
-      );
-      return false;
-    }
   }
 
   Future<void> _deleteSegment(SegmentInfo segment) async {
@@ -640,6 +479,99 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
+mixin _PublicSubmissionWithdrawal on State<StatefulWidget> {
+  Future<bool> _maybeHandlePublicSubmissionWithdrawal(
+      SegmentInfo segment) async {
+    if (!segment.submittedForPublicReview) {
+      return true;
+    }
+
+    final shouldWithdraw =
+        await _showWithdrawPublicSubmissionDialog(context, segment);
+    if (!mounted) {
+      return false;
+    }
+
+    if (shouldWithdraw != true) {
+      // The user chose to keep the submission. Delete the local copy only.
+      return true;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    AuthController auth;
+    try {
+      auth = context.read<AuthController>();
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission: not signed in.'),
+        ),
+      );
+      return false;
+    }
+
+    if (!auth.isLoggedIn || !auth.isConfigured) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission: not signed in.'),
+        ),
+      );
+      return false;
+    }
+
+    final userId = auth.currentUserId;
+    final client = auth.client;
+    if (userId == null || userId.isEmpty || client == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to withdraw the public submission.'),
+        ),
+      );
+      return false;
+    }
+
+    final remoteService = RemoteSegmentsService(client: client);
+
+    try {
+      final deleted = await remoteService.deletePendingSubmission(
+        addedByUserId: userId,
+        name: segment.name,
+        startCoordinates: segment.start,
+        endCoordinates: segment.end,
+      );
+
+      if (deleted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Segment ${segment.displayId} will no longer be reviewed for public release.',
+            ),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(
+            content:
+                Text('The public review request for this segment was already processed.'),
+          ),
+        );
+      }
+
+      return true;
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to cancel the public review for this segment.'),
+        ),
+      );
+      return false;
+    }
+  }
+}
+
 Future<_SegmentAction?> _showSegmentActionsSheet(
   BuildContext context,
   SegmentInfo segment,
@@ -697,7 +629,7 @@ Future<bool> _showDeleteConfirmationDialog(
   return result ?? false;
 }
 
-Future<bool> _showCancelRemoteSubmissionDialog(
+Future<bool> _showWithdrawPublicSubmissionDialog(
   BuildContext context,
   SegmentInfo segment,
 ) async {
@@ -705,11 +637,11 @@ Future<bool> _showCancelRemoteSubmissionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Cancel public submission?'),
+        title: const Text('Withdraw public submission?'),
         content: Text(
-          'Segment ${segment.displayId} was submitted for public review. '
-          'Cancelling the public submission will prevent it from being published. '
-          'Do you want to cancel the public submission as well?',
+          'You have submitted segment ${segment.displayId} for public review. '
+          'Withdrawing the submission will remove it from the moderation queue. '
+          'Do you want to withdraw the submission?',
         ),
         actions: [
           TextButton(
@@ -718,7 +650,7 @@ Future<bool> _showCancelRemoteSubmissionDialog(
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel submission'),
+            child: const Text('Withdraw submission'),
           ),
         ],
       );

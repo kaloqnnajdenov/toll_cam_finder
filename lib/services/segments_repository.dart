@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'package:toll_cam_finder/services/local_segments_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_csv_constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
@@ -16,6 +17,7 @@ class SegmentInfo {
     required this.start,
     required this.end,
     this.isLocalOnly = false,
+    this.submittedForPublicReview = false,
   });
 
   final String id;
@@ -23,6 +25,7 @@ class SegmentInfo {
   final String start;
   final String end;
   final bool isLocalOnly;
+  final bool submittedForPublicReview;
 
   String get displayId {
     if (!isLocalOnly) {
@@ -63,6 +66,19 @@ class SegmentsRepository {
       return const [];
     }
 
+    Set<String> submittedForPublicReviewIds = const <String>{};
+    if (!kIsWeb) {
+      try {
+        final metadataService = LocalSegmentsService(fileSystem: _fileSystem);
+        submittedForPublicReviewIds =
+            await metadataService.loadPublicSubmissionIds();
+      } on LocalSegmentsServiceException {
+        submittedForPublicReviewIds = const <String>{};
+      } catch (_) {
+        submittedForPublicReviewIds = const <String>{};
+      }
+    }
+
     final segments = <SegmentInfo>[];
     for (final row in rows.skip(1)) {
       if (row.length <= idIndex ||
@@ -92,6 +108,8 @@ class SegmentsRepository {
           start: start,
           end: end,
           isLocalOnly: isLocalOnly,
+          submittedForPublicReview:
+              submittedForPublicReviewIds.contains(id),
         ),
       );
     }
