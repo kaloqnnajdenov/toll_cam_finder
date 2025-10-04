@@ -45,6 +45,7 @@ class SegmentsRepository {
 
   Future<List<SegmentInfo>> loadSegments({
     String assetPath = kTollSegmentsAssetPath,
+    bool onlyLocal = false,
   }) async {
     final raw = await _loadSegmentsData(assetPath);
     final rows = const CsvToListConverter(fieldDelimiter: ';').convert(raw);
@@ -95,8 +96,45 @@ class SegmentsRepository {
       );
     }
 
-    segments.sort((a, b) => a.displayId.compareTo(b.displayId));
+    if (onlyLocal) {
+      segments.retainWhere((segment) => segment.isLocalOnly);
+    }
+
+    segments.sort(_compareSegments);
     return segments;
+  }
+
+  int _compareSegments(SegmentInfo a, SegmentInfo b) {
+    final idComparison = _compareDisplayIds(a.displayId, b.displayId);
+    if (idComparison != 0) {
+      return idComparison;
+    }
+
+    final nameComparison = a.name.compareTo(b.name);
+    if (nameComparison != 0) {
+      return nameComparison;
+    }
+
+    return a.id.compareTo(b.id);
+  }
+
+  int _compareDisplayIds(String a, String b) {
+    final numericA = int.tryParse(a);
+    final numericB = int.tryParse(b);
+
+    if (numericA != null && numericB != null) {
+      return numericA.compareTo(numericB);
+    }
+
+    if (numericA != null) {
+      return -1;
+    }
+
+    if (numericB != null) {
+      return 1;
+    }
+
+    return a.compareTo(b);
   }
 
   int _findColumn(List<String> header, List<String> candidates) {

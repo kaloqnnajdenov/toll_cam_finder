@@ -69,6 +69,68 @@ class LocalSegmentsService {
     await _fileSystem.writeAsString(csvPath, '$csv\n');
   }
 
+  Future<bool> deleteLocalSegment(String id) async {
+    if (kIsWeb) {
+      throw const LocalSegmentsServiceException(
+        'Deleting local segments is not supported on the web.',
+      );
+    }
+
+    if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+      throw const LocalSegmentsServiceException(
+        'Only segments saved locally can be deleted.',
+      );
+    }
+
+    final csvPath = await resolveTollSegmentsDataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    if (!await _fileSystem.exists(csvPath)) {
+      return false;
+    }
+
+    final rows = await _readExistingRows(csvPath);
+    if (rows.isEmpty) {
+      return false;
+    }
+
+    final updatedRows = <List<String>>[];
+    var removed = false;
+
+    for (final row in rows) {
+      if (_isHeaderRow(row)) {
+        updatedRows.add(row);
+        continue;
+      }
+
+      if (row.isNotEmpty && row.first == id) {
+        removed = true;
+        continue;
+      }
+
+      updatedRows.add(row);
+    }
+
+    if (!removed) {
+      return false;
+    }
+
+    if (updatedRows.isEmpty) {
+      await _fileSystem.writeAsString(csvPath, '');
+      return true;
+    }
+
+    final csv = const ListToCsvConverter(
+      fieldDelimiter: ';',
+      textDelimiter: '"',
+      textEndDelimiter: '"',
+    ).convert(updatedRows);
+
+    await _fileSystem.writeAsString(csvPath, '$csv\n');
+    return true;
+  }
+
   Future<List<List<String>>> _readExistingRows(String path) async {
     if (!await _fileSystem.exists(path)) {
       return <List<String>>[];
