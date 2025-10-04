@@ -12,6 +12,7 @@ class AppRoutes {
   static const String signUp = '/sign-up';
   static const String profile = '/profile';
   static const String segments = '/segments';
+  static const String localSegments = '/segments/local';
   static const String createSegment = '/segments/create';
 
   static Map<String, WidgetBuilder> get routes => {
@@ -20,6 +21,7 @@ class AppRoutes {
     signUp: (_) => const SignUpPage(),
     profile: (_) => const ProfilePage(),
     segments: (_) => const SegmentsPage(),
+    localSegments: (_) => const LocalSegmentsPage(),
     createSegment: (_) => const CreateSegmentPage(),
   };
 }
