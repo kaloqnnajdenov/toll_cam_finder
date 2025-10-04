@@ -173,6 +173,20 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   }
 
   Future<void> _handlePublicSegmentSaved() async {
+    final auth = context.read<AuthController>();
+    if (!auth.isLoggedIn) {
+      _showSnackBar('You must be logged in to submit a public segment.');
+      return;
+    }
+
+    final userId = auth.currentUserId;
+    if (userId == null || userId.isEmpty) {
+      _showSnackBar(
+        'Unable to determine the logged in account. Please sign in again.',
+      );
+      return;
+    }
+
     final draft = _buildDraft();
     if (draft == null) {
       return;
@@ -188,11 +202,13 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       return;
     }
 
-    final auth = context.read<AuthController>();
     final remoteService = RemoteSegmentsService(client: auth.client);
 
     try {
-      await remoteService.submitForModeration(draft);
+      await remoteService.submitForModeration(
+        draft,
+        addedByUserId: userId,
+      );
     } on RemoteSegmentsServiceException catch (error) {
       await _rollbackLocalDraft(localId);
       _showSnackBar(error.message);
