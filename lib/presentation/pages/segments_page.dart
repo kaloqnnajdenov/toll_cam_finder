@@ -144,8 +144,48 @@ class _SegmentsPageState extends State<SegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
-    if (!segment.submittedForReview) {
+    final messenger = ScaffoldMessenger.of(context);
+
+    AuthController? auth;
+    try {
+      auth = context.read<AuthController>();
+    } catch (_) {
+      auth = null;
+    }
+
+    if (auth == null || !auth.isLoggedIn || !auth.isConfigured) {
       return true;
+    }
+
+    final userId = auth.currentUserId;
+    final client = auth.client;
+    if (userId == null || userId.isEmpty || client == null) {
+      return true;
+    }
+
+    final remoteService = RemoteSegmentsService(client: client);
+
+    try {
+      final hasPending = await remoteService.hasPendingSubmission(
+        addedByUserId: userId,
+        name: segment.name,
+        startCoordinates: segment.start,
+        endCoordinates: segment.end,
+      );
+
+      if (!hasPending) {
+        return true;
+      }
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to check the public submission status.'),
+        ),
+      );
+      return false;
     }
 
     final shouldWithdraw =
@@ -157,42 +197,6 @@ class _SegmentsPageState extends State<SegmentsPage> {
     if (shouldWithdraw != true) {
       return true;
     }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    AuthController auth;
-    try {
-      auth = context.read<AuthController>();
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You must be logged in to withdraw the public submission.'),
-        ),
-      );
-      return false;
-    }
-
-    if (!auth.isLoggedIn || !auth.isConfigured) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You must be logged in to withdraw the public submission.'),
-        ),
-      );
-      return false;
-    }
-
-    final userId = auth.currentUserId;
-    final client = auth.client;
-    if (userId == null || userId.isEmpty || client == null) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission for this segment.'),
-        ),
-      );
-      return false;
-    }
-
-    final remoteService = RemoteSegmentsService(client: client);
 
     try {
       final deleted = await remoteService.deletePendingSubmission(
@@ -490,8 +494,48 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
   }
 
   Future<bool> _handleRemoteSubmissionCancellation(SegmentInfo segment) async {
-    if (!segment.submittedForReview) {
+    final messenger = ScaffoldMessenger.of(context);
+
+    AuthController? auth;
+    try {
+      auth = context.read<AuthController>();
+    } catch (_) {
+      auth = null;
+    }
+
+    if (auth == null || !auth.isLoggedIn || !auth.isConfigured) {
       return true;
+    }
+
+    final userId = auth.currentUserId;
+    final client = auth.client;
+    if (userId == null || userId.isEmpty || client == null) {
+      return true;
+    }
+
+    final remoteService = RemoteSegmentsService(client: client);
+
+    try {
+      final hasPending = await remoteService.hasPendingSubmission(
+        addedByUserId: userId,
+        name: segment.name,
+        startCoordinates: segment.start,
+        endCoordinates: segment.end,
+      );
+
+      if (!hasPending) {
+        return true;
+      }
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to check the public submission status.'),
+        ),
+      );
+      return false;
     }
 
     final shouldWithdraw =
@@ -503,42 +547,6 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     if (shouldWithdraw != true) {
       return true;
     }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    AuthController auth;
-    try {
-      auth = context.read<AuthController>();
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You must be logged in to withdraw the public submission.'),
-        ),
-      );
-      return false;
-    }
-
-    if (!auth.isLoggedIn || !auth.isConfigured) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You must be logged in to withdraw the public submission.'),
-        ),
-      );
-      return false;
-    }
-
-    final userId = auth.currentUserId;
-    final client = auth.client;
-    if (userId == null || userId.isEmpty || client == null) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission for this segment.'),
-        ),
-      );
-      return false;
-    }
-
-    final remoteService = RemoteSegmentsService(client: client);
 
     try {
       final deleted = await remoteService.deletePendingSubmission(
