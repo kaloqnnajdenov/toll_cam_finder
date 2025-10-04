@@ -8,6 +8,9 @@ const String kTollSegmentsAssetPath = 'assets/data/toll_segments.csv';
 /// Default file name used when storing the synced toll segments data on disk.
 const String kTollSegmentsFileName = 'toll_segments.csv';
 
+/// Default file name used to persist metadata about locally created segments.
+const String kTollSegmentsMetadataFileName = 'toll_segments_public.json';
+
 /// Function signature for providing a custom on-disk location for the synced
 /// toll segments CSV. Useful for tests.
 typedef TollSegmentsPathResolver = Future<String> Function();
@@ -33,4 +36,24 @@ Future<String> resolveTollSegmentsDataPath({
 
   final directory = await getApplicationSupportDirectory();
   return p.join(directory.path, kTollSegmentsFileName);
+}
+
+/// Resolves the absolute path where metadata for locally created segments
+/// should be stored. The metadata file lives alongside the CSV that stores the
+/// segment records.
+Future<String> resolveTollSegmentsMetadataPath({
+  TollSegmentsPathResolver? overrideResolver,
+}) async {
+  final csvPath = await resolveTollSegmentsDataPath(
+    overrideResolver: overrideResolver,
+  );
+
+  if (kIsWeb) {
+    // Web builds cannot persist to disk. A synthetic asset-like path is
+    // returned for consistency, even though it will not be used.
+    return p.setExtension(csvPath, '.public.json');
+  }
+
+  final directory = p.dirname(csvPath);
+  return p.join(directory, kTollSegmentsMetadataFileName);
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -16,6 +18,7 @@ class SegmentInfo {
     required this.start,
     required this.end,
     this.isLocalOnly = false,
+    this.submittedForReview = false,
   });
 
   final String id;
@@ -23,6 +26,7 @@ class SegmentInfo {
   final String start;
   final String end;
   final bool isLocalOnly;
+  final bool submittedForReview;
 
   String get displayId {
     if (!isLocalOnly) {
@@ -63,6 +67,10 @@ class SegmentsRepository {
       return const [];
     }
 
+    final submittedIds = (!kIsWeb && assetPath == kTollSegmentsAssetPath)
+        ? await _loadSubmittedSegmentIds()
+        : <String>{};
+
     final segments = <SegmentInfo>[];
     for (final row in rows.skip(1)) {
       if (row.length <= idIndex ||
@@ -92,6 +100,7 @@ class SegmentsRepository {
           start: start,
           end: end,
           isLocalOnly: isLocalOnly,
+          submittedForReview: submittedIds.contains(id),
         ),
       );
     }
@@ -171,5 +180,28 @@ class SegmentsRepository {
     }
 
     return rootBundle.loadString(assetPath);
+  }
+
+  Future<Set<String>> _loadSubmittedSegmentIds() async {
+    try {
+      final metadataPath = await resolveTollSegmentsMetadataPath();
+      if (!await _fileSystem.exists(metadataPath)) {
+        return <String>{};
+      }
+
+      final contents = await _fileSystem.readAsString(metadataPath);
+      if (contents.trim().isEmpty) {
+        return <String>{};
+      }
+
+      final decoded = jsonDecode(contents);
+      if (decoded is List) {
+        return decoded.map((entry) => '$entry').toSet();
+      }
+    } catch (_) {
+      // Ignore metadata parsing failures; treat as if there is no metadata.
+    }
+
+    return <String>{};
   }
 }

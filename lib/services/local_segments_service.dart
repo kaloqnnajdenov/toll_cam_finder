@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -25,6 +27,7 @@ class LocalSegmentsService {
     required String name,
     required String startCoordinates,
     required String endCoordinates,
+    bool isPublic = false,
   }) async {
     final draft = prepareDraft(
       name: name,
@@ -32,7 +35,7 @@ class LocalSegmentsService {
       endCoordinates: endCoordinates,
     );
 
-    await saveDraft(draft);
+    await saveDraft(draft, isPublic: isPublic);
   }
 
   /// Normalizes the provided input fields and returns a [SegmentDraft] that can
@@ -56,7 +59,10 @@ class LocalSegmentsService {
   }
 
   /// Persists a [SegmentDraft] locally and returns the generated identifier.
-  Future<String> saveDraft(SegmentDraft draft) async {
+  Future<String> saveDraft(
+    SegmentDraft draft, {
+    bool isPublic = false,
+  }) async {
     if (kIsWeb) {
       throw const LocalSegmentsServiceException(
         'Saving local segments is not supported on the web.',
@@ -94,6 +100,13 @@ class LocalSegmentsService {
     ).convert(rows);
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
+
+    try {
+      await _updateSubmissionFlag(localId, isPublic);
+    } catch (error) {
+      debugPrint('Failed to update submission flag for $localId: $error');
+    }
+
     return localId;
   }
 
@@ -146,17 +159,35 @@ class LocalSegmentsService {
 
     if (updatedRows.isEmpty) {
       await _fileSystem.writeAsString(csvPath, '');
-      return true;
+    } else {
+      final csv = const ListToCsvConverter(
+        fieldDelimiter: ';',
+        textDelimiter: '"',
+        textEndDelimiter: '"',
+      ).convert(updatedRows);
+
+      await _fileSystem.writeAsString(csvPath, '$csv\n');
     }
 
-    final csv = const ListToCsvConverter(
-      fieldDelimiter: ';',
-      textDelimiter: '"',
-      textEndDelimiter: '"',
-    ).convert(updatedRows);
+    try {
+      await _updateSubmissionFlag(id, false);
+    } catch (error) {
+      debugPrint('Failed to clear submission flag for $id: $error');
+    }
 
-    await _fileSystem.writeAsString(csvPath, '$csv\n');
     return true;
+  }
+
+  Future<bool> isSubmittedForPublicReview(String id) async {
+    if (kIsWeb) {
+      return false;
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+    final submitted = await _readSubmittedSegmentIds(metadataPath);
+    return submitted.contains(id);
   }
 
   Future<List<List<String>>> _readExistingRows(String path) async {
@@ -208,6 +239,55 @@ class LocalSegmentsService {
     }
 
     return '${lat.toStringAsFixed(6)}, ${lon.toStringAsFixed(6)}';
+  }
+
+  Future<void> _updateSubmissionFlag(String id, bool isPublic) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final metadataPath = await resolveTollSegmentsMetadataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    await _fileSystem.ensureParentDirectory(metadataPath);
+    final submitted = await _readSubmittedSegmentIds(metadataPath);
+
+    if (isPublic) {
+      submitted.add(id);
+    } else {
+      submitted.remove(id);
+    }
+
+    if (submitted.isEmpty) {
+      await _fileSystem.writeAsString(metadataPath, '');
+      return;
+    }
+
+    final payload = jsonEncode(submitted.toList()..sort());
+    await _fileSystem.writeAsString(metadataPath, '$payload\n');
+  }
+
+  Future<Set<String>> _readSubmittedSegmentIds(String path) async {
+    if (!await _fileSystem.exists(path)) {
+      return <String>{};
+    }
+
+    final contents = await _fileSystem.readAsString(path);
+    if (contents.trim().isEmpty) {
+      return <String>{};
+    }
+
+    try {
+      final decoded = jsonDecode(contents);
+      if (decoded is List) {
+        return decoded.map((entry) => '$entry').toSet();
+      }
+    } catch (_) {
+      // Ignore malformed metadata and treat it as absent.
+    }
+
+    return <String>{};
   }
 }
 
