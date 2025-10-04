@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/local_segments_service.dart';
@@ -14,13 +15,41 @@ class CreateSegmentPage extends StatefulWidget {
 }
 
 class _CreateSegmentPageState extends State<CreateSegmentPage> {
+  static String? _cachedName;
+  static String? _cachedStart;
+  static String? _cachedEnd;
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
+  bool _persistDraftOnDispose = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_cachedName != null) {
+      _nameController.text = _cachedName!;
+    }
+    if (_cachedStart != null) {
+      _startController.text = _cachedStart!;
+    }
+    if (_cachedEnd != null) {
+      _endController.text = _cachedEnd!;
+    }
+  }
 
   @override
   void dispose() {
+    if (_persistDraftOnDispose) {
+      _cachedName = _nameController.text;
+      _cachedStart = _startController.text;
+      _cachedEnd = _endController.text;
+    } else {
+      _cachedName = null;
+      _cachedStart = null;
+      _cachedEnd = null;
+    }
     _nameController.dispose();
     _startController.dispose();
     _endController.dispose();
@@ -169,13 +198,58 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
 
     if (!mounted) return;
 
+    _resetDraftState();
     Navigator.of(context).pop(true);
   }
 
   Future<void> _handlePublicSegmentSaved() async {
     final auth = context.read<AuthController>();
     if (!auth.isLoggedIn) {
-      _showSnackBar('You must be logged in to submit a public segment.');
+      final choice = await showDialog<_LoginOrLocalChoice>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Sign in to share publicly'),
+            content: const Text(
+              'You need to be logged in to submit a public segment. '
+              'Would you like to log in or save the segment locally instead?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(_LoginOrLocalChoice.saveLocally);
+                },
+                child: const Text('Save locally'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop(_LoginOrLocalChoice.login);
+                },
+                child: const Text('Login'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted) return;
+
+      switch (choice) {
+        case _LoginOrLocalChoice.login:
+          final loggedIn = await Navigator.of(context).pushNamed<bool>(
+            AppRoutes.login,
+            arguments: true,
+          );
+          if (loggedIn == true && mounted) {
+            await _handlePublicSegmentSaved();
+          }
+          break;
+        case _LoginOrLocalChoice.saveLocally:
+          await _handlePrivateSegmentSaved();
+          break;
+        case null:
+          break;
+      }
       return;
     }
 
@@ -226,6 +300,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         content: Text('Segment submitted for public review.'),
       ),
     );
+    _resetDraftState();
     Navigator.of(context).pop(true);
   }
 
@@ -272,6 +347,13 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       SnackBar(content: Text(message)),
     );
   }
+
+  void _resetDraftState() {
+    _persistDraftOnDispose = false;
+    _cachedName = null;
+    _cachedStart = null;
+    _cachedEnd = null;
+  }
 }
 class _LabeledTextField extends StatelessWidget {
   const _LabeledTextField({
@@ -300,4 +382,9 @@ class _LabeledTextField extends StatelessWidget {
 enum _SegmentVisibilityChoice {
   private,
   public,
+}
+
+enum _LoginOrLocalChoice {
+  login,
+  saveLocally,
 }
