@@ -490,13 +490,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             ListTile(
               leading: const Icon(Icons.segment),
               title: const Text('Segments'),
-              onTap: () {
-                Navigator.of(context).pop();
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  Navigator.of(context).pushNamed(AppRoutes.segments);
-                });
-              },
+              onTap: _onSegmentsSelected,
             ),
             ListTile(
               leading: const Icon(Icons.person_outline),
@@ -557,6 +551,51 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       if (!mounted) return;
       unawaited(_performSync());
     });
+  }
+
+  void _onSegmentsSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_openSegmentsPage());
+    });
+  }
+
+  Future<void> _openSegmentsPage() async {
+    final result = await Navigator.of(context).pushNamed(AppRoutes.segments);
+    if (!mounted || result != true) {
+      return;
+    }
+
+    await _refreshLocalSegments();
+  }
+
+  Future<void> _refreshLocalSegments() async {
+    final reloaded = await _segmentTracker.reload(
+      assetPath: AppConstants.pathToTollSegments,
+    );
+
+    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
+    if (!mounted) return;
+
+    _updateVisibleCameras();
+    if (!mounted) return;
+
+    _resetSegmentState();
+    if (reloaded && _userLatLng != null) {
+      final segEvent = _segmentTracker.handleLocationUpdate(
+        current: _userLatLng!,
+        previous: null,
+        rawHeading: null,
+        speedKmh: _speedKmh,
+        compassHeading: _compassHeading,
+      );
+      _applySegmentEvent(segEvent);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _performSync() async {
