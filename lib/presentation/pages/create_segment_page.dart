@@ -24,6 +24,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final TextEditingController _endController = TextEditingController();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   bool _persistDraftOnDispose = true;
+  bool _isNavigatingToLogin = false;
 
   @override
   void initState() {
@@ -202,7 +203,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (!auth.isLoggedIn) {
       final choice = await showDialog<_LoginOrLocalChoice>(
         context: context,
-        useRootNavigator: false,
+        useRootNavigator: true,
         builder: (context) {
           return AlertDialog(
             title: const Text('Sign in to share publicly'),
@@ -232,16 +233,24 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
 
       switch (choice) {
         case _LoginOrLocalChoice.login:
+          if (_isNavigatingToLogin) {
+            break;
+          }
           _cacheDraftInputs();
-          final navigator = Navigator.of(context);
-          final loggedIn = await navigator.pushNamed<bool>(
-            AppRoutes.login,
-            arguments: true,
-          );
-          if (loggedIn == true && mounted) {
-            _showSnackBar(
-              'Logged in successfully. Tap "Save segment" again to submit the segment.',
+          _isNavigatingToLogin = true;
+          try {
+            final navigator = Navigator.of(context, rootNavigator: true);
+            final loggedIn = await navigator.pushNamed<bool>(
+              AppRoutes.login,
+              arguments: true,
             );
+            if (loggedIn == true && mounted) {
+              _showSnackBar(
+                'Logged in successfully. Tap "Save segment" again to submit the segment.',
+              );
+            }
+          } finally {
+            _isNavigatingToLogin = false;
           }
           break;
         case _LoginOrLocalChoice.saveLocally:
