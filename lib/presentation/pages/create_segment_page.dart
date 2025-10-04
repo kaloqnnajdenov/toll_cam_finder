@@ -236,12 +236,16 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
 
       switch (choice) {
         case _LoginOrLocalChoice.login:
-          final loggedIn = await Navigator.of(context).pushNamed<bool>(
+          _cacheDraftInputs();
+          final loggedIn = await Navigator.of(context, rootNavigator: true)
+              .pushNamed<bool>(
             AppRoutes.login,
             arguments: true,
           );
           if (loggedIn == true && mounted) {
-            await _handlePublicSegmentSaved();
+            _showSnackBar(
+              'Logged in successfully. Tap "Save segment" again to submit the segment.',
+            );
           }
           break;
         case _LoginOrLocalChoice.saveLocally:
@@ -353,6 +357,11 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedName = null;
     _cachedStart = null;
     _cachedEnd = null;
+  }
+  void _cacheDraftInputs() {
+    _cachedName = _nameController.text;
+    _cachedStart = _startController.text;
+    _cachedEnd = _endController.text;
   }
 }
 class _LabeledTextField extends StatelessWidget {
