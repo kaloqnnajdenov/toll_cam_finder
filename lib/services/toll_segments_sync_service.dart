@@ -8,6 +8,7 @@ import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
     if (dart.library.io) 'toll_segments_file_system_io.dart' as fs_impl;
 import 'toll_segments_paths.dart';
+import 'toll_segments_csv_constants.dart';
 
 /// Handles downloading the latest toll segments from Supabase, comparing them
 /// with the local CSV asset, and writing back the updated data.
@@ -46,8 +47,12 @@ class TollSegmentsSyncService {
       final remoteRows = await _fetchRemoteRows(client);
 
       final localRows = await _readLocalRows(localCsvPath);
-      final diff = _calculateDiff(localRows, remoteRows);
-      await _writeRowsToLocal(localCsvPath, remoteRows);
+      final diff = _calculateDiff(localRows.remoteRows, remoteRows);
+      await _writeRowsToLocal(
+        localCsvPath,
+        remoteRows,
+        localRows.localRows,
+      );
 
       return diff;
     } on TollSegmentsSyncException {
@@ -176,15 +181,15 @@ class TollSegmentsSyncService {
     return result;
   }
 
-  Future<List<List<String>>> _readLocalRows(String localCsvPath) async {
+  Future<_PartitionedLocalRows> _readLocalRows(String localCsvPath) async {
     final exists = await _fileSystem.exists(localCsvPath);
     if (!exists) {
-      return const [];
+      return const _PartitionedLocalRows();
     }
 
     final raw = await _fileSystem.readAsString(localCsvPath);
     if (raw.trim().isEmpty) {
-      return const [];
+      return const _PartitionedLocalRows();
     }
 
     final parsed = const CsvToListConverter(
@@ -193,21 +198,42 @@ class TollSegmentsSyncService {
     ).convert(raw);
 
     if (parsed.length <= 1) {
-      return const [];
+      return const _PartitionedLocalRows();
     }
 
-    return parsed
-        .skip(1)
-        .map(
-          (row) => row.map((value) => value.toString()).toList(growable: false),
-        )
-        .toList(growable: false);
+    final remoteRows = <List<String>>[];
+    final localRows = <List<String>>[];
+
+    for (final row in parsed.skip(1)) {
+      final normalized =
+          row.map((value) => value.toString()).toList(growable: false);
+      if (normalized.isEmpty) {
+        continue;
+      }
+
+      final id = normalized.first;
+      if (id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+        localRows.add(normalized);
+      } else {
+        remoteRows.add(normalized);
+      }
+    }
+
+    return _PartitionedLocalRows(
+      remoteRows: remoteRows,
+      localRows: localRows,
+    );
   }
 
-  Future<void> _writeRowsToLocal(String localCsvPath, List<List<String>> rows) async {
+  Future<void> _writeRowsToLocal(
+    String localCsvPath,
+    List<List<String>> remoteRows,
+    List<List<String>> localRows,
+  ) async {
     final csvRows = <List<String>>[];
-    csvRows.add(_header);
-    csvRows.addAll(rows);
+    csvRows.add(TollSegmentsCsvSchema.header);
+    csvRows.addAll(remoteRows);
+    csvRows.addAll(localRows);
 
     final csv = const ListToCsvConverter(
       fieldDelimiter: ';',
@@ -251,7 +277,7 @@ class TollSegmentsSyncService {
 
   List<String> _toCanonicalRow(Map<String, dynamic> record) {
     final values = <String>[];
-    for (final column in _header) {
+    for (final column in TollSegmentsCsvSchema.header) {
       final value = _extractField(record, column);
       if (value == null) {
         throw TollSegmentsSyncException(
@@ -294,15 +320,6 @@ class TollSegmentsSyncService {
     return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
-  static const List<String> _header = <String>[
-    'ID',
-    'road',
-    'Start name',
-    'End name',
-    'Start',
-    'End',
-  ];
-
   static const Map<String, List<String>> _columnAliases = <String, List<String>>{
     'ID': <String>['id'],
     'road': <String>['road_name'],
@@ -336,4 +353,14 @@ class TollSegmentsSyncException implements Exception {
 
   @override
   String toString() => 'TollSegmentsSyncException: $message';
+}
+
+class _PartitionedLocalRows {
+  const _PartitionedLocalRows({
+    this.remoteRows = const <List<String>>[],
+    this.localRows = const <List<String>>[],
+  });
+
+  final List<List<String>> remoteRows;
+  final List<List<String>> localRows;
 }

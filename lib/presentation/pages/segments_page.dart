@@ -66,8 +66,19 @@ class _SegmentsPageState extends State<SegmentsPage> {
     );
   }
 
-  void _onCreateSegmentPressed() {
-    Navigator.of(context).pushNamed(AppRoutes.createSegment);
+  Future<void> _onCreateSegmentPressed() async {
+    final result = await Navigator.of(context).pushNamed(AppRoutes.createSegment);
+    if (!mounted || result != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Segment saved locally.')),
+    );
+
+    setState(() {
+      _segmentsFuture = _repository.loadSegments();
+    });
   }
 }
 
@@ -85,7 +96,21 @@ class _SegmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Segment ${segment.id}', style: theme.textTheme.labelMedium),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Segment ${segment.displayId}',
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ),
+                if (segment.isLocalOnly) ...[
+                  const SizedBox(width: 8),
+                  const _LocalBadge(),
+                ],
+              ],
+            ),
             const SizedBox(height: 4),
             Text(segment.name, style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
@@ -102,6 +127,28 @@ class _SegmentCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalBadge extends StatelessWidget {
+  const _LocalBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Local',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSecondaryContainer,
         ),
       ),
     );

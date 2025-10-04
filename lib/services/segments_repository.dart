@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'package:toll_cam_finder/services/toll_segments_csv_constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
@@ -14,12 +15,26 @@ class SegmentInfo {
     required this.name,
     required this.start,
     required this.end,
+    this.isLocalOnly = false,
   });
 
   final String id;
   final String name;
   final String start;
   final String end;
+  final bool isLocalOnly;
+
+  String get displayId {
+    if (!isLocalOnly) {
+      return id;
+    }
+
+    final prefix = TollSegmentsCsvSchema.localSegmentIdPrefix;
+    if (id.startsWith(prefix)) {
+      return id.substring(prefix.length);
+    }
+    return id;
+  }
 }
 
 class SegmentsRepository {
@@ -65,17 +80,22 @@ class SegmentsRepository {
         continue;
       }
 
+      final isLocalOnly = id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix);
+      final resolvedName =
+          name.isEmpty && isLocalOnly ? 'Personal segment' : name;
+
       segments.add(
         SegmentInfo(
           id: id,
-          name: name,
+          name: resolvedName,
           start: start,
           end: end,
+          isLocalOnly: isLocalOnly,
         ),
       );
     }
 
-    segments.sort((a, b) => a.id.compareTo(b.id));
+    segments.sort((a, b) => a.displayId.compareTo(b.displayId));
     return segments;
   }
 
