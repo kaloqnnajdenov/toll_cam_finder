@@ -61,19 +61,14 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create segment'),
-      ),
+      appBar: AppBar(title: const Text('Create segment')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Segment details',
-                style: theme.textTheme.titleLarge,
-              ),
+              Text('Segment details', style: theme.textTheme.titleLarge),
               const SizedBox(height: 24),
               _LabeledTextField(
                 controller: _nameController,
@@ -93,10 +88,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                 hintText: '41.8322163,26.1404669',
               ),
               const SizedBox(height: 24),
-              Text(
-                'Map selection',
-                style: theme.textTheme.titleMedium,
-              ),
+              Text('Map selection', style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               SegmentPickerMap(
                 startController: _startController,
@@ -121,7 +113,9 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Do you want the segment to be publically visible?'),
+          title: const Text(
+            'Do you want the segment to be publically visible?',
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -147,7 +141,8 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     switch (visibilityChoice) {
       case _SegmentVisibilityChoice.private:
         final confirmPrivate = await _showConfirmationDialog(
-          message: 'Are you sure that you want to keep the segment only to yourself?',
+          message:
+              'Are you sure that you want to keep the segment only to yourself?',
         );
         if (confirmPrivate == true) {
           await _handlePrivateSegmentSaved();
@@ -207,6 +202,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (!auth.isLoggedIn) {
       final choice = await showDialog<_LoginOrLocalChoice>(
         context: context,
+        useRootNavigator: false,
         builder: (context) {
           return AlertDialog(
             title: const Text('Sign in to share publicly'),
@@ -237,8 +233,8 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       switch (choice) {
         case _LoginOrLocalChoice.login:
           _cacheDraftInputs();
-          final loggedIn = await Navigator.of(context, rootNavigator: true)
-              .pushNamed<bool>(
+          final navigator = Navigator.of(context);
+          final loggedIn = await navigator.pushNamed<bool>(
             AppRoutes.login,
             arguments: true,
           );
@@ -283,10 +279,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     final remoteService = RemoteSegmentsService(client: auth.client);
 
     try {
-      await remoteService.submitForModeration(
-        draft,
-        addedByUserId: userId,
-      );
+      await remoteService.submitForModeration(draft, addedByUserId: userId);
     } on RemoteSegmentsServiceException catch (error) {
       await _rollbackLocalDraft(localId);
       _showSnackBar(error.message);
@@ -300,9 +293,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Segment submitted for public review.'),
-      ),
+      const SnackBar(content: Text('Segment submitted for public review.')),
     );
     _resetDraftState();
     Navigator.of(context).pop(true);
@@ -347,9 +338,9 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _resetDraftState() {
@@ -358,12 +349,14 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedStart = null;
     _cachedEnd = null;
   }
+
   void _cacheDraftInputs() {
     _cachedName = _nameController.text;
     _cachedStart = _startController.text;
     _cachedEnd = _endController.text;
   }
 }
+
 class _LabeledTextField extends StatelessWidget {
   const _LabeledTextField({
     required this.controller,
@@ -388,12 +381,6 @@ class _LabeledTextField extends StatelessWidget {
   }
 }
 
-enum _SegmentVisibilityChoice {
-  private,
-  public,
-}
+enum _SegmentVisibilityChoice { private, public }
 
-enum _LoginOrLocalChoice {
-  login,
-  saveLocally,
-}
+enum _LoginOrLocalChoice { login, saveLocally }
