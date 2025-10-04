@@ -23,10 +23,12 @@ class AuthController extends ChangeNotifier {
   bool _isLoggedIn = false;
   String? _currentEmail;
   String? _pendingEmail;
+  String? _currentUserId;
 
   bool get isLoggedIn => _isLoggedIn;
   String? get currentEmail => _currentEmail;
   String? get pendingEmail => _pendingEmail;
+  String? get currentUserId => _currentUserId;
   bool get isConfigured => _client != null;
   SupabaseClient? get client => _client;
   
@@ -106,7 +108,7 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> logOut() async {
-   if (_client == null) {
+    if (_client == null) {
       _applySession(null);
       return;
     }
@@ -125,9 +127,13 @@ class AuthController extends ChangeNotifier {
   void _applySession(Session? session) {
     final user = session?.user;
     _currentEmail = user?.email;
+    _currentUserId = user?.id;
     _isLoggedIn = user != null;
     if (user != null) {
       _pendingEmail = null;
+    }
+    if (user == null) {
+      _currentUserId = null;
     }
     notifyListeners();
   }

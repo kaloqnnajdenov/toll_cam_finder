@@ -29,6 +29,7 @@ class TollSegmentsSyncService {
 
   static const String _moderationStatusColumn = 'moderation_status';
   static const String _approvedStatus = 'approved';
+  static const String _addedByUserColumn = 'added_by_user';
 
   /// Performs the synchronization flow.
   ///
@@ -139,7 +140,12 @@ class TollSegmentsSyncService {
           .select('*')
           .eq(_moderationStatusColumn, _approvedStatus);
 
-      return response.cast<Map<String, dynamic>>();
+      return response
+          .cast<Map<String, dynamic>>()
+          .map((record) => Map<String, dynamic>.from(record)
+            ..removeWhere((key, value) =>
+                _normalize(key) == _normalize(_addedByUserColumn)))
+          .toList(growable: false);
     } on PostgrestException catch (error) {
       if (_isMissingColumnError(error, _moderationStatusColumn)) {
         throw TollSegmentsSyncException(

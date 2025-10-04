@@ -17,13 +17,23 @@ class RemoteSegmentsService {
   static const String _approvedStatus = 'approved';
   static const String _idColumn = 'id';
   static const int _smallIntMax = 32767;
+  static const String _addedByUserColumn = 'added_by_user';
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
-  Future<void> submitForModeration(SegmentDraft draft) async {
+  Future<void> submitForModeration(
+    SegmentDraft draft, {
+    required String addedByUserId,
+  }) async {
     final client = _client;
     if (client == null) {
       throw const RemoteSegmentsServiceException(
         'Supabase is not configured. Unable to submit the segment for moderation.',
+      );
+    }
+
+    if (addedByUserId.trim().isEmpty) {
+      throw const RemoteSegmentsServiceException(
+        'A logged in user is required to submit a public segment for moderation.',
       );
     }
 
@@ -38,6 +48,7 @@ class RemoteSegmentsService {
         'Start': draft.startCoordinates,
         'End': draft.endCoordinates,
         _moderationStatusColumn: _pendingStatus,
+        _addedByUserColumn: addedByUserId,
       });
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
