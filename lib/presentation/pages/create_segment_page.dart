@@ -182,7 +182,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   }
 
   Future<void> _handlePrivateSegmentSaved() async {
-    final draft = _buildDraft();
+    final draft = _buildDraft(isPublic: false);
     if (draft == null) {
       return;
     }
@@ -270,7 +270,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       return;
     }
 
-    final draft = _buildDraft();
+    final draft = _buildDraft(isPublic: true);
     if (draft == null) {
       return;
     }
@@ -308,7 +308,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     Navigator.of(context).pop(true);
   }
 
-  SegmentDraft? _buildDraft() {
+  SegmentDraft? _buildDraft({required bool isPublic}) {
     if (_startController.text.trim().isEmpty ||
         _endController.text.trim().isEmpty) {
       _showSnackBar('Start and end coordinates are required.');
@@ -320,6 +320,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         name: _nameController.text,
         startCoordinates: _startController.text,
         endCoordinates: _endController.text,
+        isPublic: isPublic,
       );
     } on LocalSegmentsServiceException catch (error) {
       _showSnackBar(error.message);
