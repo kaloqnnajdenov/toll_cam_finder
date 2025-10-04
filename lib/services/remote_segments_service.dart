@@ -109,9 +109,10 @@ class RemoteSegmentsService {
     }
   }
 
-  /// Deletes the pending moderation request that matches the provided segment
-  /// for the supplied user. Returns `true` if a submission was deleted.
-  Future<bool> deletePendingSubmission({
+  /// Deletes the moderation request that matches the provided segment for the
+  /// supplied user, regardless of the current moderation status. Returns
+  /// `true` if a submission was deleted.
+  Future<bool> deleteSubmission({
     required String addedByUserId,
     required String name,
     required String startCoordinates,
@@ -129,7 +130,6 @@ class RemoteSegmentsService {
           .from(tableName)
           .delete()
           .match(<String, Object>{
-        _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
         _roadColumn: name,
         _startColumn: startCoordinates,

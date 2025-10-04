@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -13,16 +15,28 @@ class SegmentInfo {
   const SegmentInfo({
     required this.id,
     required this.name,
-    required this.start,
-    required this.end,
+    required this.startDisplayName,
+    required this.endDisplayName,
+    required this.startCoordinates,
+    required this.endCoordinates,
     this.isLocalOnly = false,
+    this.isMarkedPublic = false,
   });
 
   final String id;
   final String name;
-  final String start;
-  final String end;
+  final String startDisplayName;
+  final String endDisplayName;
+  final String startCoordinates;
+  final String endCoordinates;
   final bool isLocalOnly;
+  final bool isMarkedPublic;
+
+  String get startLabel =>
+      startDisplayName.isNotEmpty ? startDisplayName : startCoordinates;
+
+  String get endLabel =>
+      endDisplayName.isNotEmpty ? endDisplayName : endCoordinates;
 
   String get displayId {
     if (!isLocalOnly) {
@@ -53,31 +67,58 @@ class SegmentsRepository {
       return const [];
     }
 
+    final publicFlags = await _loadPublicFlags();
+
     final header = rows.first.map((cell) => '$cell'.trim().toLowerCase()).toList();
     final idIndex = header.indexOf('id');
     final nameIndex = _findColumn(header, const ['name', 'road']);
-    final startIndex = _findColumn(header, const ['start name', 'start']);
-    final endIndex = _findColumn(header, const ['end name', 'end']);
+    final startNameIndex = header.indexOf('start name');
+    final startCoordinatesIndex = header.indexOf('start');
+    final endNameIndex = header.indexOf('end name');
+    final endCoordinatesIndex = header.indexOf('end');
 
-    if (idIndex == -1 || nameIndex == -1 || startIndex == -1 || endIndex == -1) {
+    if (idIndex == -1 ||
+        nameIndex == -1 ||
+        (startNameIndex == -1 && startCoordinatesIndex == -1) ||
+        (endNameIndex == -1 && endCoordinatesIndex == -1)) {
       return const [];
     }
 
     final segments = <SegmentInfo>[];
     for (final row in rows.skip(1)) {
-      if (row.length <= idIndex ||
-          row.length <= nameIndex ||
-          row.length <= startIndex ||
-          row.length <= endIndex) {
+      if (row.length <= idIndex || row.length <= nameIndex) {
+        continue;
+      }
+
+      if (startNameIndex != -1 && row.length <= startNameIndex) {
+        continue;
+      }
+
+      if (startCoordinatesIndex != -1 && row.length <= startCoordinatesIndex) {
+        continue;
+      }
+
+      if (endNameIndex != -1 && row.length <= endNameIndex) {
+        continue;
+      }
+
+      if (endCoordinatesIndex != -1 && row.length <= endCoordinatesIndex) {
         continue;
       }
 
       final id = _stringAt(row, idIndex);
       final name = _stringAt(row, nameIndex);
-      final start = _stringAt(row, startIndex);
-      final end = _stringAt(row, endIndex);
+      final startDisplayName = _stringAt(row, startNameIndex);
+      final endDisplayName = _stringAt(row, endNameIndex);
+      final startCoordinates = _stringAt(row, startCoordinatesIndex);
+      final endCoordinates = _stringAt(row, endCoordinatesIndex);
 
-      if (id.isEmpty && name.isEmpty && start.isEmpty && end.isEmpty) {
+      if (id.isEmpty &&
+          name.isEmpty &&
+          startDisplayName.isEmpty &&
+          endDisplayName.isEmpty &&
+          startCoordinates.isEmpty &&
+          endCoordinates.isEmpty) {
         continue;
       }
 
@@ -89,9 +130,12 @@ class SegmentsRepository {
         SegmentInfo(
           id: id,
           name: resolvedName,
-          start: start,
-          end: end,
+          startDisplayName: startDisplayName,
+          endDisplayName: endDisplayName,
+          startCoordinates: startCoordinates,
+          endCoordinates: endCoordinates,
           isLocalOnly: isLocalOnly,
+          isMarkedPublic: publicFlags[id] ?? false,
         ),
       );
     }
@@ -172,4 +216,32 @@ class SegmentsRepository {
 
     return rootBundle.loadString(assetPath);
   }
+
+  Future<Map<String, bool>> _loadPublicFlags() async {
+    if (kIsWeb) {
+      return const <String, bool>{};
+    }
+
+    try {
+      final metadataPath = await resolveTollSegmentsMetadataPath();
+      if (!await _fileSystem.exists(metadataPath)) {
+        return const <String, bool>{};
+      }
+
+      final contents = await _fileSystem.readAsString(metadataPath);
+      if (contents.trim().isEmpty) {
+        return const <String, bool>{};
+      }
+
+      final dynamic decoded = jsonDecode(contents);
+      if (decoded is! Map<String, dynamic>) {
+        return const <String, bool>{};
+      }
+
+      return decoded.map((key, value) => MapEntry(key, value == true));
+    } catch (_) {
+      return const <String, bool>{};
+    }
+  }
 }
+
