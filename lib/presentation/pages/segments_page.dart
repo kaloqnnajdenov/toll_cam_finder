@@ -210,13 +210,6 @@ class _SegmentsPageState extends State<SegmentsPage> {
             ),
           ),
         );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
-          ),
-        );
       }
 
       return true;
@@ -553,13 +546,6 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
             content: Text(
               'Segment ${segment.displayId} will no longer be reviewed for public release.',
             ),
-          ),
-        );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content:
-                Text('The public review request for this segment was already processed.'),
           ),
         );
       }
