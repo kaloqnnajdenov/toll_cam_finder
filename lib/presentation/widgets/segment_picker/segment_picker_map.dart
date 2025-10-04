@@ -141,6 +141,11 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
                 icon: Icons.remove,
                 onPressed: () => _zoomBy(-AppConstants.segmentPickerZoomStep),
               ),
+              const SizedBox(height: AppConstants.segmentPickerZoomButtonSpacing),
+              MapActionButton(
+                icon: Icons.clear,
+                onPressed: _clearEndpoints,
+              ),
             ],
           ),
         ),
@@ -270,6 +275,23 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     }
   }
 
+  void _clearEndpoints() {
+    if (_start == null && _end == null) {
+      return;
+    }
+    setState(() {
+      _start = null;
+      _end = null;
+      _routePoints = null;
+      _lastRouteStart = null;
+      _lastRouteEnd = null;
+      _routeRequestToken = null;
+    });
+    _clearController(widget.startController);
+    _clearController(widget.endController);
+    _mapController.move(AppConstants.initialCenter, AppConstants.initialZoom);
+  }
+
   void _zoomBy(double delta) {
     final camera = _mapController.camera;
     final targetZoom = (camera.zoom + delta)
@@ -278,8 +300,16 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
   }
 
   void _writeToController(TextEditingController controller, LatLng latLng) {
+    _setControllerText(controller, _formatLatLng(latLng));
+  }
+
+  void _clearController(TextEditingController controller) {
+    _setControllerText(controller, '');
+  }
+
+  void _setControllerText(TextEditingController controller, String value) {
     _updatingControllers = true;
-    controller.text = _formatLatLng(latLng);
+    controller.text = value;
     _updatingControllers = false;
   }
 

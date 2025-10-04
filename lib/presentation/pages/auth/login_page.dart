@@ -44,18 +44,24 @@ class _LoginPageState extends State<LoginPage> {
     });
    
     final auth = context.read<AuthController>();
-    
-     try {
+    final shouldPopOnSuccess =
+        ModalRoute.of(context)?.settings.arguments == true;
+
+    try {
       await auth.logIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-    if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.profile,
-        ModalRoute.withName(AppRoutes.map),
-      );
+      if (!mounted) return;
+      if (shouldPopOnSuccess) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.profile,
+          ModalRoute.withName(AppRoutes.map),
+        );
+      }
     } on AuthFailure catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                 onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : _submit,
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
