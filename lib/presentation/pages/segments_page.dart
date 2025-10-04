@@ -14,6 +14,7 @@ class SegmentsPage extends StatefulWidget {
 class _SegmentsPageState extends State<SegmentsPage> {
   final SegmentsRepository _repository = SegmentsRepository();
   late Future<List<SegmentInfo>> _segmentsFuture;
+  bool _segmentsUpdated = false;
 
   @override
   void initState() {
@@ -23,45 +24,51 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Segments')),
-      body: FutureBuilder<List<SegmentInfo>>(
-        future: _segmentsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop(_segmentsUpdated);
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Segments')),
+        body: FutureBuilder<List<SegmentInfo>>(
+          future: _segmentsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return _ErrorView(
-              onRetry: () {
-                setState(() {
-                  _segmentsFuture = _repository.loadSegments();
-                });
+            if (snapshot.hasError) {
+              return _ErrorView(
+                onRetry: () {
+                  setState(() {
+                    _segmentsFuture = _repository.loadSegments();
+                  });
+                },
+              );
+            }
+
+            final segments = snapshot.data ?? const <SegmentInfo>[];
+            if (segments.isEmpty) {
+              return const _EmptySegmentsView();
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: segments.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final segment = segments[index];
+                return _SegmentCard(segment: segment);
               },
             );
-          }
-
-          final segments = snapshot.data ?? const <SegmentInfo>[];
-          if (segments.isEmpty) {
-            return const _EmptySegmentsView();
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: segments.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final segment = segments[index];
-              return _SegmentCard(segment: segment);
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _onCreateSegmentPressed,
-        icon: const Icon(Icons.add),
-        label: const Text('Create segment'),
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _onCreateSegmentPressed,
+          icon: const Icon(Icons.add),
+          label: const Text('Create segment'),
+        ),
       ),
     );
   }
@@ -76,6 +83,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
       const SnackBar(content: Text('Segment saved locally.')),
     );
 
+    _segmentsUpdated = true;
     setState(() {
       _segmentsFuture = _repository.loadSegments();
     });
