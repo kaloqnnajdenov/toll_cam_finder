@@ -11,6 +11,10 @@ const String kTollSegmentsFileName = 'toll_segments.csv';
 /// Suffix appended to the toll segments CSV path to store local metadata.
 const String kTollSegmentsMetadataSuffix = '_metadata.json';
 
+/// Suffix appended to the toll segments CSV path to store cached segment paths
+/// as GeoJSON.
+const String kSegmentPathsSuffix = '_paths.geojson';
+
 /// Function signature for providing a custom on-disk location for the synced
 /// toll segments CSV. Useful for tests.
 typedef TollSegmentsPathResolver = Future<String> Function();
@@ -47,5 +51,15 @@ Future<String> resolveTollSegmentsMetadataPath({
     overrideResolver: overrideResolver,
   );
   return '$csvPath$kTollSegmentsMetadataSuffix';
+}
+
+/// Resolves the path where cached segment path GeoJSON data should be stored.
+Future<String> resolveSegmentPathsCachePath({
+  TollSegmentsPathResolver? overrideResolver,
+}) async {
+  final csvPath = await resolveTollSegmentsDataPath(
+    overrideResolver: overrideResolver,
+  );
+  return '$csvPath$kSegmentPathsSuffix';
 }
 

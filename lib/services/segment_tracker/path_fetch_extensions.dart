@@ -33,11 +33,12 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
     try {
       enhanced =
           await _fetchDetailedPath(geometry.path.first, geometry.path.last);
-    } finally {
       if (enhanced != null && enhanced.length >= 2) {
         final stored = List<GeoPoint>.unmodifiable(enhanced);
         _pathOverrides[geometry.id] = stored;
         _fetchFailures.remove(geometry.id);
+        _onEnhancedPathStored?.call(geometry.id, stored);
+        await _persistEnhancedPath(geometry.id, stored);
         if (_active != null && _active!.geometry.id == geometry.id) {
           _active!
             ..path = stored
@@ -61,6 +62,7 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
           debugPrint('[SEG] enhanced path unavailable for ${geometry.id}');
         }
       }
+    } finally {
       _fetching.remove(geometry.id);
     }
   }
@@ -93,5 +95,18 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
       return true;
     }
     return path.length > 2;
+  }
+
+  Future<void> _persistEnhancedPath(
+    String segmentId,
+    List<GeoPoint> path,
+  ) async {
+    try {
+      await _pathCache.savePath(segmentId, path);
+    } on SegmentPathCacheException catch (error) {
+      if (kDebugMode) {
+        debugPrint('[SEG] failed to persist path for $segmentId: ${error.message}');
+      }
+    }
   }
 }

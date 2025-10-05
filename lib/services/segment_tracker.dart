@@ -13,6 +13,7 @@ import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/services/osrm_path_fetcher.dart';
+import 'package:toll_cam_finder/services/segment_path_cache_service.dart';
 
 part 'segment_tracker/segment_tracker_models.dart';
 part 'segment_tracker/segment_match.dart';
@@ -27,6 +28,8 @@ class SegmentTracker {
   SegmentTracker({
     required SegmentIndexService indexService,
     http.Client? httpClient,
+    SegmentPathCacheService? pathCache,
+    void Function(String segmentId, List<GeoPoint> path)? onEnhancedPathStored,
     this.candidateRadiusMeters = AppConstants.candidateRadiusMeters,
     this.onPathToleranceMeters = AppConstants.segmentOnPathToleranceMeters,
     this.startGeofenceRadiusMeters =
@@ -35,9 +38,11 @@ class SegmentTracker {
     this.directionToleranceDegrees =
         AppConstants.segmentDirectionToleranceDegrees,
     this.directionMinSpeedKmh = AppConstants.segmentDirectionMinSpeedKmh,
-  }) : _index = indexService,
-       _httpClient = httpClient ?? http.Client(),
-       _ownsHttpClient = httpClient == null;
+  })  : _index = indexService,
+        _httpClient = httpClient ?? http.Client(),
+        _ownsHttpClient = httpClient == null,
+        _pathCache = pathCache ?? SegmentPathCacheService(),
+        _onEnhancedPathStored = onEnhancedPathStored;
 
   static const int _strictMissThreshold = 3;
   static const int _looseMissThreshold = 6;
@@ -47,6 +52,9 @@ class SegmentTracker {
   final SegmentIndexService _index;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
+  final SegmentPathCacheService _pathCache;
+  final void Function(String segmentId, List<GeoPoint> path)?
+      _onEnhancedPathStored;
 
   final double candidateRadiusMeters;
   final double onPathToleranceMeters;
@@ -78,6 +86,9 @@ class SegmentTracker {
       await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     }
     _isReady = _index.isReady;
+    if (_isReady) {
+      await _restoreCachedPaths();
+    }
     if (!_isReady) {
       _latestDebugData = const SegmentTrackerDebugData.empty();
     }
@@ -88,13 +99,16 @@ class SegmentTracker {
     _resetTrackingState();
     await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     _isReady = _index.isReady;
+    if (_isReady) {
+      await _restoreCachedPaths();
+    }
     if (!_isReady) {
       _latestDebugData = const SegmentTrackerDebugData.empty();
     }
     return _isReady;
   }
 
-void updateIgnoredSegments(Set<String> ignoredIds) {
+  void updateIgnoredSegments(Set<String> ignoredIds) {
     _ignoredSegmentIds
       ..clear()
       ..addAll(ignoredIds);
@@ -212,6 +226,29 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     _lastCompassHeadingDeg = null;
     _smoothedHeadingDeg = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
+  }
+
+  Future<void> _restoreCachedPaths() async {
+    try {
+      final stored = await _pathCache.loadAllPaths();
+      if (stored.isEmpty) {
+        return;
+      }
+      _pathOverrides
+        ..clear()
+        ..addAll(
+          stored.map(
+            (key, value) => MapEntry(
+              key,
+              List<GeoPoint>.unmodifiable(value),
+            ),
+          ),
+        );
+    } on SegmentPathCacheException catch (error) {
+      if (kDebugMode) {
+        debugPrint('[SEG] failed to restore cached paths: ${error.message}');
+      }
+    }
   }
 
   _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {

@@ -7,6 +7,35 @@ import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
+class StoredSegmentsOverlay extends StatelessWidget {
+  const StoredSegmentsOverlay({
+    super.key,
+    required this.paths,
+  });
+
+  final Iterable<List<LatLng>> paths;
+
+  @override
+  Widget build(BuildContext context) {
+    final polylines = paths
+        .where((points) => points.length >= 2)
+        .map(
+          (points) => Polyline(
+            points: points,
+            strokeWidth: 3.0,
+            color: Colors.orangeAccent.withOpacity(0.7),
+          ),
+        )
+        .toList(growable: false);
+
+    if (polylines.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return PolylineLayer(polylines: polylines);
+  }
+}
+
 class QuerySquareOverlay extends StatelessWidget {
   const QuerySquareOverlay({
     super.key,

@@ -9,12 +9,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
+import 'package:toll_cam_finder/services/segment_path_cache_service.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
@@ -44,6 +46,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
   final SegmentsMetadataService _metadataService = SegmentsMetadataService();
+  late final SegmentPathCacheService _segmentPathCache;
 
   // User + map state
   LatLng _center = AppConstants.initialCenter;
@@ -61,9 +64,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final AverageSpeedController _avgCtrl = AverageSpeedController();
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
-  final SegmentTracker _segmentTracker = SegmentTracker(
-    indexService: SegmentIndexService.instance,
-  );
+  late final SegmentTracker _segmentTracker;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
 
@@ -77,15 +78,24 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   String? _segmentProgressLabel;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
+  Map<String, List<LatLng>> _storedSegmentPolylines =
+      <String, List<LatLng>>{};
 
   @override
   void initState() {
     super.initState();
 
+    _segmentPathCache = SegmentPathCacheService();
+    _segmentTracker = SegmentTracker(
+      indexService: SegmentIndexService.instance,
+      pathCache: _segmentPathCache,
+      onEnhancedPathStored: _handleEnhancedSegmentPath,
+    );
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _metadataLoadFuture = _loadSegmentsMetadata();
     unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
+    unawaited(_loadStoredSegmentPaths());
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     final compassStream = FlutterCompass.events;
@@ -105,6 +115,36 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _avgCtrl.dispose();
     _segmentTracker.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadStoredSegmentPaths() async {
+    try {
+      final stored = await _segmentPathCache.loadAllPaths();
+      if (!mounted) return;
+      final mapped = stored.map(
+        (id, path) => MapEntry(
+          id,
+          path
+              .map((point) => LatLng(point.lat, point.lon))
+              .toList(growable: false),
+        ),
+      );
+      setState(() {
+        _storedSegmentPolylines = mapped;
+      });
+    } on SegmentPathCacheException catch (error) {
+      debugPrint('MapPage: failed to load stored segment paths (${error.message}).');
+    }
+  }
+
+  void _handleEnhancedSegmentPath(String segmentId, List<GeoPoint> path) {
+    if (!mounted) return;
+    setState(() {
+      final updated = Map<String, List<LatLng>>.of(_storedSegmentPolylines);
+      updated[segmentId] =
+          path.map((point) => LatLng(point.lat, point.lon)).toList(growable: false);
+      _storedSegmentPolylines = updated;
+    });
   }
 
   void _handleCompassEvent(CompassEvent event) {
@@ -379,6 +419,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
   }
 
+
   Future<void> _loadCameras() async {
     await _cameraController.loadFromAsset(
       AppConstants.camerasAsset,
@@ -437,6 +478,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
+    final visibleStoredPaths = _storedSegmentPolylines.entries
+        .where(
+          (entry) =>
+              !_segmentsMetadata.deactivatedSegmentIds.contains(entry.key),
+        )
+        .map((entry) => entry.value)
+        .toList(growable: false);
 
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
@@ -451,6 +499,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             ),
             children: [
               const BaseTileLayer(),
+
+              if (visibleStoredPaths.isNotEmpty)
+                StoredSegmentsOverlay(
+                  paths: visibleStoredPaths,
+                ),
 
               BlueDotMarker(point: markerPoint),
 
