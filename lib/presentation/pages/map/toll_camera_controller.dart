@@ -17,8 +17,14 @@ class TollCameraController {
         visibleCameras: _cameras.visibleCameras,
       );
 
-  Future<void> loadFromAsset(String assetPath) async {
-    await _cameras.loadFromAsset(assetPath);
+  Future<void> loadFromAsset(
+    String assetPath, {
+    Set<String> excludedSegmentIds = const <String>{},
+  }) async {
+    await _cameras.loadFromAsset(
+      assetPath,
+      excludedSegmentIds: excludedSegmentIds,
+    );
   }
 
   void updateVisible({LatLngBounds? bounds}) {

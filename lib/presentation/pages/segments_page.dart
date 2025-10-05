@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/local_segments_service.dart';
 import 'package:toll_cam_finder/services/remote_segments_service.dart';
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
 import '../../app/app_routes.dart';
@@ -24,6 +25,7 @@ class SegmentsPage extends StatefulWidget {
 class _SegmentsPageState extends State<SegmentsPage> {
   final SegmentsRepository _repository = SegmentsRepository();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
+  final SegmentsMetadataService _metadataService = SegmentsMetadataService();
   late Future<List<SegmentInfo>> _segmentsFuture;
   bool _segmentsUpdated = false;
 
@@ -130,11 +132,49 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
   Future<void> _onSegmentLongPress(SegmentInfo segment) async {
     final action = await showSegmentActionsSheet(context, segment);
-    if (!mounted || action != SegmentAction.delete) {
+    if (!mounted || action == null) {
       return;
     }
 
-    await _confirmAndDeleteSegment(segment);
+    switch (action) {
+      case SegmentAction.delete:
+        await _confirmAndDeleteSegment(segment);
+        break;
+      case SegmentAction.deactivate:
+        await _setSegmentDeactivated(segment, true);
+        break;
+      case SegmentAction.activate:
+        await _setSegmentDeactivated(segment, false);
+        break;
+    }
+  }
+
+  Future<void> _setSegmentDeactivated(
+    SegmentInfo segment,
+    bool deactivate,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _metadataService.setSegmentDeactivated(segment.id, deactivate);
+      if (!mounted) return;
+
+      final message = deactivate
+          ? 'Segment ${segment.displayId} hidden. Cameras and warnings are disabled.'
+          : 'Segment ${segment.displayId} is visible again. Cameras and warnings restored.';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      _segmentsUpdated = true;
+      setState(() {
+        _segmentsFuture = _repository.loadSegments();
+      });
+    } on SegmentsMetadataException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update segment ${segment.displayId}: ${error.message}',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {
@@ -319,6 +359,7 @@ class LocalSegmentsPage extends StatefulWidget {
 class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
   final SegmentsRepository _repository = SegmentsRepository();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
+  final SegmentsMetadataService _metadataService = SegmentsMetadataService();
   late Future<List<SegmentInfo>> _segmentsFuture;
   bool _segmentsUpdated = false;
 
@@ -402,11 +443,49 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
   Future<void> _onSegmentLongPress(SegmentInfo segment) async {
     final action = await showSegmentActionsSheet(context, segment);
-    if (!mounted || action != SegmentAction.delete) {
+    if (!mounted || action == null) {
       return;
     }
 
-    await _confirmAndDeleteSegment(segment);
+    switch (action) {
+      case SegmentAction.delete:
+        await _confirmAndDeleteSegment(segment);
+        break;
+      case SegmentAction.deactivate:
+        await _setSegmentDeactivated(segment, true);
+        break;
+      case SegmentAction.activate:
+        await _setSegmentDeactivated(segment, false);
+        break;
+    }
+  }
+
+  Future<void> _setSegmentDeactivated(
+    SegmentInfo segment,
+    bool deactivate,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _metadataService.setSegmentDeactivated(segment.id, deactivate);
+      if (!mounted) return;
+
+      final message = deactivate
+          ? 'Segment ${segment.displayId} hidden. Cameras and warnings are disabled.'
+          : 'Segment ${segment.displayId} is visible again. Cameras and warnings restored.';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      _segmentsUpdated = true;
+      setState(() {
+        _segmentsFuture = _repository.loadSegments(onlyLocal: true);
+      });
+    } on SegmentsMetadataException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update segment ${segment.displayId}: ${error.message}',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {
@@ -580,4 +659,3 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     }
   }
 }
-

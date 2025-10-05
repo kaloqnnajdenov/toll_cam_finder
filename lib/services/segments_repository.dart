@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_csv_constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
@@ -21,6 +20,7 @@ class SegmentInfo {
     required this.endCoordinates,
     this.isLocalOnly = false,
     this.isMarkedPublic = false,
+    this.isDeactivated = false,
   });
 
   final String id;
@@ -31,6 +31,7 @@ class SegmentInfo {
   final String endCoordinates;
   final bool isLocalOnly;
   final bool isMarkedPublic;
+  final bool isDeactivated;
 
   String get startLabel =>
       startDisplayName.isNotEmpty ? startDisplayName : startCoordinates;
@@ -52,10 +53,15 @@ class SegmentInfo {
 }
 
 class SegmentsRepository {
-  SegmentsRepository({TollSegmentsFileSystem? fileSystem})
-      : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
+  SegmentsRepository({
+    TollSegmentsFileSystem? fileSystem,
+    SegmentsMetadataService? metadataService,
+  }) : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
+       _metadataService =
+           metadataService ?? SegmentsMetadataService(fileSystem: fileSystem);
 
   final TollSegmentsFileSystem _fileSystem;
+  final SegmentsMetadataService _metadataService;
 
   Future<List<SegmentInfo>> loadSegments({
     String assetPath = kTollSegmentsAssetPath,
@@ -67,9 +73,19 @@ class SegmentsRepository {
       return const [];
     }
 
-    final publicFlags = await _loadPublicFlags();
+    SegmentsMetadata metadata;
+    try {
+      metadata = await _metadataService.load();
+    } on SegmentsMetadataException {
+      // If metadata cannot be loaded we still want to surface the segments.
+      metadata = SegmentsMetadata();
+    }
+    final publicFlags = metadata.publicFlags;
+    final deactivatedSegments = metadata.deactivatedSegmentIds;
 
-    final header = rows.first.map((cell) => '$cell'.trim().toLowerCase()).toList();
+    final header = rows.first
+        .map((cell) => '$cell'.trim().toLowerCase())
+        .toList();
     final idIndex = header.indexOf('id');
     final nameIndex = _findColumn(header, const ['name', 'road']);
     final startNameIndex = header.indexOf('start name');
@@ -122,9 +138,12 @@ class SegmentsRepository {
         continue;
       }
 
-      final isLocalOnly = id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix);
-      final resolvedName =
-          name.isEmpty && isLocalOnly ? 'Personal segment' : name;
+      final isLocalOnly = id.startsWith(
+        TollSegmentsCsvSchema.localSegmentIdPrefix,
+      );
+      final resolvedName = name.isEmpty && isLocalOnly
+          ? 'Personal segment'
+          : name;
 
       segments.add(
         SegmentInfo(
@@ -136,6 +155,7 @@ class SegmentsRepository {
           endCoordinates: endCoordinates,
           isLocalOnly: isLocalOnly,
           isMarkedPublic: publicFlags[id] ?? false,
+          isDeactivated: deactivatedSegments.contains(id),
         ),
       );
     }
@@ -217,31 +237,4 @@ class SegmentsRepository {
     return rootBundle.loadString(assetPath);
   }
 
-  Future<Map<String, bool>> _loadPublicFlags() async {
-    if (kIsWeb) {
-      return const <String, bool>{};
-    }
-
-    try {
-      final metadataPath = await resolveTollSegmentsMetadataPath();
-      if (!await _fileSystem.exists(metadataPath)) {
-        return const <String, bool>{};
-      }
-
-      final contents = await _fileSystem.readAsString(metadataPath);
-      if (contents.trim().isEmpty) {
-        return const <String, bool>{};
-      }
-
-      final dynamic decoded = jsonDecode(contents);
-      if (decoded is! Map<String, dynamic>) {
-        return const <String, bool>{};
-      }
-
-      return decoded.map((key, value) => MapEntry(key, value == true));
-    } catch (_) {
-      return const <String, bool>{};
-    }
-  }
 }
-

@@ -1,12 +1,12 @@
-import 'dart:convert';
-
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
+import 'segments_metadata_service.dart';
 import 'toll_segments_csv_constants.dart';
 import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
-    if (dart.library.io) 'toll_segments_file_system_io.dart' as fs_impl;
+    if (dart.library.io) 'toll_segments_file_system_io.dart'
+    as fs_impl;
 import 'toll_segments_paths.dart';
 import 'segment_id_generator.dart';
 
@@ -15,11 +15,18 @@ class LocalSegmentsService {
   LocalSegmentsService({
     TollSegmentsFileSystem? fileSystem,
     TollSegmentsPathResolver? pathResolver,
-  })  : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
-        _pathResolver = pathResolver;
-
+    SegmentsMetadataService? metadataService,
+  }) : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
+       _pathResolver = pathResolver,
+       _metadataService =
+           metadataService ??
+           SegmentsMetadataService(
+             fileSystem: fileSystem,
+             pathResolver: pathResolver,
+           );
   final TollSegmentsFileSystem _fileSystem;
   final TollSegmentsPathResolver? _pathResolver;
+  final SegmentsMetadataService _metadataService;
 
   /// Stores a user-created segment on disk. The resulting row is marked with a
   /// local identifier so that it survives future synchronisation runs.
@@ -52,7 +59,9 @@ class LocalSegmentsService {
     required String endCoordinates,
     bool isPublic = false,
   }) {
-    final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
+    final normalizedName = name.trim().isEmpty
+        ? 'Personal segment'
+        : name.trim();
     final normalizedRoadName = roadName?.trim() ?? '';
     final normalizedStartDisplayName = startDisplayName?.trim();
     final normalizedEndDisplayName = endDisplayName?.trim();
@@ -199,7 +208,9 @@ class LocalSegmentsService {
     ).convert(contents);
 
     return parsed
-        .map((row) => row.map((cell) => cell.toString()).toList(growable: false))
+        .map(
+          (row) => row.map((cell) => cell.toString()).toList(growable: false),
+        )
         .toList(growable: true);
   }
 
@@ -261,45 +272,10 @@ class LocalSegmentsService {
       return;
     }
 
-    final metadataPath = await resolveTollSegmentsMetadataPath(
-      overrideResolver: _pathResolver,
-    );
-    await _fileSystem.ensureParentDirectory(metadataPath);
-
-    final flags = await _readVisibilityFlags(metadataPath);
-    if (isPublic) {
-      flags[id] = true;
-    } else {
-      flags.remove(id);
-    }
-
-    if (flags.isEmpty) {
-      await _fileSystem.writeAsString(metadataPath, '');
-      return;
-    }
-
-    await _fileSystem.writeAsString(metadataPath, jsonEncode(flags));
-  }
-
-  Future<Map<String, bool>> _readVisibilityFlags(String path) async {
-    if (!await _fileSystem.exists(path)) {
-      return <String, bool>{};
-    }
-
-    final contents = await _fileSystem.readAsString(path);
-    if (contents.trim().isEmpty) {
-      return <String, bool>{};
-    }
-
     try {
-      final dynamic decoded = jsonDecode(contents);
-      if (decoded is! Map<String, dynamic>) {
-        return <String, bool>{};
-      }
-
-      return decoded.map((key, value) => MapEntry(key, value == true));
-    } catch (_) {
-      return <String, bool>{};
+      await _metadataService.updatePublicFlag(id, isPublic);
+    } on SegmentsMetadataException catch (error) {
+      throw LocalSegmentsServiceException(error.message);
     }
   }
 
