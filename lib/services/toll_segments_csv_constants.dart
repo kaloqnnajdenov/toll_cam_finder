@@ -8,6 +8,17 @@ class TollSegmentsCsvSchema {
   /// List of column headers in the order they should appear in the CSV.
   static const List<String> header = <String>[
     'ID',
+    'name',
+    'road',
+    'Start name',
+    'End name',
+    'Start',
+    'End',
+  ];
+
+  /// Legacy header used before the dedicated `name` column was introduced.
+  static const List<String> legacyHeader = <String>[
+    'ID',
     'road',
     'Start name',
     'End name',

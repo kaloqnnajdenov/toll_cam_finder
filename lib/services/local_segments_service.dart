@@ -25,6 +25,7 @@ class LocalSegmentsService {
   /// local identifier so that it survives future synchronisation runs.
   Future<void> saveLocalSegment({
     required String name,
+    String? roadName,
     String? startDisplayName,
     String? endDisplayName,
     required String startCoordinates,
@@ -32,6 +33,7 @@ class LocalSegmentsService {
   }) async {
     final draft = prepareDraft(
       name: name,
+      roadName: roadName,
       startDisplayName: startDisplayName,
       endDisplayName: endDisplayName,
       startCoordinates: startCoordinates,
@@ -45,6 +47,7 @@ class LocalSegmentsService {
   /// be stored locally or submitted to the backend.
   SegmentDraft prepareDraft({
     required String name,
+    String? roadName,
     String? startDisplayName,
     String? endDisplayName,
     required String startCoordinates,
@@ -52,6 +55,7 @@ class LocalSegmentsService {
     bool isPublic = false,
   }) {
     final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
+    final normalizedRoadName = roadName?.trim();
     final normalizedStartDisplayName = startDisplayName?.trim();
     final normalizedEndDisplayName = endDisplayName?.trim();
     final normalizedStart = _normalizeCoordinates(startCoordinates);
@@ -59,6 +63,9 @@ class LocalSegmentsService {
 
     return SegmentDraft(
       name: normalizedName,
+      roadName: normalizedRoadName?.isNotEmpty == true
+          ? normalizedRoadName!
+          : normalizedName,
       startDisplayName: normalizedStartDisplayName?.isNotEmpty == true
           ? normalizedStartDisplayName!
           : '$normalizedName start',
@@ -87,6 +94,8 @@ class LocalSegmentsService {
     final rows = await _readExistingRows(csvPath);
     if (rows.isEmpty) {
       rows.add(TollSegmentsCsvSchema.header);
+    } else if (_isLegacyHeaderRow(rows.first)) {
+      _upgradeLegacyRows(rows);
     } else if (!_isHeaderRow(rows.first)) {
       rows.insert(0, TollSegmentsCsvSchema.header);
     }
@@ -95,6 +104,7 @@ class LocalSegmentsService {
     final newRow = <String>[
       localId,
       draft.name,
+      draft.roadName,
       draft.startDisplayName,
       draft.endDisplayName,
       draft.startCoordinates,
@@ -210,6 +220,41 @@ class LocalSegmentsService {
     return true;
   }
 
+  bool _isLegacyHeaderRow(List<String> row) {
+    if (row.length != TollSegmentsCsvSchema.legacyHeader.length) {
+      return false;
+    }
+    for (var i = 0; i < row.length; i++) {
+      if (row[i].trim() != TollSegmentsCsvSchema.legacyHeader[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _upgradeLegacyRows(List<List<String>> rows) {
+    if (rows.isEmpty || !_isLegacyHeaderRow(rows.first)) {
+      return;
+    }
+
+    rows[0] = TollSegmentsCsvSchema.header;
+
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+      final legacyRoad = row.length > 1 ? row[1] : '';
+      final upgradedRow = <String>[
+        row.isNotEmpty ? row[0] : '',
+        legacyRoad,
+        legacyRoad,
+        row.length > 2 ? row[2] : '',
+        row.length > 3 ? row[3] : '',
+        row.length > 4 ? row[4] : '',
+        row.length > 5 ? row[5] : '',
+      ];
+      rows[i] = upgradedRow;
+    }
+  }
+
   Future<void> _updateVisibilityFlag(String id, bool isPublic) async {
     if (kIsWeb) {
       return;
@@ -290,6 +335,7 @@ class LocalSegmentsServiceException implements Exception {
 class SegmentDraft {
   const SegmentDraft({
     required this.name,
+    required this.roadName,
     required this.startDisplayName,
     required this.endDisplayName,
     required this.startCoordinates,
@@ -298,6 +344,7 @@ class SegmentDraft {
   });
 
   final String name;
+  final String roadName;
   final String startDisplayName;
   final String endDisplayName;
   final String startCoordinates;

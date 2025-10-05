@@ -16,12 +16,14 @@ class CreateSegmentPage extends StatefulWidget {
 
 class _CreateSegmentPageState extends State<CreateSegmentPage> {
   static String? _cachedName;
+  static String? _cachedRoadName;
   static String? _cachedStartDisplayName;
   static String? _cachedEndDisplayName;
   static String? _cachedStartCoordinates;
   static String? _cachedEndCoordinates;
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _roadController = TextEditingController();
   final TextEditingController _startNameController = TextEditingController();
   final TextEditingController _endNameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
@@ -35,6 +37,9 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     super.initState();
     if (_cachedName != null) {
       _nameController.text = _cachedName!;
+    }
+    if (_cachedRoadName != null) {
+      _roadController.text = _cachedRoadName!;
     }
     if (_cachedStartDisplayName != null) {
       _startNameController.text = _cachedStartDisplayName!;
@@ -54,18 +59,21 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   void dispose() {
     if (_persistDraftOnDispose) {
       _cachedName = _nameController.text;
+      _cachedRoadName = _roadController.text;
       _cachedStartDisplayName = _startNameController.text;
       _cachedEndDisplayName = _endNameController.text;
       _cachedStartCoordinates = _startController.text;
       _cachedEndCoordinates = _endController.text;
     } else {
       _cachedName = null;
+      _cachedRoadName = null;
       _cachedStartDisplayName = null;
       _cachedEndDisplayName = null;
       _cachedStartCoordinates = null;
       _cachedEndCoordinates = null;
     }
     _nameController.dispose();
+    _roadController.dispose();
     _startNameController.dispose();
     _endNameController.dispose();
     _startController.dispose();
@@ -91,6 +99,12 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                 controller: _nameController,
                 label: 'Segment name',
                 hintText: 'Segment name',
+              ),
+              const SizedBox(height: 16),
+              _LabeledTextField(
+                controller: _roadController,
+                label: 'Road name',
+                hintText: 'Road name',
               ),
               const SizedBox(height: 16),
               _LabeledTextField(
@@ -346,6 +360,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     try {
       return _localSegmentsService.prepareDraft(
         name: _nameController.text,
+        roadName: _roadController.text,
         startDisplayName: _startNameController.text,
         endDisplayName: _endNameController.text,
         startCoordinates: _startController.text,
@@ -386,6 +401,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   void _resetDraftState() {
     _persistDraftOnDispose = false;
     _cachedName = null;
+    _cachedRoadName = null;
     _cachedStartDisplayName = null;
     _cachedEndDisplayName = null;
     _cachedStartCoordinates = null;
@@ -394,6 +410,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
 
   void _cacheDraftInputs() {
     _cachedName = _nameController.text;
+    _cachedRoadName = _roadController.text;
     _cachedStartDisplayName = _startNameController.text;
     _cachedEndDisplayName = _endNameController.text;
     _cachedStartCoordinates = _startController.text;

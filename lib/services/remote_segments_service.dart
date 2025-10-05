@@ -19,6 +19,7 @@ class RemoteSegmentsService {
   static const int _smallIntMax = 32767;
   static const String _addedByUserColumn = 'added_by_user';
   static const String _roadColumn = 'road';
+  static const String _nameColumn = 'name';
   static const String _startColumn = 'Start';
   static const String _endColumn = 'End';
 
@@ -45,7 +46,8 @@ class RemoteSegmentsService {
     try {
       await client.from(tableName).insert(<String, dynamic>{
         'id': pendingId,
-        'road': draft.name,
+        _nameColumn: draft.name,
+        _roadColumn: draft.roadName,
         'Start name': draft.startDisplayName,
         'End name': draft.endDisplayName,
         'Start': draft.startCoordinates,
@@ -72,6 +74,7 @@ class RemoteSegmentsService {
   Future<bool> hasPendingSubmission({
     required String addedByUserId,
     required String name,
+    required String roadName,
     required String startCoordinates,
     required String endCoordinates,
   }) async {
@@ -89,7 +92,8 @@ class RemoteSegmentsService {
           .match(<String, Object>{
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
-        _roadColumn: name,
+        _nameColumn: name,
+        _roadColumn: roadName,
         _startColumn: startCoordinates,
         _endColumn: endCoordinates,
       }).limit(1);
@@ -115,6 +119,7 @@ class RemoteSegmentsService {
   Future<bool> deleteSubmission({
     required String addedByUserId,
     required String name,
+    required String roadName,
     required String startCoordinates,
     required String endCoordinates,
   }) async {
@@ -131,7 +136,8 @@ class RemoteSegmentsService {
           .delete()
           .match(<String, Object>{
         _addedByUserColumn: addedByUserId,
-        _roadColumn: name,
+        _nameColumn: name,
+        _roadColumn: roadName,
         _startColumn: startCoordinates,
         _endColumn: endCoordinates,
       }).select('$_idColumn');
