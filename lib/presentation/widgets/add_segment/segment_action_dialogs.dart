@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
-enum SegmentAction { delete }
+enum SegmentAction { delete, toggleActivation }
 
 Future<SegmentAction?> showSegmentActionsSheet(
   BuildContext context,
   SegmentInfo segment,
 ) {
   final canDelete = segment.isLocalOnly;
+  final canToggleActivation = segment.isMarkedPublic && !segment.isLocalOnly;
   return showModalBottomSheet<SegmentAction>(
     context: context,
     builder: (context) {
@@ -16,6 +17,23 @@ Future<SegmentAction?> showSegmentActionsSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (canToggleActivation)
+              ListTile(
+                leading: Icon(
+                  segment.isActive
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                title: Text(
+                  segment.isActive
+                      ? 'Deactivate segment'
+                      : 'Activate segment',
+                ),
+                onTap: () =>
+                    Navigator.of(context).pop(SegmentAction.toggleActivation),
+              ),
+            if (canToggleActivation && canDelete)
+              const Divider(height: 0),
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('Delete segment'),

@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_csv_constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
@@ -21,6 +20,7 @@ class SegmentInfo {
     required this.endCoordinates,
     this.isLocalOnly = false,
     this.isMarkedPublic = false,
+    this.isActive = true,
   });
 
   final String id;
@@ -31,6 +31,7 @@ class SegmentInfo {
   final String endCoordinates;
   final bool isLocalOnly;
   final bool isMarkedPublic;
+  final bool isActive;
 
   String get startLabel =>
       startDisplayName.isNotEmpty ? startDisplayName : startCoordinates;
@@ -52,10 +53,21 @@ class SegmentInfo {
 }
 
 class SegmentsRepository {
-  SegmentsRepository({TollSegmentsFileSystem? fileSystem})
-      : _fileSystem = fileSystem ?? fs_impl.createFileSystem();
+  factory SegmentsRepository({
+    TollSegmentsFileSystem? fileSystem,
+    SegmentsMetadataService? metadataService,
+  }) {
+    final fs = fileSystem ?? fs_impl.createFileSystem();
+    return SegmentsRepository._(
+      fs,
+      metadataService ?? SegmentsMetadataService(fileSystem: fs),
+    );
+  }
+
+  SegmentsRepository._(this._fileSystem, this._metadataService);
 
   final TollSegmentsFileSystem _fileSystem;
+  final SegmentsMetadataService _metadataService;
 
   Future<List<SegmentInfo>> loadSegments({
     String assetPath = kTollSegmentsAssetPath,
@@ -67,7 +79,7 @@ class SegmentsRepository {
       return const [];
     }
 
-    final publicFlags = await _loadPublicFlags();
+    final metadata = await _metadataService.load();
 
     final header = rows.first.map((cell) => '$cell'.trim().toLowerCase()).toList();
     final idIndex = header.indexOf('id');
@@ -135,7 +147,8 @@ class SegmentsRepository {
           startCoordinates: startCoordinates,
           endCoordinates: endCoordinates,
           isLocalOnly: isLocalOnly,
-          isMarkedPublic: publicFlags[id] ?? false,
+          isMarkedPublic: metadata.publicFlags[id] ?? false,
+          isActive: !metadata.deactivatedPublicSegmentIds.contains(id),
         ),
       );
     }
@@ -217,31 +230,5 @@ class SegmentsRepository {
     return rootBundle.loadString(assetPath);
   }
 
-  Future<Map<String, bool>> _loadPublicFlags() async {
-    if (kIsWeb) {
-      return const <String, bool>{};
-    }
-
-    try {
-      final metadataPath = await resolveTollSegmentsMetadataPath();
-      if (!await _fileSystem.exists(metadataPath)) {
-        return const <String, bool>{};
-      }
-
-      final contents = await _fileSystem.readAsString(metadataPath);
-      if (contents.trim().isEmpty) {
-        return const <String, bool>{};
-      }
-
-      final dynamic decoded = jsonDecode(contents);
-      if (decoded is! Map<String, dynamic>) {
-        return const <String, bool>{};
-      }
-
-      return decoded.map((key, value) => MapEntry(key, value == true));
-    } catch (_) {
-      return const <String, bool>{};
-    }
-  }
 }
 

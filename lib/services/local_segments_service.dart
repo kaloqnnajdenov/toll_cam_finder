@@ -1,25 +1,42 @@
-import 'dart:convert';
-
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
+import 'segment_id_generator.dart';
+import 'segments_metadata_service.dart';
 import 'toll_segments_csv_constants.dart';
 import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
     if (dart.library.io) 'toll_segments_file_system_io.dart' as fs_impl;
 import 'toll_segments_paths.dart';
-import 'segment_id_generator.dart';
 
 /// Persists user-created segments to the local toll segments CSV.
 class LocalSegmentsService {
-  LocalSegmentsService({
+  factory LocalSegmentsService({
     TollSegmentsFileSystem? fileSystem,
     TollSegmentsPathResolver? pathResolver,
-  })  : _fileSystem = fileSystem ?? fs_impl.createFileSystem(),
-        _pathResolver = pathResolver;
+    SegmentsMetadataService? metadataService,
+  }) {
+    final fs = fileSystem ?? fs_impl.createFileSystem();
+    return LocalSegmentsService._(
+      fs,
+      pathResolver,
+      metadataService ??
+          SegmentsMetadataService(
+            fileSystem: fs,
+            pathResolver: pathResolver,
+          ),
+    );
+  }
+
+  LocalSegmentsService._(
+    this._fileSystem,
+    this._pathResolver,
+    this._metadataService,
+  );
 
   final TollSegmentsFileSystem _fileSystem;
   final TollSegmentsPathResolver? _pathResolver;
+  final SegmentsMetadataService _metadataService;
 
   /// Stores a user-created segment on disk. The resulting row is marked with a
   /// local identifier so that it survives future synchronisation runs.
@@ -261,46 +278,7 @@ class LocalSegmentsService {
       return;
     }
 
-    final metadataPath = await resolveTollSegmentsMetadataPath(
-      overrideResolver: _pathResolver,
-    );
-    await _fileSystem.ensureParentDirectory(metadataPath);
-
-    final flags = await _readVisibilityFlags(metadataPath);
-    if (isPublic) {
-      flags[id] = true;
-    } else {
-      flags.remove(id);
-    }
-
-    if (flags.isEmpty) {
-      await _fileSystem.writeAsString(metadataPath, '');
-      return;
-    }
-
-    await _fileSystem.writeAsString(metadataPath, jsonEncode(flags));
-  }
-
-  Future<Map<String, bool>> _readVisibilityFlags(String path) async {
-    if (!await _fileSystem.exists(path)) {
-      return <String, bool>{};
-    }
-
-    final contents = await _fileSystem.readAsString(path);
-    if (contents.trim().isEmpty) {
-      return <String, bool>{};
-    }
-
-    try {
-      final dynamic decoded = jsonDecode(contents);
-      if (decoded is! Map<String, dynamic>) {
-        return <String, bool>{};
-      }
-
-      return decoded.map((key, value) => MapEntry(key, value == true));
-    } catch (_) {
-      return <String, bool>{};
-    }
+    await _metadataService.setPublicFlag(id, isPublic);
   }
 
   String _normalizeCoordinates(String input) {

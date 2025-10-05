@@ -19,44 +19,47 @@ class SegmentCard extends StatelessWidget {
       child: InkWell(
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      segment.name,
-                      style: theme.textTheme.titleMedium,
+        child: Opacity(
+          opacity: segment.isActive ? 1.0 : 0.5,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        segment.name,
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ),
-                  ),
-                  if (segment.isLocalOnly) ...[
-                    const SizedBox(width: 8),
-                    const _LocalBadge(),
+                    if (segment.isLocalOnly) ...[
+                      const SizedBox(width: 8),
+                      const _LocalBadge(),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _SegmentLocation(
-                      value: segment.startDisplayName,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _SegmentLocation(
+                        value: segment.startDisplayName,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _SegmentLocation(
-                      value: segment.endDisplayName,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _SegmentLocation(
+                        value: segment.endDisplayName,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

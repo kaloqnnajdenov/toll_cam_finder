@@ -1,11 +1,11 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/local_segments_service.dart';
 import 'package:toll_cam_finder/services/remote_segments_service.dart';
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
 import '../../app/app_routes.dart';
@@ -24,6 +24,7 @@ class SegmentsPage extends StatefulWidget {
 class _SegmentsPageState extends State<SegmentsPage> {
   final SegmentsRepository _repository = SegmentsRepository();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
+  final SegmentsMetadataService _metadataService = SegmentsMetadataService();
   late Future<List<SegmentInfo>> _segmentsFuture;
   bool _segmentsUpdated = false;
 
@@ -73,17 +74,49 @@ class _SegmentsPageState extends State<SegmentsPage> {
               return const EmptySegmentsView();
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: segments.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final segment = segments[index];
-                return SegmentCard(
-                  segment: segment,
-                  onLongPress: () => _onSegmentLongPress(segment),
+            final activeSegments = <SegmentInfo>[];
+            final inactiveSegments = <SegmentInfo>[];
+            for (final segment in segments) {
+              final isDeactivatedPublic =
+                  segment.isMarkedPublic && !segment.isLocalOnly && !segment.isActive;
+              if (isDeactivatedPublic) {
+                inactiveSegments.add(segment);
+              } else {
+                activeSegments.add(segment);
+              }
+            }
+
+            final children = <Widget>[];
+
+            void addSegments(List<SegmentInfo> items) {
+              for (var i = 0; i < items.length; i++) {
+                final segment = items[i];
+                children.add(
+                  SegmentCard(
+                    segment: segment,
+                    onLongPress: () => _onSegmentLongPress(segment),
+                  ),
                 );
-              },
+                if (i != items.length - 1) {
+                  children.add(const SizedBox(height: 12));
+                }
+              }
+            }
+
+            addSegments(activeSegments);
+
+            if (inactiveSegments.isNotEmpty) {
+              if (activeSegments.isNotEmpty) {
+                children.add(const SizedBox(height: 16));
+                children.add(const Divider());
+                children.add(const SizedBox(height: 12));
+              }
+              addSegments(inactiveSegments);
+            }
+
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: children,
             );
           },
         ),
@@ -130,11 +163,61 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
   Future<void> _onSegmentLongPress(SegmentInfo segment) async {
     final action = await showSegmentActionsSheet(context, segment);
-    if (!mounted || action != SegmentAction.delete) {
+    switch (action) {
+      case SegmentAction.delete:
+        await _confirmAndDeleteSegment(segment);
+        break;
+      case SegmentAction.toggleActivation:
+        await _toggleSegmentActivation(segment);
+        break;
+      case null:
+        break;
+    }
+  }
+
+  Future<void> _toggleSegmentActivation(SegmentInfo segment) async {
+    if (!mounted) {
       return;
     }
 
-    await _confirmAndDeleteSegment(segment);
+    final messenger = ScaffoldMessenger.of(context);
+    if (kIsWeb) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Segment activation is not supported on the web.'),
+        ),
+      );
+      return;
+    }
+    final newIsActive = !segment.isActive;
+
+    try {
+      await _metadataService.setSegmentActivation(segment.id, newIsActive);
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to ${newIsActive ? 'activate' : 'deactivate'} the segment.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          newIsActive
+              ? 'Segment ${segment.displayId} activated.'
+              : 'Segment ${segment.displayId} deactivated.',
+        ),
+      ),
+    );
+
+    _segmentsUpdated = true;
+    setState(() {
+      _segmentsFuture = _repository.loadSegments();
+    });
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {
@@ -402,11 +485,18 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
   Future<void> _onSegmentLongPress(SegmentInfo segment) async {
     final action = await showSegmentActionsSheet(context, segment);
-    if (!mounted || action != SegmentAction.delete) {
+    if (!mounted) {
       return;
     }
 
-    await _confirmAndDeleteSegment(segment);
+    switch (action) {
+      case SegmentAction.delete:
+        await _confirmAndDeleteSegment(segment);
+        break;
+      case SegmentAction.toggleActivation:
+      case null:
+        break;
+    }
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {

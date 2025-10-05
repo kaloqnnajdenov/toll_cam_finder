@@ -37,7 +37,10 @@ class CameraUtils {
 
   /// Loads GeoJSON from asset and fills [_allCameras]. Also sets the
   /// initial [_visibleCameras] to all (until a bounds-based filter runs).
-  Future<void> loadFromAsset(String assetPath) async {
+  Future<void> loadFromAsset(
+    String assetPath, {
+    Set<String> disabledSegmentIds = const <String>{},
+  }) async {
     _loading = true;
     _error = null;
 
@@ -45,7 +48,7 @@ class CameraUtils {
       final data = await _loadCameraData(assetPath);
 
       final pts = assetPath.toLowerCase().endsWith('.csv')
-          ? _parseCamerasFromCsv(data)
+          ? _parseCamerasFromCsv(data, disabledSegmentIds)
           : _parseCamerasFromGeoJson(data);
 
       _allCameras = pts;
@@ -96,7 +99,10 @@ class CameraUtils {
     return pts;
   }
 
-  List<LatLng> _parseCamerasFromCsv(String raw) {
+  List<LatLng> _parseCamerasFromCsv(
+    String raw,
+    Set<String> disabledSegmentIds,
+  ) {
     final rows = const CsvToListConverter(
       fieldDelimiter: ';',
       shouldParseNumbers: false,
@@ -111,6 +117,7 @@ class CameraUtils {
         .toList(growable: false);
     final startIdx = header.indexOf('start');
     final endIdx = header.indexOf('end');
+    final idIdx = header.indexOf('id');
 
     if (startIdx == -1 || endIdx == -1) {
       throw const FormatException('CSV must contain "Start" and "End" columns');
@@ -121,6 +128,13 @@ class CameraUtils {
 
     for (final row in rows.skip(1)) {
       if (row.length <= startIdx || row.length <= endIdx) continue;
+
+      if (idIdx != -1 && row.length > idIdx) {
+        final id = row[idIdx]?.toString().trim() ?? '';
+        if (id.isNotEmpty && disabledSegmentIds.contains(id)) {
+          continue;
+        }
+      }
 
       final start = _latLngFromCsvValue(row[startIdx]);
       final end = _latLngFromCsvValue(row[endIdx]);

@@ -16,6 +16,7 @@ import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
 
 import '../../app/app_routes.dart';
@@ -62,6 +63,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  final SegmentsMetadataService _metadataService = SegmentsMetadataService();
 
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
@@ -343,7 +345,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _loadCameras() async {
-    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
+    final metadata = await _metadataService.load();
+    await _cameraController.loadFromAsset(
+      AppConstants.camerasAsset,
+      disabledSegmentIds: metadata.deactivatedPublicSegmentIds,
+    );
     if (!mounted) return;
     _updateVisibleCameras();
   }
@@ -575,10 +581,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       assetPath: AppConstants.pathToTollSegments,
     );
 
-    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
-    if (!mounted) return;
-
-    _updateVisibleCameras();
+    await _loadCameras();
     if (!mounted) return;
 
     _resetSegmentState();
