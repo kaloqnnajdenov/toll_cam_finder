@@ -12,6 +12,8 @@ class SegmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasBadges = segment.isLocalOnly || segment.isDeactivated;
+    final speedLimit = segment.speedLimitKph?.trim();
+    final hasSpeedLimit = speedLimit != null && speedLimit.isNotEmpty;
     return Card(
       child: InkWell(
         onLongPress: onLongPress,
@@ -22,12 +24,14 @@ class SegmentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
-                      segment.name,
-                      style: theme.textTheme.titleMedium,
+                      segment.displayId,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (hasBadges) ...[
@@ -36,19 +40,36 @@ class SegmentCard extends StatelessWidget {
                   ],
                 ],
               ),
+              const SizedBox(height: 8),
+              Text(
+                segment.name,
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: _SegmentLocation(value: segment.startDisplayName),
+                    child: _SegmentLocation(
+                      title: 'Start',
+                      value: segment.startDisplayName,
+                      fallback: segment.startCoordinates,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _SegmentLocation(value: segment.endDisplayName),
+                    child: _SegmentLocation(
+                      title: 'End',
+                      value: segment.endDisplayName,
+                      fallback: segment.endCoordinates,
+                    ),
                   ),
                 ],
               ),
+              if (hasSpeedLimit) ...[
+                const SizedBox(height: 16),
+                _SegmentSpeed(speedLimit: speedLimit!),
+              ],
             ],
           ),
         ),
@@ -151,23 +172,65 @@ class _SegmentBadges extends StatelessWidget {
 }
 
 class _SegmentLocation extends StatelessWidget {
-  const _SegmentLocation({required this.value});
+  const _SegmentLocation({
+    required this.title,
+    required this.value,
+    required this.fallback,
+  });
 
+  final String title;
   final String value;
+  final String fallback;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final trimmedValue = value.trim();
+    final trimmedFallback = fallback.trim();
+    final displayValue = trimmedValue.isNotEmpty
+        ? trimmedValue
+        : (trimmedFallback.isNotEmpty ? trimmedFallback : '—');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          trimmedValue.isEmpty ? '—' : trimmedValue,
-          style: theme.textTheme.bodyMedium,
+          title,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.bodyMedium),
+        Text(
+          displayValue,
+          style: theme.textTheme.bodyMedium,
+        ),
+      ],
+    );
+  }
+}
+
+class _SegmentSpeed extends StatelessWidget {
+  const _SegmentSpeed({required this.speedLimit});
+
+  final String speedLimit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.speed,
+          size: 16,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Max speed: $speedLimit km/h',
+          style: theme.textTheme.bodyMedium,
+        ),
       ],
     );
   }
