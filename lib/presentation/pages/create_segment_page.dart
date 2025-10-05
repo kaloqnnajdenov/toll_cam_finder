@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
+import 'package:toll_cam_finder/presentation/pages/create_segment/widgets/segment_labeled_text_field.dart';
 import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/local_segments_service.dart';
@@ -189,12 +190,12 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               ),
                               const SizedBox(height: 24),
                               buildFieldPair(
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _nameController,
                                   label: 'Segment name',
                                   hintText: 'Segment name',
                                 ),
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _roadNameController,
                                   label: 'Road name',
                                   hintText: 'Road name',
@@ -202,12 +203,12 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _startNameController,
                                   label: 'Start',
                                   hintText: 'Start name',
                                 ),
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _endNameController,
                                   label: 'End',
                                   hintText: 'End name',
@@ -215,12 +216,12 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _startController,
                                   label: 'Start coordinates',
                                   hintText: '41.8626802,26.0873785',
                                 ),
-                                _LabeledTextField(
+                                SegmentLabeledTextField(
                                   controller: _endController,
                                   label: 'End point',
                                   hintText: '41.8322163,26.1404669',
@@ -512,30 +513,6 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedEndDisplayName = _endNameController.text;
     _cachedStartCoordinates = _startController.text;
     _cachedEndCoordinates = _endController.text;
-  }
-}
-
-class _LabeledTextField extends StatelessWidget {
-  const _LabeledTextField({
-    required this.controller,
-    required this.label,
-    this.hintText,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String? hintText;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hintText,
-        border: const OutlineInputBorder(),
-      ),
-    );
   }
 }
 
