@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'local_segments_service.dart';
+
+/// Possible moderation statuses returned for a submitted segment.
+enum SegmentSubmissionStatus { none, pending, approved, other }
 
 /// Handles submitting user-created segments to Supabase for moderation.
 class RemoteSegmentsService {
@@ -55,6 +60,11 @@ class RemoteSegmentsService {
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
       });
+    } on SocketException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'No internet connection. Unable to submit the segment for moderation.',
+        cause: error,
+      );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
         'Failed to submit the segment for moderation: ${error.message}',
@@ -97,6 +107,11 @@ class RemoteSegmentsService {
       }).limit(1);
 
       return rows.isNotEmpty;
+    } on SocketException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'No internet connection. Unable to manage public submissions.',
+        cause: error,
+      );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
         'Failed to check the public submission status: ${error.message}',
@@ -139,6 +154,11 @@ class RemoteSegmentsService {
       }).select('$_idColumn');
 
       return deleted.isNotEmpty;
+    } on SocketException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'No internet connection. Unable to manage public submissions.',
+        cause: error,
+      );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
         'Failed to cancel the public submission: ${error.message}',
@@ -147,6 +167,67 @@ class RemoteSegmentsService {
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
         'Unexpected error while cancelling the public submission.',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Fetches the moderation status for the provided submission.
+  Future<SegmentSubmissionStatus> getSubmissionStatus({
+    required String addedByUserId,
+    required String name,
+    required String startCoordinates,
+    required String endCoordinates,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw const RemoteSegmentsServiceException(
+        'Supabase is not configured. Unable to manage public submissions.',
+      );
+    }
+
+    try {
+      final List<dynamic> rows = await client
+          .from(tableName)
+          .select('$_moderationStatusColumn')
+          .match(<String, Object>{
+        _addedByUserColumn: addedByUserId,
+        _nameColumn: name,
+        _startColumn: startCoordinates,
+        _endColumn: endCoordinates,
+      }).limit(1);
+
+      if (rows.isEmpty) {
+        return SegmentSubmissionStatus.none;
+      }
+
+      final rawStatus =
+          (rows.first as Map<String, dynamic>)[_moderationStatusColumn];
+      if (rawStatus is String) {
+        final normalized = rawStatus.toLowerCase();
+        if (normalized == _approvedStatus) {
+          return SegmentSubmissionStatus.approved;
+        }
+        if (normalized == _pendingStatus) {
+          return SegmentSubmissionStatus.pending;
+        }
+      }
+
+      return SegmentSubmissionStatus.other;
+    } on SocketException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'No internet connection. Unable to manage public submissions.',
+        cause: error,
+      );
+    } on PostgrestException catch (error) {
+      throw RemoteSegmentsServiceException(
+        'Failed to check the public submission status: ${error.message}',
+        cause: error,
+      );
+    } catch (error, stackTrace) {
+      throw RemoteSegmentsServiceException(
+        'Unexpected error while checking the public submission status.',
         cause: error,
         stackTrace: stackTrace,
       );
