@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/presentation/pages/create_segment/widgets/segment_labeled_text_field.dart';
 import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
@@ -256,21 +257,21 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Do you want the segment to be publically visible?',
+          content: const Text(
+            AppMessages.chooseSegmentVisibilityQuestion,
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.private);
               },
-              child: const Text('No'),
+              child: const Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.public);
               },
-              child: const Text('Yes'),
+              child: const Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -284,8 +285,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     switch (visibilityChoice) {
       case _SegmentVisibilityChoice.private:
         final confirmPrivate = await _showConfirmationDialog(
-          message:
-              'Are you sure that you want to keep the segment only to yourself?',
+          message: AppMessages.confirmKeepSegmentPrivate,
         );
         if (confirmPrivate == true) {
           await _handlePrivateSegmentSaved();
@@ -293,7 +293,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         break;
       case _SegmentVisibilityChoice.public:
         final confirmPublic = await _showConfirmationDialog(
-          message: 'Are you sure you want to make this segment public?',
+          message: AppMessages.confirmMakeSegmentPublic,
         );
         if (confirmPublic == true) {
           await _handlePublicSegmentSaved();
@@ -311,11 +311,11 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('No'),
+              child: const Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Yes'),
+              child: const Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -348,23 +348,20 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         useRootNavigator: true,
         builder: (context) {
           return AlertDialog(
-            title: const Text('Sign in to share publicly'),
-            content: const Text(
-              'You need to be logged in to submit a public segment. '
-              'Would you like to log in or save the segment locally instead?',
-            ),
+            title: const Text(AppMessages.signInToSharePubliclyTitle),
+            content: const Text(AppMessages.signInToSharePubliclyBody),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.saveLocally);
                 },
-                child: const Text('Save locally'),
+                child: const Text(AppMessages.saveLocallyAction),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.login);
                 },
-                child: const Text('Login'),
+                child: const Text(AppMessages.loginAction),
               ),
             ],
           );
@@ -387,7 +384,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
             final loggedIn = result is bool ? result : null;
             if (loggedIn == true && mounted) {
               _showSnackBar(
-                'Logged in successfully. Tap "Save segment" again to submit the segment.',
+                AppMessages.loggedInRetrySavePrompt,
               );
             }
           } finally {
@@ -406,7 +403,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     final userId = auth.currentUserId;
     if (userId == null || userId.isEmpty) {
       _showSnackBar(
-        'Unable to determine the logged in account. Please sign in again.',
+        AppMessages.unableToDetermineLoggedInAccountRetry,
       );
       return;
     }
@@ -436,14 +433,16 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       return;
     } catch (_) {
       await _rollbackLocalDraft(localId);
-      _showSnackBar('Failed to submit the segment for moderation.');
+      _showSnackBar(AppMessages.failedToSubmitForModeration);
       return;
     }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Segment submitted for public review.')),
+      const SnackBar(
+        content: Text(AppMessages.segmentSubmittedForPublicReviewGeneric),
+      ),
     );
     _resetDraftState();
     Navigator.of(context).pop(true);
@@ -452,7 +451,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   SegmentDraft? _buildDraft({required bool isPublic}) {
     if (_startController.text.trim().isEmpty ||
         _endController.text.trim().isEmpty) {
-      _showSnackBar('Start and end coordinates are required.');
+      _showSnackBar(AppMessages.startEndCoordinatesRequired);
       return null;
     }
 
@@ -478,7 +477,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     } on LocalSegmentsServiceException catch (error) {
       _showSnackBar(error.message);
     } catch (_) {
-      _showSnackBar('Failed to save the segment locally.');
+      _showSnackBar(AppMessages.failedToSaveSegmentLocally);
     }
     return null;
   }

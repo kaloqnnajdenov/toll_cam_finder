@@ -4,6 +4,7 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_messages.dart';
 import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
     if (dart.library.io) 'toll_segments_file_system_io.dart'
@@ -39,7 +40,7 @@ class TollSegmentsSyncService {
   Future<TollSegmentsSyncResult> sync({required SupabaseClient client}) async {
     if (kIsWeb) {
       throw const TollSegmentsSyncException(
-        'Syncing toll segments is not supported on the web.',
+        AppMessages.syncNotSupportedOnWeb,
       );
     }
 
@@ -70,17 +71,17 @@ class TollSegmentsSyncService {
       rethrow;
     } on PostgrestException catch (error) {
       throw TollSegmentsSyncException(
-        'Failed to download toll segments: ${error.message}',
+        AppMessages.failedToDownloadTollSegments(error.message),
         cause: error,
       );
     } on TollSegmentsFileSystemException catch (error) {
       throw TollSegmentsSyncException(
-        'Failed to access the toll segments file: ${error.message}',
+        AppMessages.failedToAccessTollSegmentsFile(error.message),
         cause: error,
       );
     } catch (error, stackTrace) {
       throw TollSegmentsSyncException(
-        'Unexpected error while syncing toll segments.',
+        AppMessages.unexpectedSyncError,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -118,14 +119,13 @@ class TollSegmentsSyncService {
 
     if (attemptedTables.isEmpty) {
       throw TollSegmentsSyncException(
-        'The $tableName table did not return any rows.',
+        AppMessages.tableReturnedNoRows(tableName),
         cause: lastMissingTableException,
       );
     }
 
     throw TollSegmentsSyncException(
-      'No toll segment rows were returned from Supabase. Checked tables: '
-      '${attemptedTables.join(', ')}. Ensure your account has access to the data.',
+      AppMessages.noTollSegmentRowsFound(attemptedTables.join(', ')),
       cause: lastMissingTableException,
     );
   }
@@ -149,7 +149,10 @@ class TollSegmentsSyncService {
     } on PostgrestException catch (error) {
       if (_isMissingColumnError(error, _moderationStatusColumn)) {
         throw TollSegmentsSyncException(
-          'The "$table" table is missing the "$_moderationStatusColumn" column required for moderation.',
+          AppMessages.tableMissingModerationColumn(
+            table,
+            _moderationStatusColumn,
+          ),
           cause: error,
         );
       }
@@ -293,7 +296,7 @@ class TollSegmentsSyncService {
       );
     } catch (error, stackTrace) {
       throw TollSegmentsSyncException(
-        'Failed to determine the local toll segments storage path.',
+        AppMessages.failedToDetermineTollSegmentsPath,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -383,7 +386,7 @@ class TollSegmentsSyncService {
       final value = _extractField(record, column);
       if (value == null) {
         throw TollSegmentsSyncException(
-          'Missing required column "$column" in the Toll_Segments table.',
+          AppMessages.missingRequiredColumn(column),
         );
       }
       values.add(value);

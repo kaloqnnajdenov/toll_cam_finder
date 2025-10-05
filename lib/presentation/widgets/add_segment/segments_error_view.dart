@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 
 class SegmentsErrorView extends StatelessWidget {
   const SegmentsErrorView({
@@ -14,11 +15,11 @@ class SegmentsErrorView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Failed to load segments.'),
+          const Text(AppMessages.failedToLoadSegments),
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: onRetry,
-            child: const Text('Retry'),
+            child: const Text(AppMessages.retryAction),
           ),
         ],
       ),

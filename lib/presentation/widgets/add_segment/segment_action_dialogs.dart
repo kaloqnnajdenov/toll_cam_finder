@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
@@ -34,12 +35,14 @@ Future<SegmentAction?> showSegmentActionsSheet(
                 isDeactivated ? Icons.visibility : Icons.visibility_off,
               ),
               title: Text(
-                isDeactivated ? 'Show segment on map' : 'Hide segment on map',
+                isDeactivated
+                    ? AppMessages.showSegmentOnMapAction
+                    : AppMessages.hideSegmentOnMapAction,
               ),
               subtitle: Text(
                 isDeactivated
-                    ? 'Cameras and warnings for this segment will be restored.'
-                    : 'No cameras or warnings will appear for this segment.',
+                    ? AppMessages.segmentVisibilityRestoreSubtitle
+                    : AppMessages.segmentVisibilityDisableSubtitle,
               ),
               onTap: () => Navigator.of(context).pop(
                 isDeactivated
@@ -50,12 +53,14 @@ Future<SegmentAction?> showSegmentActionsSheet(
             if (segment.isLocalOnly && !segment.isMarkedPublic)
               ListTile(
                 leading: const Icon(Icons.public),
-                title: const Text('Share segment publicly'),
+                title: const Text(AppMessages.shareSegmentPubliclyAction),
                 subtitle: !isAuthConfigured
-                    ? const Text('Public sharing is not available.')
+                    ? const Text(AppMessages.publicSharingUnavailableShort)
                     : isLoggedIn
-                        ? const Text('Submit this segment for public review.')
-                        : const Text('Please sign in to share segments publicly.'),
+                        ? const Text(
+                            AppMessages.submitSegmentForPublicReviewSubtitle,
+                          )
+                        : const Text(AppMessages.signInToShareSegment),
                 enabled: canMakePublic && isLoggedIn,
                 onTap: canMakePublic && isLoggedIn
                     ? () => Navigator.of(context).pop(SegmentAction.makePublic)
@@ -63,10 +68,10 @@ Future<SegmentAction?> showSegmentActionsSheet(
               ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
-              title: const Text('Delete segment'),
+              title: const Text(AppMessages.deleteSegmentAction),
               subtitle: canDelete
                   ? null
-                  : const Text('Only local segments can be deleted.'),
+                  : const Text(AppMessages.onlyLocalSegmentsCanBeDeleted),
               enabled: canDelete,
               onTap: canDelete
                   ? () => Navigator.of(context).pop(SegmentAction.delete)
@@ -87,18 +92,18 @@ Future<bool> showDeleteConfirmationDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Delete segment'),
+        title: const Text(AppMessages.deleteSegmentConfirmationTitle),
         content: Text(
-          'Are you sure you want to delete segment ${segment.displayId}?',
+          AppMessages.confirmDeleteSegment(segment.displayId),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const Text(AppMessages.cancelAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: const Text(AppMessages.deleteAction),
           ),
         ],
       );
@@ -116,19 +121,16 @@ Future<bool> showCancelRemoteSubmissionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Withdraw public submission?'),
-        content: const Text(
-          'You have submitted this segment for review. '
-          'Do you want to withdraw the submission?',
-        ),
+        title: const Text(AppMessages.withdrawPublicSubmissionTitle),
+        content: const Text(AppMessages.withdrawPublicSubmissionMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('No'),
+            child: const Text(AppMessages.noAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Yes'),
+            child: const Text(AppMessages.yesAction),
           ),
         ],
       );

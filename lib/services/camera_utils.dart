@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
@@ -54,7 +55,7 @@ class CameraUtils {
       _loading = false;
     } catch (e) {
       _loading = false;
-      _error = 'Failed to load cameras: $e';
+      _error = AppMessages.failedToLoadCameras('$e');
     }
   }
 
@@ -117,7 +118,7 @@ class CameraUtils {
     final endIdx = header.indexOf('end');
 
     if (startIdx == -1 || endIdx == -1) {
-      throw const FormatException('CSV must contain "Start" and "End" columns');
+      throw const FormatException(AppMessages.csvMissingStartEndColumns);
     }
 
     final pts = <LatLng>[];

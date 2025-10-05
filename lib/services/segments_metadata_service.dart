@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
@@ -134,7 +135,7 @@ class SegmentsMetadataService {
     } on TollSegmentsFileSystemException catch (error, stackTrace) {
       Error.throwWithStackTrace(
         SegmentsMetadataException(
-          'Failed to access the segments metadata file.',
+          AppMessages.failedToAccessSegmentsMetadataFile,
           cause: error,
         ),
         stackTrace,
@@ -142,7 +143,7 @@ class SegmentsMetadataService {
     } on FormatException catch (error, stackTrace) {
       Error.throwWithStackTrace(
         SegmentsMetadataException(
-          'Failed to parse the segments metadata file.',
+          AppMessages.failedToParseSegmentsMetadataFile,
           cause: error,
         ),
         stackTrace,
@@ -153,7 +154,7 @@ class SegmentsMetadataService {
   Future<void> updatePublicFlag(String id, bool isPublic) async {
     if (kIsWeb) {
       throw const SegmentsMetadataException(
-        'Segment metadata cannot be updated on the web.',
+        AppMessages.segmentMetadataUpdateUnavailable,
       );
     }
 
@@ -165,7 +166,7 @@ class SegmentsMetadataService {
   Future<void> setSegmentDeactivated(String id, bool isDeactivated) async {
     if (kIsWeb) {
       throw const SegmentsMetadataException(
-        'Segment metadata cannot be updated on the web.',
+        AppMessages.segmentMetadataUpdateUnavailable,
       );
     }
 
@@ -200,7 +201,7 @@ class SegmentsMetadataService {
     } on TollSegmentsFileSystemException catch (error, stackTrace) {
       Error.throwWithStackTrace(
         SegmentsMetadataException(
-          'Failed to write to the segments metadata file.',
+          AppMessages.failedToWriteSegmentsMetadataFile,
           cause: error,
         ),
         stackTrace,

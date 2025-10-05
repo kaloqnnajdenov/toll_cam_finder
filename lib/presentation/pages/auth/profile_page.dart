@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../services/auth_controller.dart';
@@ -56,7 +57,7 @@ class ProfilePage extends StatelessWidget {
                     debugPrint('Logout error: $error\n$stackTrace');
                     messenger.showSnackBar(
                       const SnackBar(
-                        content: Text('Unable to log out. Please try again.'),
+                        content: Text(AppMessages.unableToLogOutTryAgain),
                       ),
                     );
                   }
