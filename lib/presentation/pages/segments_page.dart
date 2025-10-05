@@ -7,10 +7,10 @@ import 'package:toll_cam_finder/services/remote_segments_service.dart';
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
 import '../../app/app_routes.dart';
-import 'segments/widgets/empty_segments_views.dart';
-import 'segments/widgets/segment_action_dialogs.dart';
-import 'segments/widgets/segment_card.dart';
-import 'segments/widgets/segments_error_view.dart';
+import '../widgets/add_segment/empty_segments_views.dart';
+import '../widgets/add_segment/segment_action_dialogs.dart';
+import '../widgets/add_segment/segment_card.dart';
+import '../widgets/add_segment/segments_error_view.dart';
 
 class SegmentsPage extends StatefulWidget {
   const SegmentsPage({super.key});
