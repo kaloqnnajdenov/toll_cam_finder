@@ -128,6 +128,83 @@ class LocalSegmentsService {
     return localId;
   }
 
+  /// Loads the locally stored segment that matches the provided identifier.
+  Future<SegmentDraft> loadDraft(String id) async {
+    if (kIsWeb) {
+      throw const LocalSegmentsServiceException(
+        'Loading local segments is not supported on the web.',
+      );
+    }
+
+    if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+      throw const LocalSegmentsServiceException(
+        'Only segments saved locally can be shared publicly.',
+      );
+    }
+
+    final csvPath = await resolveTollSegmentsDataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    if (!await _fileSystem.exists(csvPath)) {
+      throw const LocalSegmentsServiceException(
+        'The segment could not be found locally.',
+      );
+    }
+
+    final rows = await _readExistingRows(csvPath);
+    if (rows.isEmpty) {
+      throw const LocalSegmentsServiceException(
+        'The segment could not be found locally.',
+      );
+    }
+
+    for (final row in rows) {
+      if (_isHeaderRow(row)) {
+        continue;
+      }
+
+      if (row.isEmpty || row.first != id) {
+        continue;
+      }
+
+      final name = row.length > 1 ? row[1].trim() : '';
+      final roadName = row.length > 2 ? row[2].trim() : '';
+      final startDisplayName = row.length > 3 ? row[3].trim() : '';
+      final endDisplayName = row.length > 4 ? row[4].trim() : '';
+      final startCoordinates = row.length > 5 ? row[5].trim() : '';
+      final endCoordinates = row.length > 6 ? row[6].trim() : '';
+
+      if (startCoordinates.isEmpty || endCoordinates.isEmpty) {
+        throw const LocalSegmentsServiceException(
+          'The saved segment is missing coordinates and cannot be shared publicly.',
+        );
+      }
+
+      final resolvedName = name.isNotEmpty ? name : 'Personal segment';
+      final resolvedStartDisplayName = startDisplayName.isNotEmpty
+          ? startDisplayName
+          : '$resolvedName start';
+      final resolvedEndDisplayName = endDisplayName.isNotEmpty
+          ? endDisplayName
+          : '$resolvedName end';
+
+      return SegmentDraft(
+        name: resolvedName,
+        roadName: roadName,
+        startDisplayName: resolvedStartDisplayName,
+        endDisplayName: resolvedEndDisplayName,
+        startCoordinates: startCoordinates,
+        endCoordinates: endCoordinates,
+        isPublic: true,
+      );
+    }
+
+    throw const LocalSegmentsServiceException(
+      'The segment could not be found locally.',
+    );
+  }
+
   Future<bool> deleteLocalSegment(String id) async {
     if (kIsWeb) {
       throw const LocalSegmentsServiceException(
