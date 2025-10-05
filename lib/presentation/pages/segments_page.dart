@@ -146,6 +146,9 @@ class _SegmentsPageState extends State<SegmentsPage> {
       case SegmentAction.activate:
         await _setSegmentDeactivated(segment, false);
         break;
+      case SegmentAction.makePublic:
+        await _submitSegmentForPublicReview(segment);
+        break;
     }
   }
 
@@ -175,6 +178,131 @@ class _SegmentsPageState extends State<SegmentsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _submitSegmentForPublicReview(SegmentInfo segment) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    AuthController authController;
+    try {
+      authController = context.read<AuthController>();
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to share segments publicly.'),
+        ),
+      );
+      return;
+    }
+
+    if (!authController.isConfigured || authController.client == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Public segment sharing is currently unavailable.'),
+        ),
+      );
+      return;
+    }
+
+    if (!authController.isLoggedIn) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to share segments publicly.'),
+        ),
+      );
+      return;
+    }
+
+    final userId = authController.currentUserId;
+    if (userId == null || userId.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to determine the logged in account.'),
+        ),
+      );
+      return;
+    }
+
+    SegmentDraft draft;
+    try {
+      draft = await _localSegmentsService.loadDraft(segment.id);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to prepare the segment for public review.'),
+        ),
+      );
+      return;
+    }
+
+    final remoteService = RemoteSegmentsService(client: authController.client);
+
+    try {
+      final hasPending = await remoteService.hasPendingSubmission(
+        addedByUserId: userId,
+        name: draft.name,
+        startCoordinates: draft.startCoordinates,
+        endCoordinates: draft.endCoordinates,
+      );
+      if (hasPending) {
+        await _metadataService.updatePublicFlag(segment.id, true);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Segment ${segment.displayId} is already awaiting public review.',
+            ),
+          ),
+        );
+        _segmentsUpdated = true;
+        setState(() {
+          _segmentsFuture = _repository.loadSegments();
+        });
+        return;
+      }
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to check the public submission status.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await remoteService.submitForModeration(
+        draft,
+        addedByUserId: userId,
+      );
+      await _metadataService.updatePublicFlag(segment.id, true);
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to submit the segment for moderation.'),
+        ),
+      );
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Segment ${segment.displayId} submitted for public review.',
+        ),
+      ),
+    );
+    _segmentsUpdated = true;
+    setState(() {
+      _segmentsFuture = _repository.loadSegments();
+    });
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {
@@ -457,6 +585,9 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       case SegmentAction.activate:
         await _setSegmentDeactivated(segment, false);
         break;
+      case SegmentAction.makePublic:
+        await _submitSegmentForPublicReview(segment);
+        break;
     }
   }
 
@@ -486,6 +617,131 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _submitSegmentForPublicReview(SegmentInfo segment) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    AuthController authController;
+    try {
+      authController = context.read<AuthController>();
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to share segments publicly.'),
+        ),
+      );
+      return;
+    }
+
+    if (!authController.isConfigured || authController.client == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Public segment sharing is currently unavailable.'),
+        ),
+      );
+      return;
+    }
+
+    if (!authController.isLoggedIn) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to share segments publicly.'),
+        ),
+      );
+      return;
+    }
+
+    final userId = authController.currentUserId;
+    if (userId == null || userId.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to determine the logged in account.'),
+        ),
+      );
+      return;
+    }
+
+    SegmentDraft draft;
+    try {
+      draft = await _localSegmentsService.loadDraft(segment.id);
+    } on LocalSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to prepare the segment for public review.'),
+        ),
+      );
+      return;
+    }
+
+    final remoteService = RemoteSegmentsService(client: authController.client);
+
+    try {
+      final hasPending = await remoteService.hasPendingSubmission(
+        addedByUserId: userId,
+        name: draft.name,
+        startCoordinates: draft.startCoordinates,
+        endCoordinates: draft.endCoordinates,
+      );
+      if (hasPending) {
+        await _metadataService.updatePublicFlag(segment.id, true);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Segment ${segment.displayId} is already awaiting public review.',
+            ),
+          ),
+        );
+        _segmentsUpdated = true;
+        setState(() {
+          _segmentsFuture = _repository.loadSegments(onlyLocal: true);
+        });
+        return;
+      }
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to check the public submission status.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await remoteService.submitForModeration(
+        draft,
+        addedByUserId: userId,
+      );
+      await _metadataService.updatePublicFlag(segment.id, true);
+    } on RemoteSegmentsServiceException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to submit the segment for moderation.'),
+        ),
+      );
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Segment ${segment.displayId} submitted for public review.',
+        ),
+      ),
+    );
+    _segmentsUpdated = true;
+    setState(() {
+      _segmentsFuture = _repository.loadSegments(onlyLocal: true);
+    });
   }
 
   Future<void> _confirmAndDeleteSegment(SegmentInfo segment) async {
