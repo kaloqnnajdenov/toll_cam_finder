@@ -93,7 +93,9 @@ class _SegmentsPageState extends State<SegmentsPage> {
   }
 
   Future<void> _onShowLocalSegmentsPressed() async {
-    final result = await Navigator.of(context).pushNamed(AppRoutes.localSegments);
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRoutes.localSegments);
     if (!mounted || result != true) {
       return;
     }
@@ -105,14 +107,16 @@ class _SegmentsPageState extends State<SegmentsPage> {
   }
 
   Future<void> _onCreateSegmentPressed() async {
-    final result = await Navigator.of(context).pushNamed(AppRoutes.createSegment);
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRoutes.createSegment);
     if (!mounted || result != true) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Segment saved locally.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Segment saved locally.')));
 
     _segmentsUpdated = true;
     setState(() {
@@ -148,8 +152,10 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return true;
     }
 
-    final shouldWithdraw =
-        await _showCancelRemoteSubmissionDialog(context, segment);
+    final shouldWithdraw = await _showCancelRemoteSubmissionDialog(
+      context,
+      segment,
+    );
     if (!mounted) {
       return false;
     }
@@ -230,7 +236,9 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final deleted = await _localSegmentsService.deleteLocalSegment(segment.id);
+      final deleted = await _localSegmentsService.deleteLocalSegment(
+        segment.id,
+      );
       if (!mounted) {
         return;
       }
@@ -253,9 +261,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) {
         return;
@@ -268,10 +274,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
 }
 
 class _SegmentCard extends StatelessWidget {
-  const _SegmentCard({
-    required this.segment,
-    this.onLongPress,
-  });
+  const _SegmentCard({required this.segment, this.onLongPress});
 
   final SegmentInfo segment;
   final VoidCallback? onLongPress;
@@ -293,8 +296,8 @@ class _SegmentCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Segment ${segment.displayId}',
-                      style: theme.textTheme.labelMedium,
+                      segment.name,
+                      style: theme.textTheme.titleMedium,
                     ),
                   ),
                   if (segment.isLocalOnly) ...[
@@ -303,8 +306,6 @@ class _SegmentCard extends StatelessWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(segment.name, style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,14 +313,14 @@ class _SegmentCard extends StatelessWidget {
                   Expanded(
                     child: _SegmentLocation(
                       label: 'Start',
-                      value: segment.startLabel,
+                      value: segment.startDisplayName,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _SegmentLocation(
                       label: 'End',
-                      value: segment.endLabel,
+                      value: segment.endDisplayName,
                     ),
                   ),
                 ],
@@ -363,10 +364,14 @@ class _SegmentLocation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final trimmedValue = value.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.labelSmall),
+        Text(
+          trimmedValue.isEmpty ? '—' : trimmedValue,
+          style: theme.textTheme.bodyMedium,
+        ),
         const SizedBox(height: 4),
         Text(value, style: theme.textTheme.bodyMedium),
       ],
@@ -448,14 +453,16 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
   }
 
   Future<void> _onCreateSegmentPressed() async {
-    final result = await Navigator.of(context).pushNamed(AppRoutes.createSegment);
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRoutes.createSegment);
     if (!mounted || result != true) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Segment saved locally.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Segment saved locally.')));
 
     _segmentsUpdated = true;
     setState(() {
@@ -491,8 +498,10 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return true;
     }
 
-    final shouldWithdraw =
-        await _showCancelRemoteSubmissionDialog(context, segment);
+    final shouldWithdraw = await _showCancelRemoteSubmissionDialog(
+      context,
+      segment,
+    );
     if (!mounted) {
       return false;
     }
@@ -573,7 +582,9 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final deleted = await _localSegmentsService.deleteLocalSegment(segment.id);
+      final deleted = await _localSegmentsService.deleteLocalSegment(
+        segment.id,
+      );
       if (!mounted) {
         return;
       }
@@ -596,9 +607,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) {
         return;
@@ -609,7 +618,6 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     }
   }
 }
-
 
 class _EmptySegmentsView extends StatelessWidget {
   const _EmptySegmentsView();
@@ -688,7 +696,9 @@ Future<bool> _showDeleteConfirmationDialog(
     builder: (context) {
       return AlertDialog(
         title: const Text('Delete segment'),
-        content: Text('Are you sure you want to delete segment ${segment.displayId}?'),
+        content: Text(
+          'Are you sure you want to delete segment ${segment.displayId}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

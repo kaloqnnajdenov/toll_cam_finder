@@ -88,64 +88,177 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Create segment')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Segment details', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 24),
-              _LabeledTextField(
-                controller: _nameController,
-                label: 'Segment name',
-                hintText: 'Segment name',
-              ),
-              const SizedBox(height: 16),
-              _LabeledTextField(
-                controller: _roadNameController,
-                label: 'Road name',
-                hintText: 'Road name',
-              ),
-              const SizedBox(height: 16),
-              _LabeledTextField(
-                controller: _startNameController,
-                label: 'Start',
-                hintText: 'Start name',
-              ),
-              const SizedBox(height: 16),
-              _LabeledTextField(
-                controller: _endNameController,
-                label: 'End',
-                hintText: 'End name',
-              ),
-              const SizedBox(height: 16),
-              _LabeledTextField(
-                controller: _startController,
-                label: 'Start coordinates',
-                hintText: '41.8626802,26.0873785',
-              ),
-              const SizedBox(height: 16),
-              _LabeledTextField(
-                controller: _endController,
-                label: 'End point',
-                hintText: '41.8322163,26.1404669',
-              ),
-              const SizedBox(height: 24),
-              Text('Map selection', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              SegmentPickerMap(
-                startController: _startController,
-                endController: _endController,
-              ),
-              const SizedBox(height: 32),
-              Center(
-                child: FilledButton(
-                  onPressed: _onSavePressed,
-                  child: const Text('Save segment'),
+               child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 840;
+            final horizontalPadding = isWide ? 48.0 : 24.0;
+            final instructionBackground = theme.colorScheme.primary.withOpacity(
+              theme.brightness == Brightness.dark ? 0.24 : 0.08,
+            );
+
+            Widget buildFieldPair(Widget first, Widget second) {
+              if (isWide) {
+                return Row(
+                  children: [
+                    Expanded(child: first),
+                    const SizedBox(width: 24),
+                    Expanded(child: second),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  first,
+                  const SizedBox(height: 16),
+                  second,
+                ],
+              );
+            }
+
+            return Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 32,
                 ),
-              ),
-            ],
-          ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 960),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 32),
+                      Text(
+                        'Map selection',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              color: instructionBackground,
+                              padding: EdgeInsets.fromLTRB(
+                                isWide ? 32 : 24,
+                                isWide ? 28 : 24,
+                                isWide ? 32 : 24,
+                                16,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Fine-tune the segment on the map',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Drop or drag markers to adjust the start and end points. '
+                                    'Coordinates are filled automatically as you move them.',
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.all(isWide ? 32 : 24),
+                              child: SegmentPickerMap(
+                                startController: _startController,
+                                endController: _endController,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        'Segment details',
+                        style: (theme.textTheme.headlineSmall ??
+                                theme.textTheme.titleLarge)
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 24),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        elevation: 0,
+                        child: Padding(
+                          padding: EdgeInsets.all(isWide ? 32 : 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'General information',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 24),
+                              buildFieldPair(
+                                _LabeledTextField(
+                                  controller: _nameController,
+                                  label: 'Segment name',
+                                  hintText: 'Segment name',
+                                ),
+                                _LabeledTextField(
+                                  controller: _roadNameController,
+                                  label: 'Road name',
+                                  hintText: 'Road name',
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              buildFieldPair(
+                                _LabeledTextField(
+                                  controller: _startNameController,
+                                  label: 'Start',
+                                  hintText: 'Start name',
+                                ),
+                                _LabeledTextField(
+                                  controller: _endNameController,
+                                  label: 'End',
+                                  hintText: 'End name',
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              buildFieldPair(
+                                _LabeledTextField(
+                                  controller: _startController,
+                                  label: 'Start coordinates',
+                                  hintText: '41.8626802,26.0873785',
+                                ),
+                                _LabeledTextField(
+                                  controller: _endController,
+                                  label: 'End point',
+                                  hintText: '41.8322163,26.1404669',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: _onSavePressed,
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text('Save segment'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ) 
+          );
+          },
         ),
       ),
     );
