@@ -57,28 +57,6 @@ class SegmentCard extends StatelessWidget {
   }
 }
 
-class _LocalBadge extends StatelessWidget {
-  const _LocalBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Local',
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSecondaryContainer,
-        ),
-      ),
-    );
-  }
-}
-
 class _DeactivatedBadge extends StatelessWidget {
   const _DeactivatedBadge();
 
@@ -101,6 +79,50 @@ class _DeactivatedBadge extends StatelessWidget {
   }
 }
 
+class _LocalBadge extends StatelessWidget {
+  const _LocalBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Local',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewBadge extends StatelessWidget {
+  const _ReviewBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Review',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onTertiaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
 class _SegmentBadges extends StatelessWidget {
   const _SegmentBadges({required this.segment});
 
@@ -113,7 +135,11 @@ class _SegmentBadges extends StatelessWidget {
       badges.add(const _DeactivatedBadge());
     }
     if (segment.isLocalOnly) {
-      badges.add(const _LocalBadge());
+      if (segment.isMarkedPublic) {
+        badges.add(const _ReviewBadge());
+      } else {
+        badges.add(const _LocalBadge());
+      }
     }
 
     if (badges.isEmpty) {
