@@ -15,6 +15,7 @@ class SegmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasBadges = segment.isLocalOnly || segment.isDeactivated;
     return Card(
       child: InkWell(
         onLongPress: onLongPress,
@@ -33,9 +34,9 @@ class SegmentCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  if (segment.isLocalOnly) ...[
+                  if (hasBadges) ...[
                     const SizedBox(width: 8),
-                    const _LocalBadge(),
+                    _SegmentBadges(segment: segment),
                   ],
                 ],
               ),
@@ -82,6 +83,55 @@ class _LocalBadge extends StatelessWidget {
           color: theme.colorScheme.onSecondaryContainer,
         ),
       ),
+    );
+  }
+}
+
+class _DeactivatedBadge extends StatelessWidget {
+  const _DeactivatedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Hidden',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onErrorContainer,
+        ),
+      ),
+    );
+  }
+}
+
+class _SegmentBadges extends StatelessWidget {
+  const _SegmentBadges({required this.segment});
+
+  final SegmentInfo segment;
+
+  @override
+  Widget build(BuildContext context) {
+    final badges = <Widget>[];
+    if (segment.isDeactivated) {
+      badges.add(const _DeactivatedBadge());
+    }
+    if (segment.isLocalOnly) {
+      badges.add(const _LocalBadge());
+    }
+
+    if (badges.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: badges,
     );
   }
 }

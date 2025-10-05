@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
-enum SegmentAction { delete }
+enum SegmentAction { delete, deactivate, activate }
 
 Future<SegmentAction?> showSegmentActionsSheet(
   BuildContext context,
   SegmentInfo segment,
 ) {
   final canDelete = segment.isLocalOnly;
+  final isDeactivated = segment.isDeactivated;
   return showModalBottomSheet<SegmentAction>(
     context: context,
     builder: (context) {
@@ -16,6 +17,24 @@ Future<SegmentAction?> showSegmentActionsSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: Icon(
+                isDeactivated ? Icons.visibility : Icons.visibility_off,
+              ),
+              title: Text(
+                isDeactivated
+                    ? 'Show segment on map'
+                    : 'Hide segment on map',
+              ),
+              subtitle: Text(
+                isDeactivated
+                    ? 'Cameras and warnings for this segment will be restored.'
+                    : 'No cameras or warnings will appear for this segment.',
+              ),
+              onTap: () => Navigator.of(context).pop(
+                isDeactivated ? SegmentAction.activate : SegmentAction.deactivate,
+              ),
+            ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('Delete segment'),

@@ -16,6 +16,7 @@ import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
+import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
 
 import '../../app/app_routes.dart';
@@ -42,6 +43,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
+  final SegmentsMetadataService _metadataService = SegmentsMetadataService();
 
   // User + map state
   LatLng _center = AppConstants.initialCenter;
@@ -62,6 +64,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
+  Future<void>? _metadataLoadFuture;
 
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
@@ -80,13 +84,15 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
+    _metadataLoadFuture = _loadSegmentsMetadata();
+    unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
+
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     final compassStream = FlutterCompass.events;
     if (compassStream != null) {
       _compassSub = compassStream.listen(_handleCompassEvent);
     }
-    _initLocation();
-    _loadCameras();
+    unawaited(_initLocation());
     unawaited(_initSegmentsIndex());
   }
 
@@ -121,6 +127,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
+    if (_metadataLoadFuture != null) {
+      try {
+        await _metadataLoadFuture;
+      } catch (_) {
+        // Metadata failures are reported separately.
+      }
+    }
     _speedSmoother.reset();
     final pos = await _locationService.getCurrentPosition();
 
@@ -342,8 +355,35 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _mapController.move(target, camera.zoom);
   }
 
+  Future<void> _loadSegmentsMetadata({bool showErrors = false}) async {
+    try {
+      final metadata = await _metadataService.load();
+      _segmentsMetadata = metadata;
+      _segmentTracker.updateIgnoredSegments(metadata.deactivatedSegmentIds);
+    } on SegmentsMetadataException catch (error) {
+      _segmentsMetadata = const SegmentsMetadata();
+      _segmentTracker.updateIgnoredSegments(const <String>{});
+      if (showErrors && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to load segment preferences: ${error.message}',
+            ),
+          ),
+        );
+      } else {
+        debugPrint(
+          'MapPage: failed to load segments metadata (${error.message}).',
+        );
+      }
+    }
+  }
+
   Future<void> _loadCameras() async {
-    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
+    await _cameraController.loadFromAsset(
+      AppConstants.camerasAsset,
+      excludedSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
+    );
     if (!mounted) return;
     _updateVisibleCameras();
   }
@@ -369,6 +409,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       assetPath: AppConstants.pathToTollSegments,
     );
     if (!mounted || !ready) return;
+
+    if (_metadataLoadFuture != null) {
+      try {
+        await _metadataLoadFuture;
+      } catch (_) {
+        // Metadata failures are reported separately.
+      }
+    }
 
     _resetSegmentState();
     if (_userLatLng != null) {
@@ -567,18 +615,28 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return;
     }
 
-    await _refreshLocalSegments();
+    await _refreshSegmentsData();
   }
 
-  Future<void> _refreshLocalSegments() async {
+  Future<void> _refreshSegmentsData() async {
+    _metadataLoadFuture = _loadSegmentsMetadata(showErrors: true);
+    if (_metadataLoadFuture != null) {
+      try {
+        await _metadataLoadFuture;
+      } catch (_) {
+        // Errors are surfaced inside _loadSegmentsMetadata.
+      }
+    }
+
     final reloaded = await _segmentTracker.reload(
       assetPath: AppConstants.pathToTollSegments,
     );
 
-    await _cameraController.loadFromAsset(AppConstants.camerasAsset);
-    if (!mounted) return;
+    _segmentTracker.updateIgnoredSegments(
+      _segmentsMetadata.deactivatedSegmentIds,
+    );
 
-    _updateVisibleCameras();
+    await _loadCameras();
     if (!mounted) return;
 
     _resetSegmentState();
@@ -625,6 +683,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       final reloaded = await _segmentTracker.reload(
         assetPath: AppConstants.pathToTollSegments,
       );
+      await _loadCameras();
+      if (!mounted) {
+        return;
+      }
       _resetSegmentState();
       if (reloaded && _userLatLng != null) {
         final segEvent = _segmentTracker.handleLocationUpdate(

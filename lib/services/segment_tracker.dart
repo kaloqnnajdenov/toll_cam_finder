@@ -66,6 +66,7 @@ class SegmentTracker {
   final List<GeoPoint> _headingHistory = <GeoPoint>[];
   double? _lastCompassHeadingDeg;
   double? _smoothedHeadingDeg;
+  final Set<String> _ignoredSegmentIds = <String>{};
 
   bool get isReady => _isReady;
   SegmentTrackerDebugData get debugData => _latestDebugData;
@@ -91,6 +92,17 @@ class SegmentTracker {
       _latestDebugData = const SegmentTrackerDebugData.empty();
     }
     return _isReady;
+  }
+
+  void updateIgnoredSegments(Set<String> ignoredIds) {
+    _ignoredSegmentIds
+      ..clear()
+      ..addAll(ignoredIds);
+
+    if (_active != null &&
+        _ignoredSegmentIds.contains(_active!.geometry.id)) {
+      _clearActiveSegment(reason: 'ignored');
+    }
   }
 
   SegmentTrackerEvent handleLocationUpdate({
@@ -124,7 +136,13 @@ class SegmentTracker {
     );
 
     final matches = <SegmentMatch>[];
+    final filteredCandidates = <SegmentGeometry>[];
     for (final geom in candidates) {
+      if (_ignoredSegmentIds.contains(geom.id)) {
+        continue;
+      }
+
+      filteredCandidates.add(geom);
       final path = _effectivePathFor(geom);
       final nearest = _nearestPointOnPath(userPoint, path);
       final double startDist = _distanceBetween(userPoint, path.first);
@@ -164,7 +182,7 @@ class SegmentTracker {
 
     matches.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
 
-    _updateDebugData(current, candidates, matches);
+    _updateDebugData(current, filteredCandidates, matches);
 
     final transition = _updateActiveSegment(matches);
 
