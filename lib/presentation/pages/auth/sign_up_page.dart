@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../services/auth_controller.dart';
@@ -48,7 +49,7 @@ class _SignUpPageState extends State<SignUpPage> {
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('Account created! Check your email to confirm it.'),
+          content: Text(AppMessages.accountCreatedCheckEmail),
         ),
       );
     } on AuthFailure catch (error) {
@@ -61,7 +62,7 @@ class _SignUpPageState extends State<SignUpPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
+          content: Text(AppMessages.somethingWentWrongTryAgain),
         ),
       );
     } finally {
@@ -101,7 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your name';
+                      return AppMessages.enterYourName;
                     }
                     return null;
                   },
@@ -116,7 +117,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
+                      return AppMessages.enterYourEmail;
                     }
                     return null;
                   },
@@ -131,10 +132,10 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please create a password';
+                      return AppMessages.createPasswordPrompt;
                     }
                     if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return AppMessages.passwordTooShort;
                     }
                     return null;
                   },
@@ -149,10 +150,10 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
+                      return AppMessages.confirmYourPassword;
                     }
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return AppMessages.passwordsDoNotMatch;
                     }
                     return null;
                   },

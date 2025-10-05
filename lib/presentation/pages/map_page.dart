@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/segemnt_index_service.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
@@ -367,7 +368,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to load segment preferences: ${error.message}',
+              AppMessages.failedToLoadSegmentPreferences(error.message),
             ),
           ),
         );
@@ -665,9 +666,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     if (client == null) {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text(
-            'Supabase is not configured. Please add credentials to enable sync.',
-          ),
+          content: Text(AppMessages.supabaseNotConfiguredForSync),
         ),
       );
       return;
@@ -705,7 +704,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       debugPrint('Failed to sync toll segments: $error\n$stackTrace');
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('Unexpected error while syncing toll segments.'),
+          content: Text(AppMessages.unexpectedSyncError),
         ),
       );
     } finally {
@@ -719,34 +718,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   String _buildSyncSuccessMessage(TollSegmentsSyncResult result) {
-    final parts = <String>[];
-    if (result.addedSegments > 0) {
-      final label = result.addedSegments == 1 ? 'segment' : 'segments';
-      parts.add('${result.addedSegments} $label added');
-    }
-    if (result.removedSegments > 0) {
-      final label = result.removedSegments == 1 ? 'segment' : 'segments';
-      parts.add('${result.removedSegments} $label removed');
-    }
-
-    final changesSummary = parts.isEmpty
-        ? 'No changes detected.'
-        : parts.join(', ') + '.';
-    final buffer = StringBuffer(
-      'Sync complete. $changesSummary ${result.totalSegments} total segments available.',
+    return AppMessages.syncCompleteSummary(
+      addedSegments: result.addedSegments,
+      removedSegments: result.removedSegments,
+      totalSegments: result.totalSegments,
+      approvedLocalSegments: result.approvedLocalSegments,
     );
-
-    if (result.approvedLocalSegments > 0) {
-      final verb = result.approvedLocalSegments == 1 ? 'was' : 'were';
-      final visibilityVerb = result.approvedLocalSegments == 1 ? 'is' : 'are';
-      buffer.write(
-        ' ${result.approvedLocalSegments} of your submitted segments ',
-      );
-      buffer.write(
-        '$verb approved and now $visibilityVerb visible to everyone.',
-      );
-    }
-
-    return buffer.toString();
   }
 }

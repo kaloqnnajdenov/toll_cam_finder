@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -47,7 +48,7 @@ class BaseTileLayer extends StatelessWidget {
   static void _showLaunchError(BuildContext context) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       const SnackBar(
-        content: Text('Could not open the OpenStreetMap copyright page.'),
+        content: Text(AppMessages.osmCopyrightLaunchFailed),
       ),
     );
   }

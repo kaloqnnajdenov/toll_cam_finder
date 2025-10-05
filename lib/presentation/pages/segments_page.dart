@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/services/auth_controller.dart';
 import 'package:toll_cam_finder/services/local_segments_service.dart';
 import 'package:toll_cam_finder/services/remote_segments_service.dart';
@@ -122,7 +123,9 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Segment saved locally.')));
+    ).showSnackBar(
+      SnackBar(content: Text(AppMessages.segmentSavedLocally)),
+    );
 
     _segmentsUpdated = true;
     setState(() {
@@ -162,8 +165,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       if (!mounted) return;
 
       final message = deactivate
-          ? 'Segment ${segment.displayId} hidden. Cameras and warnings are disabled.'
-          : 'Segment ${segment.displayId} is visible again. Cameras and warnings restored.';
+          ? AppMessages.segmentHidden(segment.displayId)
+          : AppMessages.segmentVisible(segment.displayId);
       messenger.showSnackBar(SnackBar(content: Text(message)));
       _segmentsUpdated = true;
       setState(() {
@@ -173,7 +176,10 @@ class _SegmentsPageState extends State<SegmentsPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to update segment ${segment.displayId}: ${error.message}',
+            AppMessages.failedToUpdateSegment(
+              segment.displayId,
+              error.message,
+            ),
           ),
         ),
       );
@@ -188,8 +194,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       authController = context.read<AuthController>();
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to share segments publicly.'),
+        SnackBar(
+          content: Text(AppMessages.signInToShareSegment),
         ),
       );
       return;
@@ -197,8 +203,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
     if (!authController.isConfigured || authController.client == null) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Public segment sharing is currently unavailable.'),
+        SnackBar(
+          content: Text(AppMessages.publicSharingUnavailable),
         ),
       );
       return;
@@ -206,8 +212,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
     if (!authController.isLoggedIn) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to share segments publicly.'),
+        SnackBar(
+          content: Text(AppMessages.signInToShareSegment),
         ),
       );
       return;
@@ -216,8 +222,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final userId = authController.currentUserId;
     if (userId == null || userId.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to determine the logged in account.'),
+        SnackBar(
+          content: Text(AppMessages.unableToDetermineLoggedInAccount),
         ),
       );
       return;
@@ -231,8 +237,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to prepare the segment for public review.'),
+        SnackBar(
+          content: Text(AppMessages.failedToPrepareSegmentForReview),
         ),
       );
       return;
@@ -267,8 +273,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to check the public submission status.'),
+        SnackBar(
+          content: Text(AppMessages.failedToCheckSubmissionStatus),
         ),
       );
       return;
@@ -285,8 +291,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to submit the segment for moderation.'),
+        SnackBar(
+          content: Text(AppMessages.failedToSubmitForModeration),
         ),
       );
       return;
@@ -343,8 +349,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       auth = context.read<AuthController>();
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.unableToWithdrawSubmission),
         ),
       );
       return false;
@@ -352,8 +358,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.signInToWithdrawSubmission),
         ),
       );
       return false;
@@ -363,8 +369,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.unableToWithdrawSubmission),
         ),
       );
       return false;
@@ -415,9 +421,9 @@ class _SegmentsPageState extends State<SegmentsPage> {
     } on RemoteSegmentsServiceException catch (error) {
       if (error.cause is SocketException) {
         messenger.showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.',
+              AppMessages.noConnectionCannotWithdrawSubmission,
             ),
           ),
         );
@@ -428,8 +434,8 @@ class _SegmentsPageState extends State<SegmentsPage> {
       return false;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to cancel the public review for this segment.'),
+        SnackBar(
+          content: Text(AppMessages.failedToCancelPublicReview),
         ),
       );
       return false;
@@ -449,13 +455,15 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
       if (!deleted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Failed to delete the segment.')),
+          SnackBar(content: Text(AppMessages.failedToDeleteSegment)),
         );
         return;
       }
 
       messenger.showSnackBar(
-        SnackBar(content: Text('Segment ${segment.displayId} deleted.')),
+        SnackBar(
+          content: Text(AppMessages.segmentDeleted(segment.displayId)),
+        ),
       );
       _segmentsUpdated = true;
       setState(() {
@@ -471,7 +479,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         return;
       }
       messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to delete the segment.')),
+        SnackBar(content: Text(AppMessages.failedToDeleteSegment)),
       );
     }
   }
@@ -561,7 +569,9 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Segment saved locally.')));
+    ).showSnackBar(
+      SnackBar(content: Text(AppMessages.segmentSavedLocally)),
+    );
 
     _segmentsUpdated = true;
     setState(() {
@@ -601,8 +611,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       if (!mounted) return;
 
       final message = deactivate
-          ? 'Segment ${segment.displayId} hidden. Cameras and warnings are disabled.'
-          : 'Segment ${segment.displayId} is visible again. Cameras and warnings restored.';
+          ? AppMessages.segmentHidden(segment.displayId)
+          : AppMessages.segmentVisible(segment.displayId);
       messenger.showSnackBar(SnackBar(content: Text(message)));
       _segmentsUpdated = true;
       setState(() {
@@ -612,7 +622,10 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to update segment ${segment.displayId}: ${error.message}',
+            AppMessages.failedToUpdateSegment(
+              segment.displayId,
+              error.message,
+            ),
           ),
         ),
       );
@@ -627,8 +640,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       authController = context.read<AuthController>();
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to share segments publicly.'),
+        SnackBar(
+          content: Text(AppMessages.signInToShareSegment),
         ),
       );
       return;
@@ -636,8 +649,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
     if (!authController.isConfigured || authController.client == null) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Public segment sharing is currently unavailable.'),
+        SnackBar(
+          content: Text(AppMessages.publicSharingUnavailable),
         ),
       );
       return;
@@ -645,8 +658,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
     if (!authController.isLoggedIn) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to share segments publicly.'),
+        SnackBar(
+          content: Text(AppMessages.signInToShareSegment),
         ),
       );
       return;
@@ -655,8 +668,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final userId = authController.currentUserId;
     if (userId == null || userId.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to determine the logged in account.'),
+        SnackBar(
+          content: Text(AppMessages.unableToDetermineLoggedInAccount),
         ),
       );
       return;
@@ -670,8 +683,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to prepare the segment for public review.'),
+        SnackBar(
+          content: Text(AppMessages.failedToPrepareSegmentForReview),
         ),
       );
       return;
@@ -691,7 +704,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} is already awaiting public review.',
+              AppMessages.segmentAlreadyAwaitingReview(segment.displayId),
             ),
           ),
         );
@@ -706,8 +719,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to check the public submission status.'),
+        SnackBar(
+          content: Text(AppMessages.failedToCheckSubmissionStatus),
         ),
       );
       return;
@@ -724,8 +737,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to submit the segment for moderation.'),
+        SnackBar(
+          content: Text(AppMessages.failedToSubmitForModeration),
         ),
       );
       return;
@@ -734,7 +747,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          'Segment ${segment.displayId} submitted for public review.',
+          AppMessages.segmentSubmittedForPublicReview(segment.displayId),
         ),
       ),
     );
@@ -782,8 +795,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       auth = context.read<AuthController>();
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.unableToWithdrawSubmission),
         ),
       );
       return false;
@@ -791,8 +804,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
     if (!auth.isLoggedIn || !auth.isConfigured) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.signInToWithdrawSubmission),
         ),
       );
       return false;
@@ -802,8 +815,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final client = auth.client;
     if (userId == null || userId.isEmpty || client == null) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Unable to withdraw the public submission.'),
+        SnackBar(
+          content: Text(AppMessages.unableToWithdrawSubmission),
         ),
       );
       return false;
@@ -843,7 +856,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                'Segment ${segment.displayId} will no longer be reviewed for public release.',
+                AppMessages.segmentNoLongerUnderReview(segment.displayId),
               ),
             ),
           );
@@ -854,9 +867,9 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     } on RemoteSegmentsServiceException catch (error) {
       if (error.cause is SocketException) {
         messenger.showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.',
+              AppMessages.noConnectionCannotWithdrawSubmission,
             ),
           ),
         );
@@ -867,8 +880,8 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
       return false;
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to cancel the public review for this segment.'),
+        SnackBar(
+          content: Text(AppMessages.failedToCancelPublicReview),
         ),
       );
       return false;
@@ -888,13 +901,15 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
       if (!deleted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Failed to delete the segment.')),
+          SnackBar(content: Text(AppMessages.failedToDeleteSegment)),
         );
         return;
       }
 
       messenger.showSnackBar(
-        SnackBar(content: Text('Segment ${segment.displayId} deleted.')),
+        SnackBar(
+          content: Text(AppMessages.segmentDeleted(segment.displayId)),
+        ),
       );
       _segmentsUpdated = true;
       setState(() {
@@ -910,7 +925,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         return;
       }
       messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to delete the segment.')),
+        SnackBar(content: Text(AppMessages.failedToDeleteSegment)),
       );
     }
   }

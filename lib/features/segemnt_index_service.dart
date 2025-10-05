@@ -4,6 +4,7 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:latlong2/latlong.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 
 // add these if not present:
@@ -232,7 +233,7 @@ class SegmentIndexService {
     final endIdx = header.indexOf('end');
 
     if (startIdx == -1 || endIdx == -1) {
-      throw const FormatException('CSV must contain "Start" and "End" columns');
+      throw const FormatException(AppMessages.csvMissingStartEndColumns);
     }
 
     final nameIdx = header.indexOf('name');

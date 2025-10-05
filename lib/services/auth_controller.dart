@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_messages.dart';
+
 /// Simple wrapper around Supabase authentication that exposes the user state to
 /// the widget tree. Errors are surfaced via [AuthFailure] so the UI can display
 /// friendly messages without crashing the app.
@@ -41,9 +43,7 @@ class AuthController extends ChangeNotifier {
   /// Placeholder login flow. Replace with real implementation.
   Future<void> logIn({required String email, required String password}) async {
     if (_client == null) {
-      throw const AuthFailure(
-        'Authentication is not configured. Please add Supabase credentials.',
-      );
+      throw const AuthFailure(AppMessages.authenticationNotConfigured);
     }
 
     try {
@@ -64,7 +64,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Login failed: $error\n$stackTrace');
-      throw const AuthFailure('Unexpected error while signing in.');
+      throw const AuthFailure(AppMessages.unexpectedErrorSigningIn);
     }
   }
 
@@ -75,9 +75,7 @@ class AuthController extends ChangeNotifier {
     String? fullName,
   }) async {
     if (_client == null) {
-      throw const AuthFailure(
-        'Authentication is not configured. Please add Supabase credentials.',
-      );
+      throw const AuthFailure(AppMessages.authenticationNotConfigured);
     }
 
     try {
@@ -101,9 +99,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Sign-up failed: $error\n$stackTrace');
-      throw const AuthFailure(
-        'Unexpected error while creating the account.',
-      );
+      throw const AuthFailure(AppMessages.unexpectedErrorCreatingAccount);
     }
   }
 
@@ -120,7 +116,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Sign-out failed: $error\n$stackTrace');
-      throw const AuthFailure('Unexpected error while signing out.');
+      throw const AuthFailure(AppMessages.unexpectedErrorSigningOut);
     }
   }
 

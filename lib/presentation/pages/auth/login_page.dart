@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../services/auth_controller.dart';
@@ -72,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
+          content: Text(AppMessages.somethingWentWrongTryAgain),
         ),
       );
     } finally {
@@ -114,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
+                      return AppMessages.enterYourEmail;
                     }
                     return null;
                   },
@@ -129,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
+                      return AppMessages.enterYourPassword;
                     }
                     return null;
                   },

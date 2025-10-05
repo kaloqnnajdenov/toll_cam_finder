@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 
 class MapHintCard extends StatelessWidget {
@@ -43,10 +44,10 @@ class MapHintCard extends StatelessWidget {
 
   String _buildMessage() {
     if (!hasStart && !hasEnd) {
-      return 'Tap anywhere on the map to place point A.';
+      return AppMessages.mapHintPlacePointA;
     } else if (hasStart && !hasEnd) {
-      return 'Tap a second location to place point B.';
+      return AppMessages.mapHintPlacePointB;
     }
-    return 'Touch and hold A or B for 0.5s, then drag to reposition that point.';
+    return AppMessages.mapHintDragPoint;
   }
 }

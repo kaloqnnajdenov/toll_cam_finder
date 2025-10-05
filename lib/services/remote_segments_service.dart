@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_messages.dart';
 import 'local_segments_service.dart';
 
 /// Possible moderation statuses returned for a submitted segment.
@@ -36,13 +37,13 @@ class RemoteSegmentsService {
     final client = _client;
     if (client == null) {
       throw const RemoteSegmentsServiceException(
-        'Supabase is not configured. Unable to submit the segment for moderation.',
+        AppMessages.supabaseNotConfiguredForModeration,
       );
     }
 
     if (addedByUserId.trim().isEmpty) {
       throw const RemoteSegmentsServiceException(
-        'A logged in user is required to submit a public segment for moderation.',
+        AppMessages.userRequiredForPublicModeration,
       );
     }
 
@@ -62,17 +63,19 @@ class RemoteSegmentsService {
       });
     } on SocketException catch (error) {
       throw RemoteSegmentsServiceException(
-        'No internet connection. Unable to submit the segment for moderation.',
+        AppMessages.noConnectionUnableToSubmitForModeration,
         cause: error,
       );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
-        'Failed to submit the segment for moderation: ${error.message}',
+        AppMessages.failedToSubmitSegmentForModerationWithReason(
+          error.message,
+        ),
         cause: error,
       );
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
-        'Unexpected error while submitting the segment for moderation.',
+        AppMessages.unexpectedErrorSubmittingForModeration,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -90,7 +93,7 @@ class RemoteSegmentsService {
     final client = _client;
     if (client == null) {
       throw const RemoteSegmentsServiceException(
-        'Supabase is not configured. Unable to manage public submissions.',
+        AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
 
@@ -109,17 +112,17 @@ class RemoteSegmentsService {
       return rows.isNotEmpty;
     } on SocketException catch (error) {
       throw RemoteSegmentsServiceException(
-        'No internet connection. Unable to manage public submissions.',
+        AppMessages.noConnectionUnableToManageSubmissions,
         cause: error,
       );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
-        'Failed to check the public submission status: ${error.message}',
+        AppMessages.failedToCheckSubmissionStatusWithReason(error.message),
         cause: error,
       );
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
-        'Unexpected error while checking the public submission status.',
+        AppMessages.unexpectedErrorCheckingSubmissionStatus,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -138,7 +141,7 @@ class RemoteSegmentsService {
     final client = _client;
     if (client == null) {
       throw const RemoteSegmentsServiceException(
-        'Supabase is not configured. Unable to manage public submissions.',
+        AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
 
@@ -156,17 +159,17 @@ class RemoteSegmentsService {
       return deleted.isNotEmpty;
     } on SocketException catch (error) {
       throw RemoteSegmentsServiceException(
-        'No internet connection. Unable to manage public submissions.',
+        AppMessages.noConnectionUnableToManageSubmissions,
         cause: error,
       );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
-        'Failed to cancel the public submission: ${error.message}',
+        AppMessages.failedToCancelSubmissionWithReason(error.message),
         cause: error,
       );
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
-        'Unexpected error while cancelling the public submission.',
+        AppMessages.unexpectedErrorCancellingSubmission,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -183,7 +186,7 @@ class RemoteSegmentsService {
     final client = _client;
     if (client == null) {
       throw const RemoteSegmentsServiceException(
-        'Supabase is not configured. Unable to manage public submissions.',
+        AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
 
@@ -217,17 +220,17 @@ class RemoteSegmentsService {
       return SegmentSubmissionStatus.other;
     } on SocketException catch (error) {
       throw RemoteSegmentsServiceException(
-        'No internet connection. Unable to manage public submissions.',
+        AppMessages.noConnectionUnableToManageSubmissions,
         cause: error,
       );
     } on PostgrestException catch (error) {
       throw RemoteSegmentsServiceException(
-        'Failed to check the public submission status: ${error.message}',
+        AppMessages.failedToCheckSubmissionStatusWithReason(error.message),
         cause: error,
       );
     } catch (error, stackTrace) {
       throw RemoteSegmentsServiceException(
-        'Unexpected error while checking the public submission status.',
+        AppMessages.unexpectedErrorCheckingSubmissionStatus,
         cause: error,
         stackTrace: stackTrace,
       );
@@ -249,7 +252,7 @@ class RemoteSegmentsService {
 
     if (nextId > _smallIntMax) {
       throw const RemoteSegmentsServiceException(
-        'Unable to assign a new segment id: all smallint values are exhausted.',
+        AppMessages.unableToAssignNewSegmentId,
       );
     }
 
@@ -277,7 +280,7 @@ class RemoteSegmentsService {
     }
 
     throw const RemoteSegmentsServiceException(
-      'Encountered an existing segment with a non-numeric id.',
+      AppMessages.nonNumericSegmentIdEncountered,
     );
   }
 }
