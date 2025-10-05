@@ -143,7 +143,22 @@ class SegmentIndexService {
       final len = (m['length_m'] is num)
           ? (m['length_m'] as num).toDouble()
           : null;
-      segments.add(SegmentGeometry(id: id, path: pts, lengthMeters: len));
+      double? speedLimit;
+      final dynamic rawSpeedLimit =
+          m['speed_limit_kph'] ?? m['speed_limit'] ?? m['max_speed_kph'];
+      if (rawSpeedLimit is num) {
+        speedLimit = rawSpeedLimit.toDouble();
+      } else if (rawSpeedLimit is String) {
+        speedLimit = double.tryParse(rawSpeedLimit.trim());
+      }
+      segments.add(
+        SegmentGeometry(
+          id: id,
+          path: pts,
+          lengthMeters: len,
+          speedLimitKph: speedLimit,
+        ),
+      );
     }
     return segments;
   }
@@ -167,6 +182,15 @@ class SegmentIndexService {
       double? lengthMeters;
       if (props['length_m'] is num) {
         lengthMeters = (props['length_m'] as num).toDouble();
+      }
+
+      double? speedLimit;
+      final dynamic rawSpeedLimit =
+          props['speed_limit_kph'] ?? props['speed_limit'];
+      if (rawSpeedLimit is num) {
+        speedLimit = rawSpeedLimit.toDouble();
+      } else if (rawSpeedLimit is String) {
+        speedLimit = double.tryParse(rawSpeedLimit.trim());
       }
 
       List<GeoPoint> path;
@@ -195,7 +219,12 @@ class SegmentIndexService {
       }
 
       segments.add(
-        SegmentGeometry(id: id, path: path, lengthMeters: lengthMeters),
+        SegmentGeometry(
+          id: id,
+          path: path,
+          lengthMeters: lengthMeters,
+          speedLimitKph: speedLimit,
+        ),
       );
     }
 
@@ -241,6 +270,7 @@ class SegmentIndexService {
     final endNameIdx = header.indexOf('end name');
 
     final segments = <SegmentGeometry>[];
+    final speedLimitIdx = header.indexOf('speed_limit_kph');
 
     var rowIdx = 0;
     for (final row in rows.skip(1)) {
@@ -276,6 +306,12 @@ class SegmentIndexService {
       idParts.add('row$rowIdx');
       final id = idParts.join('::');
 
+      double? speedLimit;
+      if (speedLimitIdx != -1 && row.length > speedLimitIdx) {
+        final value = row[speedLimitIdx].toString().trim();
+        speedLimit = value.isEmpty ? null : double.tryParse(value);
+      }
+
       segments.add(
         SegmentGeometry(
           id: id,
@@ -283,6 +319,7 @@ class SegmentIndexService {
             GeoPoint(start.latitude, start.longitude),
             GeoPoint(end.latitude, end.longitude),
           ],
+          speedLimitKph: speedLimit,
         ),
       );
     }

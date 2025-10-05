@@ -57,6 +57,7 @@ class RemoteSegmentsService {
         'End name': draft.endDisplayName,
         'Start': draft.startCoordinates,
         'End': draft.endCoordinates,
+        'speed_limit_kph': draft.speedLimitKph,
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
       });

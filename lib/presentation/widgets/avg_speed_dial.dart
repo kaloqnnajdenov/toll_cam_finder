@@ -13,6 +13,7 @@ class AverageSpeedDial extends StatelessWidget {
     this.unit = 'km/h',
     this.width = AppConstants.speedDialDefaultWidth,
     this.isActive = true,
+    this.speedLimitKph,
   });
 
   final AverageSpeedController controller;
@@ -21,6 +22,7 @@ class AverageSpeedDial extends StatelessWidget {
   final String unit;
   final double width;
   final bool isActive;
+  final double? speedLimitKph;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +86,23 @@ class AverageSpeedDial extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppConstants.speedDialValueUnitSpacing),
+                    if (speedLimitKph != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          'Limit: '
+                          '${speedLimitKph!.toStringAsFixed(speedLimitKph! % 1 == 0 ? 0 : decimals)} '
+                          '$unit',
+                          textAlign: TextAlign.center,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (speedLimitKph != null)
+                      const SizedBox(
+                        height: AppConstants.speedDialValueUnitSpacing,
+                      ),
                   ] else ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),

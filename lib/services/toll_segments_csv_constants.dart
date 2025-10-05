@@ -14,6 +14,7 @@ class TollSegmentsCsvSchema {
     'End name',
     'Start',
     'End',
+    'speed_limit_kph',
   ];
 
   /// Prefix applied to identifiers of user-created segments that only exist on

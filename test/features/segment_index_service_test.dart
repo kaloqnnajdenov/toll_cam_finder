@@ -26,6 +26,7 @@ void main() {
               {'lat': 11, 'lng': 21},
             ],
             'length_m': 42.5,
+            'speed_limit_kph': 90,
           },
           {
             'id': 'with-start-end',
@@ -60,6 +61,7 @@ void main() {
           reason: 'The parser must accept lng as an alias for lon.',
         );
         expect(withPoints.lengthMeters, closeTo(42.5, 1e-9));
+        expect(withPoints.speedLimitKph, 90);
 
         final startEnd = segments.firstWhere(
           (seg) => seg.id == 'with-start-end',

@@ -117,6 +117,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
         startedSegment: false,
         endedSegment: false,
         activeSegmentId: _active?.geometry.id,
+        activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
         debugData: _latestDebugData,
       );
     }
@@ -136,7 +137,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     );
 
     final matches = <SegmentMatch>[];
-        final filteredCandidates = <SegmentGeometry>[];
+    final filteredCandidates = <SegmentGeometry>[];
     for (final geom in candidates) {
       if (_ignoredSegmentIds.contains(geom.id)) {
         continue;
@@ -190,6 +191,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       startedSegment: transition.started,
       endedSegment: transition.ended,
       activeSegmentId: _active?.geometry.id,
+      activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
       debugData: _latestDebugData,
     );
   }

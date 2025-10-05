@@ -71,6 +71,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       const SegmentTrackerDebugData.empty();
 
   double? _lastSegmentAvgKmh;
+  double? _activeSegmentSpeedLimitKph;
 
   double? _speedKmh;
   double? _compassHeading;
@@ -203,6 +204,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       _avgCtrl.reset();
     }
 
+    if (segEvent.activeSegmentId == null) {
+      _activeSegmentSpeedLimitKph = null;
+    } else {
+      _activeSegmentSpeedLimitKph = segEvent.activeSegmentSpeedLimitKph;
+    }
+
     _segmentDebugData = segEvent.debugData;
     _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
   }
@@ -211,6 +218,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _segmentDebugData = const SegmentTrackerDebugData.empty();
     _segmentProgressLabel = null;
     _lastSegmentAvgKmh = null;
+    _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
   }
 
@@ -477,6 +485,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                 avgController: _avgCtrl,
                 hasActiveSegment: _segmentTracker.activeSegmentId != null,
                 lastSegmentAvgKmh: _lastSegmentAvgKmh,
+                segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
                 segmentProgressLabel: _segmentProgressLabel,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,

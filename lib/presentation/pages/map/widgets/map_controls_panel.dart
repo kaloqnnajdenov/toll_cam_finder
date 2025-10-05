@@ -13,6 +13,7 @@ class MapControlsPanel extends StatelessWidget {
     required this.avgController,
     required this.hasActiveSegment,
     this.lastSegmentAvgKmh,
+    this.segmentSpeedLimitKph,
     this.segmentProgressLabel,
     required this.showDebugBadge,
     required this.segmentCount,
@@ -23,6 +24,7 @@ class MapControlsPanel extends StatelessWidget {
   final AverageSpeedController avgController;
   final bool hasActiveSegment;
   final double? lastSegmentAvgKmh;
+  final double? segmentSpeedLimitKph;
   final String? segmentProgressLabel;
   final bool showDebugBadge;
   final int segmentCount;
@@ -39,6 +41,8 @@ class MapControlsPanel extends StatelessWidget {
           controller: avgController,
           unit: 'km/h',
           isActive: hasActiveSegment,
+          speedLimitKph:
+              hasActiveSegment ? segmentSpeedLimitKph : null,
         ),
         if (segmentProgressLabel != null)
           Container(
