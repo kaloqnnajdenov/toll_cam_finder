@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+
+import '../services/language_controller.dart';
 import 'app_routes.dart';
 import 'app_theme.dart';
 
@@ -7,12 +11,23 @@ class TollCamApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TollCam',
-      theme: buildAppTheme(),
-      initialRoute: AppRoutes.map,
-      routes: AppRoutes.routes,
-      debugShowCheckedModeBanner: false,
+    return Consumer<LanguageController>(
+      builder: (context, languageController, _) {
+        return MaterialApp(
+          title: 'TollCam',
+          theme: buildAppTheme(),
+          initialRoute: AppRoutes.map,
+          routes: AppRoutes.routes,
+          debugShowCheckedModeBanner: false,
+          locale: languageController.locale,
+          supportedLocales: languageController.supportedLocales,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        );
+      },
     );
   }
 }

@@ -22,6 +22,7 @@ import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
 
 import '../../app/app_routes.dart';
 import '../../services/auth_controller.dart';
+import '../../services/language_controller.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
@@ -527,6 +528,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Drawer _buildOptionsDrawer() {
+    final languageController = context.watch<LanguageController>();
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -551,6 +553,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               onTap: _onSegmentsSelected,
             ),
             ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('Language'),
+              subtitle: Text(languageController.currentOption.label),
+              onTap: _onLanguageSelected,
+            ),
+            ListTile(
               leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () {
@@ -565,6 +573,50 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  void _onLanguageSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Consumer<LanguageController>(
+              builder: (context, controller, _) {
+                final options = controller.languageOptions;
+                return ListView(
+                  shrinkWrap: true,
+                  children: [
+                    const ListTile(
+                      title: Text('Select language'),
+                    ),
+                    for (final option in options)
+                      ListTile(
+                        title: Text(option.label),
+                        trailing: option.locale == controller.locale
+                            ? const Icon(Icons.check)
+                            : null,
+                        enabled: option.available,
+                        subtitle: option.available
+                            ? null
+                            : const Text('Coming soon'),
+                        onTap: option.available
+                            ? () {
+                                controller.setLocale(option.locale);
+                                Navigator.of(sheetContext).pop();
+                              }
+                            : null,
+                      ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    });
   }
 
   void _onProfileSelected() {
