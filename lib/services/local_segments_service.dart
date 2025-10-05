@@ -36,6 +36,7 @@ class LocalSegmentsService {
     String? endDisplayName,
     required String startCoordinates,
     required String endCoordinates,
+    double? speedLimitKph,
   }) async {
     final draft = prepareDraft(
       name: name,
@@ -43,6 +44,7 @@ class LocalSegmentsService {
       endDisplayName: endDisplayName,
       startCoordinates: startCoordinates,
       endCoordinates: endCoordinates,
+      speedLimitKph: speedLimitKph,
     );
 
     await saveDraft(draft);
@@ -58,6 +60,7 @@ class LocalSegmentsService {
     required String startCoordinates,
     required String endCoordinates,
     bool isPublic = false,
+    double? speedLimitKph,
   }) {
     final normalizedName = name.trim().isEmpty
         ? 'Personal segment'
@@ -80,6 +83,7 @@ class LocalSegmentsService {
       startCoordinates: normalizedStart,
       endCoordinates: normalizedEnd,
       isPublic: isPublic,
+      speedLimitKph: speedLimitKph,
     );
   }
 
@@ -113,6 +117,9 @@ class LocalSegmentsService {
       draft.endDisplayName,
       draft.startCoordinates,
       draft.endCoordinates,
+      draft.speedLimitKph != null
+          ? draft.speedLimitKph!.toString()
+          : '',
     ];
 
     rows.add(newRow);
@@ -174,6 +181,9 @@ class LocalSegmentsService {
       final endDisplayName = row.length > 4 ? row[4].trim() : '';
       final startCoordinates = row.length > 5 ? row[5].trim() : '';
       final endCoordinates = row.length > 6 ? row[6].trim() : '';
+      final speedLimit = row.length > 7 ? row[7].trim() : '';
+      final speedLimitKph =
+          speedLimit.isEmpty ? null : double.tryParse(speedLimit);
 
       if (startCoordinates.isEmpty || endCoordinates.isEmpty) {
         throw const LocalSegmentsServiceException(
@@ -197,6 +207,7 @@ class LocalSegmentsService {
         startCoordinates: startCoordinates,
         endCoordinates: endCoordinates,
         isPublic: true,
+        speedLimitKph: speedLimitKph,
       );
     }
 
@@ -296,7 +307,31 @@ class LocalSegmentsService {
       return;
     }
 
-    const legacyHeader = <String>[
+    final expectedHeader = TollSegmentsCsvSchema.header;
+    final headerRow =
+        rows.first.map((cell) => cell.toString().trim()).toList(growable: false);
+    final headerRowLower =
+        headerRow.map((value) => value.toLowerCase()).toList(growable: false);
+
+    bool matchesHeader(List<String> candidate) {
+      if (candidate.length != headerRowLower.length) {
+        return false;
+      }
+      for (var i = 0; i < candidate.length; i++) {
+        if (candidate[i].toLowerCase() != headerRowLower[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    void padToLength(List<String> row) {
+      while (row.length < expectedHeader.length) {
+        row.add('');
+      }
+    }
+
+    const legacyWithoutName = <String>[
       'ID',
       'road',
       'Start name',
@@ -305,30 +340,59 @@ class LocalSegmentsService {
       'End',
     ];
 
-    final headerRow = rows.first;
-    if (headerRow.length != legacyHeader.length) {
+    const headerWithoutSpeedLimit = <String>[
+      'ID',
+      'name',
+      'road',
+      'Start name',
+      'End name',
+      'Start',
+      'End',
+    ];
+
+    if (matchesHeader(expectedHeader)) {
+      rows[0] = expectedHeader;
+      for (var i = 1; i < rows.length; i++) {
+        final upgraded = List<String>.from(rows[i]);
+        padToLength(upgraded);
+        rows[i] = upgraded;
+      }
       return;
     }
 
-    for (var i = 0; i < legacyHeader.length; i++) {
-      if (headerRow[i].trim() != legacyHeader[i]) {
-        return;
+    if (matchesHeader(legacyWithoutName)) {
+      rows[0] = expectedHeader;
+      for (var i = 1; i < rows.length; i++) {
+        final row = rows[i];
+        final upgraded = <String>[];
+        if (row.isNotEmpty) {
+          upgraded.add(row[0]);
+          upgraded.add('');
+          upgraded.addAll(row.skip(1));
+        }
+        padToLength(upgraded);
+        rows[i] = upgraded;
       }
+      return;
     }
 
-    rows[0] = TollSegmentsCsvSchema.header;
-    for (var i = 1; i < rows.length; i++) {
-      final row = rows[i];
-      final upgraded = <String>[];
-      if (row.isNotEmpty) {
-        upgraded.add(row[0]);
-        upgraded.add('');
-        upgraded.addAll(row.skip(1));
+    if (matchesHeader(headerWithoutSpeedLimit)) {
+      rows[0] = expectedHeader;
+      for (var i = 1; i < rows.length; i++) {
+        final upgraded = List<String>.from(rows[i])..add('');
+        padToLength(upgraded);
+        rows[i] = upgraded;
       }
-      while (upgraded.length < TollSegmentsCsvSchema.header.length) {
-        upgraded.add('');
+      return;
+    }
+
+    if (headerRow.length < expectedHeader.length) {
+      rows[0] = expectedHeader;
+      for (var i = 1; i < rows.length; i++) {
+        final upgraded = List<String>.from(rows[i]);
+        padToLength(upgraded);
+        rows[i] = upgraded;
       }
-      rows[i] = upgraded;
     }
   }
 
@@ -395,6 +459,7 @@ class SegmentDraft {
     required this.startCoordinates,
     required this.endCoordinates,
     this.isPublic = false,
+    this.speedLimitKph,
   });
 
   final String name;
@@ -404,4 +469,5 @@ class SegmentDraft {
   final String startCoordinates;
   final String endCoordinates;
   final bool isPublic;
+  final double? speedLimitKph;
 }
