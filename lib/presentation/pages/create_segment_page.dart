@@ -16,10 +16,14 @@ class CreateSegmentPage extends StatefulWidget {
 
 class _CreateSegmentPageState extends State<CreateSegmentPage> {
   static String? _cachedName;
-  static String? _cachedStart;
-  static String? _cachedEnd;
+  static String? _cachedStartDisplayName;
+  static String? _cachedEndDisplayName;
+  static String? _cachedStartCoordinates;
+  static String? _cachedEndCoordinates;
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _startNameController = TextEditingController();
+  final TextEditingController _endNameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
@@ -32,11 +36,17 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (_cachedName != null) {
       _nameController.text = _cachedName!;
     }
-    if (_cachedStart != null) {
-      _startController.text = _cachedStart!;
+    if (_cachedStartDisplayName != null) {
+      _startNameController.text = _cachedStartDisplayName!;
     }
-    if (_cachedEnd != null) {
-      _endController.text = _cachedEnd!;
+    if (_cachedEndDisplayName != null) {
+      _endNameController.text = _cachedEndDisplayName!;
+    }
+    if (_cachedStartCoordinates != null) {
+      _startController.text = _cachedStartCoordinates!;
+    }
+    if (_cachedEndCoordinates != null) {
+      _endController.text = _cachedEndCoordinates!;
     }
   }
 
@@ -44,14 +54,20 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   void dispose() {
     if (_persistDraftOnDispose) {
       _cachedName = _nameController.text;
-      _cachedStart = _startController.text;
-      _cachedEnd = _endController.text;
+      _cachedStartDisplayName = _startNameController.text;
+      _cachedEndDisplayName = _endNameController.text;
+      _cachedStartCoordinates = _startController.text;
+      _cachedEndCoordinates = _endController.text;
     } else {
       _cachedName = null;
-      _cachedStart = null;
-      _cachedEnd = null;
+      _cachedStartDisplayName = null;
+      _cachedEndDisplayName = null;
+      _cachedStartCoordinates = null;
+      _cachedEndCoordinates = null;
     }
     _nameController.dispose();
+    _startNameController.dispose();
+    _endNameController.dispose();
     _startController.dispose();
     _endController.dispose();
     super.dispose();
@@ -75,6 +91,18 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                 controller: _nameController,
                 label: 'Segment name',
                 hintText: 'Segment name',
+              ),
+              const SizedBox(height: 16),
+              _LabeledTextField(
+                controller: _startNameController,
+                label: 'Start',
+                hintText: 'Start name',
+              ),
+              const SizedBox(height: 16),
+              _LabeledTextField(
+                controller: _endNameController,
+                label: 'End',
+                hintText: 'End name',
               ),
               const SizedBox(height: 16),
               _LabeledTextField(
@@ -318,6 +346,8 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     try {
       return _localSegmentsService.prepareDraft(
         name: _nameController.text,
+        startDisplayName: _startNameController.text,
+        endDisplayName: _endNameController.text,
         startCoordinates: _startController.text,
         endCoordinates: _endController.text,
         isPublic: isPublic,
@@ -356,14 +386,18 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   void _resetDraftState() {
     _persistDraftOnDispose = false;
     _cachedName = null;
-    _cachedStart = null;
-    _cachedEnd = null;
+    _cachedStartDisplayName = null;
+    _cachedEndDisplayName = null;
+    _cachedStartCoordinates = null;
+    _cachedEndCoordinates = null;
   }
 
   void _cacheDraftInputs() {
     _cachedName = _nameController.text;
-    _cachedStart = _startController.text;
-    _cachedEnd = _endController.text;
+    _cachedStartDisplayName = _startNameController.text;
+    _cachedEndDisplayName = _endNameController.text;
+    _cachedStartCoordinates = _startController.text;
+    _cachedEndCoordinates = _endController.text;
   }
 }
 

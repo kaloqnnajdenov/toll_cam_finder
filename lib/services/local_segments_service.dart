@@ -25,11 +25,15 @@ class LocalSegmentsService {
   /// local identifier so that it survives future synchronisation runs.
   Future<void> saveLocalSegment({
     required String name,
+    String? startDisplayName,
+    String? endDisplayName,
     required String startCoordinates,
     required String endCoordinates,
   }) async {
     final draft = prepareDraft(
       name: name,
+      startDisplayName: startDisplayName,
+      endDisplayName: endDisplayName,
       startCoordinates: startCoordinates,
       endCoordinates: endCoordinates,
     );
@@ -41,18 +45,26 @@ class LocalSegmentsService {
   /// be stored locally or submitted to the backend.
   SegmentDraft prepareDraft({
     required String name,
+    String? startDisplayName,
+    String? endDisplayName,
     required String startCoordinates,
     required String endCoordinates,
     bool isPublic = false,
   }) {
     final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
+    final normalizedStartDisplayName = startDisplayName?.trim();
+    final normalizedEndDisplayName = endDisplayName?.trim();
     final normalizedStart = _normalizeCoordinates(startCoordinates);
     final normalizedEnd = _normalizeCoordinates(endCoordinates);
 
     return SegmentDraft(
       name: normalizedName,
-      startDisplayName: '$normalizedName start',
-      endDisplayName: '$normalizedName end',
+      startDisplayName: normalizedStartDisplayName?.isNotEmpty == true
+          ? normalizedStartDisplayName!
+          : '$normalizedName start',
+      endDisplayName: normalizedEndDisplayName?.isNotEmpty == true
+          ? normalizedEndDisplayName!
+          : '$normalizedName end',
       startCoordinates: normalizedStart,
       endCoordinates: normalizedEnd,
       isPublic: isPublic,
