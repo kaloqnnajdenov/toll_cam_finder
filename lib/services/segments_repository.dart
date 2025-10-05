@@ -18,6 +18,7 @@ class SegmentInfo {
     required this.endDisplayName,
     required this.startCoordinates,
     required this.endCoordinates,
+    this.speedLimitKph,
     this.isLocalOnly = false,
     this.isMarkedPublic = false,
     this.isDeactivated = false,
@@ -29,6 +30,7 @@ class SegmentInfo {
   final String endDisplayName;
   final String startCoordinates;
   final String endCoordinates;
+  final String? speedLimitKph;
   final bool isLocalOnly;
   final bool isMarkedPublic;
   final bool isDeactivated;
@@ -92,6 +94,7 @@ class SegmentsRepository {
     final startCoordinatesIndex = header.indexOf('start');
     final endNameIndex = header.indexOf('end name');
     final endCoordinatesIndex = header.indexOf('end');
+    final speedLimitIndex = header.indexOf('speed_limit_kph');
 
     if (idIndex == -1 ||
         nameIndex == -1 ||
@@ -128,6 +131,7 @@ class SegmentsRepository {
       final endDisplayName = _stringAt(row, endNameIndex);
       final startCoordinates = _stringAt(row, startCoordinatesIndex);
       final endCoordinates = _stringAt(row, endCoordinatesIndex);
+      final speedLimit = _stringAt(row, speedLimitIndex);
 
       if (id.isEmpty &&
           name.isEmpty &&
@@ -153,6 +157,7 @@ class SegmentsRepository {
           endDisplayName: endDisplayName,
           startCoordinates: startCoordinates,
           endCoordinates: endCoordinates,
+          speedLimitKph: speedLimit.isEmpty ? null : speedLimit,
           isLocalOnly: isLocalOnly,
           isMarkedPublic: publicFlags[id] ?? false,
           isDeactivated: deactivatedSegments.contains(id),
