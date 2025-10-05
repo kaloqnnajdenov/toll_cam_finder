@@ -425,6 +425,7 @@ class TollSegmentsSyncService {
   static const Map<String, List<String>> _columnAliases =
       <String, List<String>>{
         'ID': <String>['id'],
+        'name': <String>['segment_name'],
         'road': <String>['road_name'],
         'Start name': <String>['start_name', 'startname'],
         'End name': <String>['end_name', 'endname'],

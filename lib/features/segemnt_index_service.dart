@@ -235,6 +235,7 @@ class SegmentIndexService {
       throw const FormatException('CSV must contain "Start" and "End" columns');
     }
 
+    final nameIdx = header.indexOf('name');
     final roadIdx = header.indexOf('road');
     final startNameIdx = header.indexOf('start name');
     final endNameIdx = header.indexOf('end name');
@@ -255,6 +256,10 @@ class SegmentIndexService {
       }
 
       final idParts = <String>[];
+      if (nameIdx != -1 && row.length > nameIdx) {
+        final name = row[nameIdx].toString().trim();
+        if (name.isNotEmpty) idParts.add(name);
+      }
       if (roadIdx != -1 && row.length > roadIdx) {
         final road = row[roadIdx].toString().trim();
         if (road.isNotEmpty) idParts.add(road);

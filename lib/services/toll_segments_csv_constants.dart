@@ -8,6 +8,7 @@ class TollSegmentsCsvSchema {
   /// List of column headers in the order they should appear in the CSV.
   static const List<String> header = <String>[
     'ID',
+    'name',
     'road',
     'Start name',
     'End name',
