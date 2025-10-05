@@ -45,6 +45,7 @@ class LocalSegmentsService {
   /// be stored locally or submitted to the backend.
   SegmentDraft prepareDraft({
     required String name,
+    String? roadName,
     String? startDisplayName,
     String? endDisplayName,
     required String startCoordinates,
@@ -52,6 +53,7 @@ class LocalSegmentsService {
     bool isPublic = false,
   }) {
     final normalizedName = name.trim().isEmpty ? 'Personal segment' : name.trim();
+    final normalizedRoadName = roadName?.trim() ?? '';
     final normalizedStartDisplayName = startDisplayName?.trim();
     final normalizedEndDisplayName = endDisplayName?.trim();
     final normalizedStart = _normalizeCoordinates(startCoordinates);
@@ -59,6 +61,7 @@ class LocalSegmentsService {
 
     return SegmentDraft(
       name: normalizedName,
+      roadName: normalizedRoadName,
       startDisplayName: normalizedStartDisplayName?.isNotEmpty == true
           ? normalizedStartDisplayName!
           : '$normalizedName start',
@@ -85,6 +88,7 @@ class LocalSegmentsService {
     await _fileSystem.ensureParentDirectory(csvPath);
 
     final rows = await _readExistingRows(csvPath);
+    _upgradeLegacyHeader(rows);
     if (rows.isEmpty) {
       rows.add(TollSegmentsCsvSchema.header);
     } else if (!_isHeaderRow(rows.first)) {
@@ -95,6 +99,7 @@ class LocalSegmentsService {
     final newRow = <String>[
       localId,
       draft.name,
+      draft.roadName,
       draft.startDisplayName,
       draft.endDisplayName,
       draft.startCoordinates,
@@ -198,6 +203,47 @@ class LocalSegmentsService {
         .toList(growable: true);
   }
 
+  void _upgradeLegacyHeader(List<List<String>> rows) {
+    if (rows.isEmpty) {
+      return;
+    }
+
+    const legacyHeader = <String>[
+      'ID',
+      'road',
+      'Start name',
+      'End name',
+      'Start',
+      'End',
+    ];
+
+    final headerRow = rows.first;
+    if (headerRow.length != legacyHeader.length) {
+      return;
+    }
+
+    for (var i = 0; i < legacyHeader.length; i++) {
+      if (headerRow[i].trim() != legacyHeader[i]) {
+        return;
+      }
+    }
+
+    rows[0] = TollSegmentsCsvSchema.header;
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+      final upgraded = <String>[];
+      if (row.isNotEmpty) {
+        upgraded.add(row[0]);
+        upgraded.add('');
+        upgraded.addAll(row.skip(1));
+      }
+      while (upgraded.length < TollSegmentsCsvSchema.header.length) {
+        upgraded.add('');
+      }
+      rows[i] = upgraded;
+    }
+  }
+
   bool _isHeaderRow(List<String> row) {
     if (row.length != TollSegmentsCsvSchema.header.length) {
       return false;
@@ -290,6 +336,7 @@ class LocalSegmentsServiceException implements Exception {
 class SegmentDraft {
   const SegmentDraft({
     required this.name,
+    required this.roadName,
     required this.startDisplayName,
     required this.endDisplayName,
     required this.startCoordinates,
@@ -298,6 +345,7 @@ class SegmentDraft {
   });
 
   final String name;
+  final String roadName;
   final String startDisplayName;
   final String endDisplayName;
   final String startCoordinates;
