@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -203,25 +205,57 @@ class _SegmentsPageState extends State<SegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deleteSubmission(
+      final status = await remoteService.getSubmissionStatus(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.startCoordinates,
         endCoordinates: segment.endCoordinates,
       );
 
-      if (deleted) {
+      if (status == SegmentSubmissionStatus.approved) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              'Segment ${segment.displayId} was already approved by the administrators and is public.',
             ),
           ),
         );
+        return true;
+      }
+
+      if (status == SegmentSubmissionStatus.pending ||
+          status == SegmentSubmissionStatus.other) {
+        final deleted = await remoteService.deleteSubmission(
+          addedByUserId: userId,
+          name: segment.name,
+          startCoordinates: segment.startCoordinates,
+          endCoordinates: segment.endCoordinates,
+        );
+
+        if (deleted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              ),
+            ),
+          );
+        }
       }
 
       return true;
     } on RemoteSegmentsServiceException catch (error) {
+      if (error.cause is SocketException) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.',
+            ),
+          ),
+        );
+        return true;
+      }
+
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
       return false;
     } catch (_) {
@@ -443,25 +477,57 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
     final remoteService = RemoteSegmentsService(client: client);
 
     try {
-      final deleted = await remoteService.deleteSubmission(
+      final status = await remoteService.getSubmissionStatus(
         addedByUserId: userId,
         name: segment.name,
         startCoordinates: segment.startCoordinates,
         endCoordinates: segment.endCoordinates,
       );
 
-      if (deleted) {
+      if (status == SegmentSubmissionStatus.approved) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              'Segment ${segment.displayId} was already approved by the administrators and is public.',
             ),
           ),
         );
+        return true;
+      }
+
+      if (status == SegmentSubmissionStatus.pending ||
+          status == SegmentSubmissionStatus.other) {
+        final deleted = await remoteService.deleteSubmission(
+          addedByUserId: userId,
+          name: segment.name,
+          startCoordinates: segment.startCoordinates,
+          endCoordinates: segment.endCoordinates,
+        );
+
+        if (deleted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Segment ${segment.displayId} will no longer be reviewed for public release.',
+              ),
+            ),
+          );
+        }
       }
 
       return true;
     } on RemoteSegmentsServiceException catch (error) {
+      if (error.cause is SocketException) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.',
+            ),
+          ),
+        );
+        return true;
+      }
+
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
       return false;
     } catch (_) {
