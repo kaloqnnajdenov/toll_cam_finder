@@ -88,7 +88,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Create segment')),
       body: SafeArea(
-               child: LayoutBuilder(
+        child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 840;
             final horizontalPadding = isWide ? 48.0 : 24.0;
@@ -108,11 +108,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
               }
 
               return Column(
-                children: [
-                  first,
-                  const SizedBox(height: 16),
-                  second,
-                ],
+                children: [first, const SizedBox(height: 16), second],
               );
             }
 
@@ -128,11 +124,6 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 32),
-                      Text(
-                        'Map selection',
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
                       const SizedBox(height: 16),
                       Card(
                         clipBehavior: Clip.antiAlias,
@@ -178,12 +169,6 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                           ],
                         ),
                       ),
-                      Text(
-                        'Segment details',
-                        style: (theme.textTheme.headlineSmall ??
-                                theme.textTheme.titleLarge)
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
                       const SizedBox(height: 24),
                       Card(
                         margin: EdgeInsets.zero,
@@ -197,9 +182,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'General information',
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                'Segment details',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const SizedBox(height: 24),
                               buildFieldPair(
@@ -256,8 +242,8 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                     ],
                   ),
                 ),
-              ) 
-          );
+              ),
+            );
           },
         ),
       ),
@@ -395,9 +381,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           _isNavigatingToLogin = true;
           try {
             final navigator = Navigator.of(context, rootNavigator: true);
-            final result = await navigator.pushNamed(
-              AppRoutes.login,
-            );
+            final result = await navigator.pushNamed(AppRoutes.login);
             final loggedIn = result is bool ? result : null;
             if (loggedIn == true && mounted) {
               _showSnackBar(
