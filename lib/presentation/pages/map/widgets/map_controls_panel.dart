@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
@@ -32,14 +33,21 @@ class MapControlsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CurrentSpeedDial(speedKmh: speedKmh, unit: 'km/h'),
+        CurrentSpeedDial(
+          speedKmh: speedKmh,
+          title: l10n.speedDialCurrentTitle,
+          unit: l10n.speedDialUnitKmh,
+        ),
         const SizedBox(height: AppConstants.speedDialStackSpacing),
         AverageSpeedDial(
           controller: avgController,
-          unit: 'km/h',
+          title: l10n.speedDialAverageTitle,
+          unit: l10n.speedDialUnitKmh,
           isActive: hasActiveSegment,
           speedLimitKph:
               hasActiveSegment ? segmentSpeedLimitKph : null,
@@ -78,8 +86,14 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialBannerRadius),
             ),
             child: Text(
-              'avg speed for the last segment: '
-              '${lastSegmentAvgKmh!.toStringAsFixed(1)}kph',
+              l10n.translate(
+                'speedDialLastSegmentAverage',
+                {
+                  'value': lastSegmentAvgKmh!
+                      .toStringAsFixed(1),
+                  'unit': l10n.speedDialUnitKmh,
+                },
+              ),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
@@ -100,7 +114,14 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialDebugBadgeRadius),
             ),
             child: Text(
-              'Segments: $segmentCount  r=${segmentRadiusMeters.toInt()}m',
+              l10n.translate(
+                'speedDialDebugSummary',
+                {
+                  'count': '$segmentCount',
+                  'radius': '${segmentRadiusMeters.toInt()}',
+                  'unit': l10n.translate('unitMetersShort'),
+                },
+              ),
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),

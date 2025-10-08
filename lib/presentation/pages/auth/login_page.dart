@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
+import '../../../app/localization/app_localizations.dart';
 import '../../../services/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
@@ -72,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
       debugPrint('Login error: $error\n$stackTrace');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(AppMessages.somethingWentWrongTryAgain),
         ),
       );
@@ -87,9 +88,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log in'),
+        title: Text(l10n.logIn),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -101,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 32),
                 Text(
-                  'Welcome',
+                  l10n.welcomeTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -109,9 +111,9 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.emailLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -124,9 +126,9 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.passwordLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -144,14 +146,14 @@ class _LoginPageState extends State<LoginPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Continue'),
+                      : Text(l10n.continueLabel),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacementNamed(AppRoutes.signUp);
                   },
-                  child: const Text('Create a new account'),
+                  child: Text(l10n.createNewAccount),
                 ),
               ],
             ),
