@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
+import '../../../app/localization/app_localizations.dart';
 import '../../../services/auth_controller.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -12,11 +13,13 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
-    final email = auth.currentEmail ?? 'Unknown user';
+    final email = auth.currentEmail ??
+        AppLocalizations.of(context).unknownUserLabel;
 
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your profile'),
+        title: Text(l10n.yourProfile),
       ),
       body: SafeArea(
         child: Padding(
@@ -36,7 +39,7 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Manage your TollCam account and preferences.',
+                l10n.profileSubtitle,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -56,13 +59,13 @@ class ProfilePage extends StatelessWidget {
                   } catch (error, stackTrace) {
                     debugPrint('Logout error: $error\n$stackTrace');
                     messenger.showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(AppMessages.unableToLogOutTryAgain),
                       ),
                     );
                   }
                 },
-                child: const Text('Log out'),
+                child: Text(l10n.logOut),
               ),
             ],
           ),

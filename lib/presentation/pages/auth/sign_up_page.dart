@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 
 import '../../../app/app_routes.dart';
+import '../../../app/localization/app_localizations.dart';
 import '../../../services/auth_controller.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _SignUpPageState extends State<SignUpPage> {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(AppMessages.accountCreatedCheckEmail),
         ),
       );
@@ -61,7 +62,7 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint('Sign up error: $error\n$stackTrace');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(AppMessages.somethingWentWrongTryAgain),
         ),
       );
@@ -76,8 +77,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
+      appBar: AppBar(title: Text(l10n.createAccount)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -88,7 +90,7 @@ class _SignUpPageState extends State<SignUpPage> {
               children: [
                 const SizedBox(height: 32),
                 Text(
-                  'Join TollCam',
+                  l10n.joinTollCam,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -96,9 +98,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.fullNameLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -111,9 +113,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.emailLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -126,9 +128,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.passwordLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -144,9 +146,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm password',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.confirmPasswordLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -160,21 +162,21 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                 onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : _submit,
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Create account'),
+                      : Text(l10n.createAccount),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacementNamed(AppRoutes.login);
                   },
-                  child: const Text('Already have an account? Log in'),
+                  child: Text(l10n.createAccountDescription),
                 ),
               ],
             ),

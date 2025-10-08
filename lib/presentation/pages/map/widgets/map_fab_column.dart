@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
@@ -27,7 +28,7 @@ class MapFabColumn extends StatelessWidget {
           icon: Icon(
             followUser ? Icons.my_location : Icons.my_location_outlined,
           ),
-          label: const Text('Recenter'),
+          label: Text(AppLocalizations.of(context).recenter),
         ),
         const SizedBox(height: 12),
         AverageSpeedButton(controller: avgController),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/language_controller.dart';
 import 'app_routes.dart';
 import 'app_theme.dart';
+import 'localization/app_localizations.dart';
 
 class TollCamApp extends StatelessWidget {
   const TollCamApp({super.key});
@@ -13,8 +14,9 @@ class TollCamApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LanguageController>(
       builder: (context, languageController, _) {
+        final appLocalizations = AppLocalizations(languageController.locale);
         return MaterialApp(
-          title: 'TollCam',
+          title: appLocalizations.appTitle,
           theme: buildAppTheme(),
           initialRoute: AppRoutes.map,
           routes: AppRoutes.routes,
@@ -25,6 +27,7 @@ class TollCamApp extends StatelessWidget {
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
+            AppLocalizationsDelegate(),
           ],
         );
       },

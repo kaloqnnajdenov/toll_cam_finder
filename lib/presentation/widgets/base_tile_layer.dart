@@ -47,7 +47,7 @@ class BaseTileLayer extends StatelessWidget {
 
   static void _showLaunchError(BuildContext context) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(AppMessages.osmCopyrightLaunchFailed),
       ),
     );

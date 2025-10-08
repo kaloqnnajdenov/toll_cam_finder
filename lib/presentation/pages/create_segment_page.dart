@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/presentation/pages/create_segment/widgets/segment_labeled_text_field.dart';
 import 'package:toll_cam_finder/presentation/widgets/segment_picker/segment_picker_map.dart';
@@ -86,9 +87,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create segment')),
+      appBar: AppBar(title: Text(l10n.createSegment)),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -238,7 +240,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                         child: FilledButton.icon(
                           onPressed: _onSavePressed,
                           icon: const Icon(Icons.check_circle),
-                          label: const Text('Save segment'),
+                          label: Text(l10n.saveSegment),
                         ),
                       ),
                     ],
@@ -440,7 +442,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(AppMessages.segmentSubmittedForPublicReviewGeneric),
       ),
     );
