@@ -22,20 +22,20 @@ class LocationService {
     if (Platform.isAndroid) {
       settings = AndroidSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
+        distanceFilter: AppConstants.gpsDistanceFilterMeters,
         intervalDuration: Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
       );
     } else if (Platform.isIOS || Platform.isMacOS) {
       settings = AppleSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
+        distanceFilter: AppConstants.gpsDistanceFilterMeters.toDouble(),
         activityType: ActivityType.automotiveNavigation,
         pauseLocationUpdatesAutomatically: false,
       );
     } else {
-      settings = const LocationSettings(
+      settings = LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
+        distanceFilter: AppConstants.gpsDistanceFilterMeters,
       );
     }
 
