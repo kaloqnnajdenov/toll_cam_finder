@@ -53,14 +53,14 @@ Future<SegmentAction?> showSegmentActionsSheet(
             if (segment.isLocalOnly && !segment.isMarkedPublic)
               ListTile(
                 leading: const Icon(Icons.public),
-                title: const Text(AppMessages.shareSegmentPubliclyAction),
+                title:  Text(AppMessages.shareSegmentPubliclyAction),
                 subtitle: !isAuthConfigured
-                    ? const Text(AppMessages.publicSharingUnavailableShort)
+                    ?  Text(AppMessages.publicSharingUnavailableShort)
                     : isLoggedIn
-                        ? const Text(
+                        ?  Text(
                             AppMessages.submitSegmentForPublicReviewSubtitle,
                           )
-                        : const Text(AppMessages.signInToShareSegment),
+                        :  Text(AppMessages.signInToShareSegment),
                 enabled: canMakePublic && isLoggedIn,
                 onTap: canMakePublic && isLoggedIn
                     ? () => Navigator.of(context).pop(SegmentAction.makePublic)
@@ -68,10 +68,10 @@ Future<SegmentAction?> showSegmentActionsSheet(
               ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
-              title: const Text(AppMessages.deleteSegmentAction),
+              title:  Text(AppMessages.deleteSegmentAction),
               subtitle: canDelete
                   ? null
-                  : const Text(AppMessages.onlyLocalSegmentsCanBeDeleted),
+                  :  Text(AppMessages.onlyLocalSegmentsCanBeDeleted),
               enabled: canDelete,
               onTap: canDelete
                   ? () => Navigator.of(context).pop(SegmentAction.delete)
@@ -92,18 +92,18 @@ Future<bool> showDeleteConfirmationDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text(AppMessages.deleteSegmentConfirmationTitle),
+        title:  Text(AppMessages.deleteSegmentConfirmationTitle),
         content: Text(
           AppMessages.confirmDeleteSegment(segment.displayId),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(AppMessages.cancelAction),
+            child:  Text(AppMessages.cancelAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(AppMessages.deleteAction),
+            child:  Text(AppMessages.deleteAction),
           ),
         ],
       );
@@ -121,16 +121,16 @@ Future<bool> showCancelRemoteSubmissionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text(AppMessages.withdrawPublicSubmissionTitle),
-        content: const Text(AppMessages.withdrawPublicSubmissionMessage),
+        title:  Text(AppMessages.withdrawPublicSubmissionTitle),
+        content:  Text(AppMessages.withdrawPublicSubmissionMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(AppMessages.noAction),
+            child:  Text(AppMessages.noAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(AppMessages.yesAction),
+            child:  Text(AppMessages.yesAction),
           ),
         ],
       );

@@ -153,7 +153,7 @@ class SegmentsMetadataService {
 
   Future<void> updatePublicFlag(String id, bool isPublic) async {
     if (kIsWeb) {
-      throw const SegmentsMetadataException(
+      throw  SegmentsMetadataException(
         AppMessages.segmentMetadataUpdateUnavailable,
       );
     }
@@ -165,7 +165,7 @@ class SegmentsMetadataService {
 
   Future<void> setSegmentDeactivated(String id, bool isDeactivated) async {
     if (kIsWeb) {
-      throw const SegmentsMetadataException(
+      throw  SegmentsMetadataException(
         AppMessages.segmentMetadataUpdateUnavailable,
       );
     }

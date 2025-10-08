@@ -36,13 +36,13 @@ class RemoteSegmentsService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw const RemoteSegmentsServiceException(
+      throw  RemoteSegmentsServiceException(
         AppMessages.supabaseNotConfiguredForModeration,
       );
     }
 
     if (addedByUserId.trim().isEmpty) {
-      throw const RemoteSegmentsServiceException(
+      throw RemoteSegmentsServiceException(
         AppMessages.userRequiredForPublicModeration,
       );
     }
@@ -93,7 +93,7 @@ class RemoteSegmentsService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw const RemoteSegmentsServiceException(
+      throw  RemoteSegmentsServiceException(
         AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
@@ -141,7 +141,7 @@ class RemoteSegmentsService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw const RemoteSegmentsServiceException(
+      throw  RemoteSegmentsServiceException(
         AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
@@ -186,7 +186,7 @@ class RemoteSegmentsService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw const RemoteSegmentsServiceException(
+      throw  RemoteSegmentsServiceException(
         AppMessages.supabaseNotConfiguredForPublicSubmissions,
       );
     }
@@ -252,7 +252,7 @@ class RemoteSegmentsService {
     final nextId = (maxId ?? 0) + 1;
 
     if (nextId > _smallIntMax) {
-      throw const RemoteSegmentsServiceException(
+      throw  RemoteSegmentsServiceException(
         AppMessages.unableToAssignNewSegmentId,
       );
     }
@@ -280,7 +280,7 @@ class RemoteSegmentsService {
       }
     }
 
-    throw const RemoteSegmentsServiceException(
+    throw  RemoteSegmentsServiceException(
       AppMessages.nonNumericSegmentIdEncountered,
     );
   }

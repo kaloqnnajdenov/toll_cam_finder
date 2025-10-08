@@ -43,7 +43,7 @@ class AuthController extends ChangeNotifier {
   /// Placeholder login flow. Replace with real implementation.
   Future<void> logIn({required String email, required String password}) async {
     if (_client == null) {
-      throw const AuthFailure(AppMessages.authenticationNotConfigured);
+      throw  AuthFailure(AppMessages.authenticationNotConfigured);
     }
 
     try {
@@ -64,7 +64,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Login failed: $error\n$stackTrace');
-      throw const AuthFailure(AppMessages.unexpectedErrorSigningIn);
+      throw AuthFailure(AppMessages.unexpectedErrorSigningIn);
     }
   }
 
@@ -75,7 +75,7 @@ class AuthController extends ChangeNotifier {
     String? fullName,
   }) async {
     if (_client == null) {
-      throw const AuthFailure(AppMessages.authenticationNotConfigured);
+      throw AuthFailure(AppMessages.authenticationNotConfigured);
     }
 
     try {
@@ -99,7 +99,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Sign-up failed: $error\n$stackTrace');
-      throw const AuthFailure(AppMessages.unexpectedErrorCreatingAccount);
+      throw AuthFailure(AppMessages.unexpectedErrorCreatingAccount);
     }
   }
 
@@ -116,7 +116,7 @@ class AuthController extends ChangeNotifier {
       throw AuthFailure(error.message);
     } catch (error, stackTrace) {
       debugPrint('Sign-out failed: $error\n$stackTrace');
-      throw const AuthFailure(AppMessages.unexpectedErrorSigningOut);
+      throw  AuthFailure(AppMessages.unexpectedErrorSigningOut);
     }
   }
 

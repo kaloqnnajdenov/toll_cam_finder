@@ -259,7 +259,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          content: const Text(
+          content:  Text(
             AppMessages.chooseSegmentVisibilityQuestion,
           ),
           actions: [
@@ -267,13 +267,13 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.private);
               },
-              child: const Text(AppMessages.noAction),
+              child:  Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.public);
               },
-              child: const Text(AppMessages.yesAction),
+              child:  Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -313,11 +313,11 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(AppMessages.noAction),
+              child: Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(AppMessages.yesAction),
+              child: Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -350,20 +350,20 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         useRootNavigator: true,
         builder: (context) {
           return AlertDialog(
-            title: const Text(AppMessages.signInToSharePubliclyTitle),
-            content: const Text(AppMessages.signInToSharePubliclyBody),
+            title:  Text(AppMessages.signInToSharePubliclyTitle),
+            content:  Text(AppMessages.signInToSharePubliclyBody),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.saveLocally);
                 },
-                child: const Text(AppMessages.saveLocallyAction),
+                child:  Text(AppMessages.saveLocallyAction),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.login);
                 },
-                child: const Text(AppMessages.loginAction),
+                child:  Text(AppMessages.loginAction),
               ),
             ],
           );

@@ -39,7 +39,7 @@ class TollSegmentsSyncService {
   /// 3. Writes the downloaded data to the local CSV file.
   Future<TollSegmentsSyncResult> sync({required SupabaseClient client}) async {
     if (kIsWeb) {
-      throw const TollSegmentsSyncException(
+      throw  TollSegmentsSyncException(
         AppMessages.syncNotSupportedOnWeb,
       );
     }

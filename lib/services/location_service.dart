@@ -28,7 +28,7 @@ class LocationService {
     } else if (Platform.isIOS || Platform.isMacOS) {
       settings = AppleSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: AppConstants.gpsDistanceFilterMeters.toDouble(),
+        distanceFilter: AppConstants.gpsDistanceFilterMeters,
         activityType: ActivityType.automotiveNavigation,
         pauseLocationUpdatesAutomatically: false,
       );
