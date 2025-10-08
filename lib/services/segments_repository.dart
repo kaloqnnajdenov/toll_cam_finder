@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_csv_constants.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
@@ -146,7 +147,7 @@ class SegmentsRepository {
         TollSegmentsCsvSchema.localSegmentIdPrefix,
       );
       final resolvedName = name.isEmpty && isLocalOnly
-          ? 'Personal segment'
+          ? AppMessages.personalSegmentDefaultName
           : name;
 
       segments.add(

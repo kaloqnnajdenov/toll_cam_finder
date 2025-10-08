@@ -16,6 +16,45 @@ class AppMessages {
 
   static AppLocalizations get _l => _localizations;
 
+  static String get speedDialCurrentTitle =>
+      _l.translate('speedDialCurrentTitle');
+  static String get speedDialAverageTitle =>
+      _l.translate('speedDialAverageTitle');
+  static String get speedDialUnitKmh => _l.translate('speedDialUnitKmh');
+  static String get speedDialPlaceholder =>
+      _l.translate('speedDialPlaceholder');
+  static String get segmentPickerStartMarkerLabel =>
+      _l.translate('segmentPickerStartMarkerLabel');
+  static String get segmentPickerEndMarkerLabel =>
+      _l.translate('segmentPickerEndMarkerLabel');
+  static String get languageLabelEnglish =>
+      _l.translate('languageLabelEnglish');
+  static String get languageLabelSpanish =>
+      _l.translate('languageLabelSpanish');
+  static String get personalSegmentDefaultName =>
+      _l.translate('personalSegmentDefaultName');
+  static String segmentDefaultStartName(String name) =>
+      _l.translate('segmentDefaultStartName', {'name': name});
+  static String segmentDefaultEndName(String name) =>
+      _l.translate('segmentDefaultEndName', {'name': name});
+  static String get savingLocalSegmentsNotSupportedOnWeb =>
+      _l.translate('savingLocalSegmentsNotSupportedOnWeb');
+  static String get loadingLocalSegmentsNotSupportedOnWeb =>
+      _l.translate('loadingLocalSegmentsNotSupportedOnWeb');
+  static String get deletingLocalSegmentsNotSupportedOnWeb =>
+      _l.translate('deletingLocalSegmentsNotSupportedOnWeb');
+  static String get onlySegmentsSavedLocallyCanBeShared =>
+      _l.translate('onlySegmentsSavedLocallyCanBeShared');
+  static String get segmentMissingCoordinates =>
+      _l.translate('segmentMissingCoordinates');
+  static String get segmentNotFoundLocally =>
+      _l.translate('segmentNotFoundLocally');
+  static String get coordinatesMustBeProvided =>
+      _l.translate('coordinatesMustBeProvided');
+  static String get coordinatesMustBeDecimalNumbers =>
+      _l.translate('coordinatesMustBeDecimalNumbers');
+  static String get fileSystemOperationsNotSupported =>
+      _l.translate('fileSystemOperationsNotSupported');
   static String get segmentSavedLocally =>
       _l.translate('segmentSavedLocally');
   static String get showSegmentOnMapAction =>

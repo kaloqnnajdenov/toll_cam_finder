@@ -6,13 +6,23 @@ import '../core/app_messages.dart';
 class LanguageOption {
   const LanguageOption({
     required this.locale,
-    required this.label,
+    required this.languageCode,
     this.available = true,
   });
 
   final Locale locale;
-  final String label;
+  final String languageCode;
   final bool available;
+
+  String get label {
+    switch (languageCode) {
+      case 'es':
+        return AppMessages.languageLabelSpanish;
+      case 'en':
+      default:
+        return AppMessages.languageLabelEnglish;
+    }
+  }
 }
 
 class LanguageController extends ChangeNotifier {
@@ -23,12 +33,12 @@ class LanguageController extends ChangeNotifier {
   static const List<LanguageOption> _languageOptions = [
     LanguageOption(
       locale: Locale('en'),
-      label: 'English',
+      languageCode: 'en',
       available: true,
     ),
     LanguageOption(
       locale: Locale('es'),
-      label: 'Español',
+      languageCode: 'es',
       available: true,
     ),
   ];

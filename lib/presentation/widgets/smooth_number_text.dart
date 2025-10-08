@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 
 /// Text widget that animates numeric changes smoothly without the flicker of
@@ -8,7 +9,7 @@ class SmoothNumberText extends StatefulWidget {
     super.key,
     required this.value,
     required this.decimals,
-    this.placeholder = '—',
+    this.placeholder,
     this.style,
     this.duration = const Duration(
       milliseconds: AppConstants.smoothNumberTextAnimationMs,
@@ -23,7 +24,7 @@ class SmoothNumberText extends StatefulWidget {
   final int decimals;
 
   /// Text to render when [value] is `null`.
-  final String placeholder;
+  final String? placeholder;
 
   /// Text style for the rendered value/placeholder.
   final TextStyle? style;
@@ -98,7 +99,8 @@ class _SmoothNumberTextState extends State<SmoothNumberText>
   @override
   Widget build(BuildContext context) {
     if (widget.value == null) {
-      return Text(widget.placeholder, style: widget.style);
+      final placeholder = widget.placeholder ?? AppMessages.speedDialPlaceholder;
+      return Text(placeholder, style: widget.style);
     }
 
     return AnimatedBuilder(

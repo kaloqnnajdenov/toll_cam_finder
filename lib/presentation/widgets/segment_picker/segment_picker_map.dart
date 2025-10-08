@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
@@ -202,7 +203,9 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
             _updateEndpoint(endpoint, latLng, refreshRoute: false),
         onDragEnd: (latLng) => _updateEndpoint(endpoint, latLng),
         child: SegmentMarker(
-          label: endpoint == SegmentEndpoint.start ? 'A' : 'B',
+          label: endpoint == SegmentEndpoint.start
+              ? AppMessages.segmentPickerStartMarkerLabel
+              : AppMessages.segmentPickerEndMarkerLabel,
           color: color,
         ),
       ),

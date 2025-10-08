@@ -1,11 +1,13 @@
+import 'package:toll_cam_finder/core/app_messages.dart';
+
 import 'toll_segments_file_system.dart';
 
 class UnsupportedTollSegmentsFileSystem extends TollSegmentsFileSystem {
   const UnsupportedTollSegmentsFileSystem();
 
   Future<T> _unsupported<T>() {
-    throw const TollSegmentsFileSystemException(
-      'File system operations are not supported on this platform.',
+    throw TollSegmentsFileSystemException(
+      AppMessages.fileSystemOperationsNotSupported,
     );
   }
 

@@ -20,6 +20,10 @@ class AppLocalizations {
       'chooseSegmentVisibilityQuestion':
           'Do you want the segment to be publically visible?',
       'comingSoon': 'Coming soon',
+      'coordinatesMustBeProvided':
+          'Coordinates must be provided in the format "lat, lon".',
+      'coordinatesMustBeDecimalNumbers':
+          'Coordinates must be valid decimal numbers.',
       'confirmDeleteSegment':
           'Are you sure you want to delete segment {displayId}?',
       'confirmKeepSegmentPrivate':
@@ -80,6 +84,8 @@ class AppLocalizations {
       'hideSegmentOnMapAction': 'Hide segment on map',
       'joinTollCam': 'Join TollCam',
       'language': 'Language',
+      'languageLabelEnglish': 'English',
+      'languageLabelSpanish': 'Spanish',
       'languageButton': 'Change language',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
@@ -107,6 +113,8 @@ class AppLocalizations {
       'nonNumericSegmentIdEncountered':
           'Encountered an existing segment with a non-numeric id.',
       'onlyLocalSegmentsCanBeDeleted': 'Only local segments can be deleted.',
+      'onlySegmentsSavedLocallyCanBeShared':
+          'Only segments saved locally can be shared publicly.',
       'openMenu': 'Open menu',
       'osmCopyrightLaunchFailed':
           'Could not open the OpenStreetMap copyright page.',
@@ -139,6 +147,9 @@ class AppLocalizations {
           'Segment {displayId} hidden. Cameras and warnings are disabled.',
       'segmentMetadataUpdateUnavailable':
           'Segment metadata cannot be updated on the web.',
+      'segmentMissingCoordinates':
+          'The saved segment is missing coordinates and cannot be shared publicly.',
+      'segmentNotFoundLocally': 'The segment could not be found locally.',
       'segmentNoLongerUnderReview':
           'Segment {displayId} will no longer be reviewed for public release.',
       'segmentProgressEndKilometers': '{distance} km to segment end',
@@ -148,6 +159,10 @@ class AppLocalizations {
       'segmentProgressStartMeters': '{distance} m to segment start',
       'segmentProgressStartNearby': 'Segment start nearby',
       'segmentSavedLocally': 'Segment saved locally.',
+      'segmentDefaultStartName': '{name} start',
+      'segmentDefaultEndName': '{name} end',
+      'segmentPickerStartMarkerLabel': 'A',
+      'segmentPickerEndMarkerLabel': 'B',
       'segmentSubmittedForPublicReview':
           'Segment {displayId} submitted for public review.',
       'segmentSubmittedForPublicReviewGeneric': 'Segment submitted for public review.',
@@ -174,7 +189,9 @@ class AppLocalizations {
           'Avg speed for the last segment: {value}{unit}',
       'speedDialLimitLabel': 'Limit: {value} {unit}',
       'speedDialNoActiveSegment': 'No active segment',
+      'speedDialPlaceholder': '—',
       'speedDialUnitKmh': 'km/h',
+      'personalSegmentDefaultName': 'Personal segment',
       'syncAddedMany': '{count} segments added',
       'syncAddedOne': '{count} segment added',
       'syncApprovedSummaryPlural':
@@ -197,6 +214,12 @@ class AppLocalizations {
           'Supabase is not configured. Please add credentials to enable sync.',
       'sync': 'Sync',
       'syncNotSupportedOnWeb': 'Syncing toll segments is not supported on the web.',
+      'savingLocalSegmentsNotSupportedOnWeb':
+          'Saving local segments is not supported on the web.',
+      'loadingLocalSegmentsNotSupportedOnWeb':
+          'Loading local segments is not supported on the web.',
+      'deletingLocalSegmentsNotSupportedOnWeb':
+          'Deleting local segments is not supported on the web.',
       'tableMissingModerationColumn':
           'The "{tableName}" table is missing the "{column}" column required for moderation.',
       'tableReturnedNoRows':
@@ -220,6 +243,8 @@ class AppLocalizations {
       'unexpectedErrorSubmittingForModeration':
           'Unexpected error while submitting the segment for moderation.',
       'unexpectedSyncError': 'Unexpected error while syncing toll segments.',
+      'fileSystemOperationsNotSupported':
+          'File system operations are not supported on this platform.',
       'unitKilometersShort': 'km',
       'unitMetersShort': 'm',
       'unknownUserLabel': 'Unknown user',
@@ -237,6 +262,10 @@ class AppLocalizations {
       'averageSpeedResetTooltip': 'Reiniciar promedio',
       'averageSpeedStartTooltip': 'Iniciar promedio',
       'comingSoon': 'Próximamente',
+      'coordinatesMustBeProvided':
+          'Las coordenadas deben proporcionarse en el formato "lat, lon".',
+      'coordinatesMustBeDecimalNumbers':
+          'Las coordenadas deben ser números decimales válidos.',
       'confirmPasswordLabel': 'Confirmar contraseña',
       'continue': 'Continuar',
       'createAccount': 'Crear cuenta',
@@ -248,6 +277,8 @@ class AppLocalizations {
       'fullNameLabel': 'Nombre completo',
       'joinTollCam': 'Únete a TollCam',
       'language': 'Idioma',
+      'languageLabelEnglish': 'Inglés',
+      'languageLabelSpanish': 'Español',
       'languageButton': 'Cambiar idioma',
       'localSegments': 'Segmentos locales',
       'logIn': 'Iniciar sesión',
@@ -280,6 +311,16 @@ class AppLocalizations {
       'segmentProgressStartNearby': 'Inicio del segmento cercano',
       'segments': 'Segmentos',
       'selectLanguage': 'Seleccionar idioma',
+      'segmentDefaultStartName': 'Inicio de {name}',
+      'segmentDefaultEndName': 'Fin de {name}',
+      'segmentPickerStartMarkerLabel': 'A',
+      'segmentPickerEndMarkerLabel': 'B',
+      'segmentMissingCoordinates':
+          'El segmento guardado no tiene coordenadas y no se puede compartir públicamente.',
+      'segmentNotFoundLocally': 'No se pudo encontrar el segmento localmente.',
+      'personalSegmentDefaultName': 'Segmento personal',
+      'onlySegmentsSavedLocallyCanBeShared':
+          'Solo los segmentos guardados localmente pueden compartirse públicamente.',
       'speedDialAverageTitle': 'Velocidad promedio',
       'speedDialCurrentTitle': 'Velocidad',
       'speedDialDebugSummary': 'Segmentos: {count}  r={radius}{unit}',
@@ -287,6 +328,7 @@ class AppLocalizations {
           'Velocidad promedio del último segmento: {value}{unit}',
       'speedDialLimitLabel': 'Límite: {value} {unit}',
       'speedDialNoActiveSegment': 'Sin segmento activo',
+      'speedDialPlaceholder': '—',
       'speedDialUnitKmh': 'km/h',
       'syncAddedMany': '{count} segmentos añadidos',
       'syncAddedOne': '{count} segmento añadido',
@@ -300,6 +342,14 @@ class AppLocalizations {
       'syncRemovedOne': '{count} segmento eliminado',
       'syncTotalSegmentsSummary': '{count} segmentos totales disponibles.',
       'sync': 'Sincronizar',
+      'savingLocalSegmentsNotSupportedOnWeb':
+          'Guardar segmentos locales no es compatible en la web.',
+      'loadingLocalSegmentsNotSupportedOnWeb':
+          'Cargar segmentos locales no es compatible en la web.',
+      'deletingLocalSegmentsNotSupportedOnWeb':
+          'Eliminar segmentos locales no es compatible en la web.',
+      'fileSystemOperationsNotSupported':
+          'Las operaciones del sistema de archivos no son compatibles en esta plataforma.',
       'unitKilometersShort': 'km',
       'unitMetersShort': 'm',
       'unknownUserLabel': 'Usuario desconocido',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 
@@ -8,22 +9,24 @@ class CurrentSpeedDial extends StatelessWidget {
   const CurrentSpeedDial({
     super.key,
     required this.speedKmh,
-    this.title = 'Speed',
+    this.title,
     this.decimals = AppConstants.speedDialDefaultDecimals,
-    this.unit = 'km/h',
+    this.unit,
     this.width = AppConstants.speedDialDefaultWidth,
   });
 
   final double? speedKmh;
-  final String title;
+  final String? title;
   final int decimals;
-  final String unit;
+  final String? unit;
   final double width;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final resolvedTitle = title ?? AppMessages.speedDialCurrentTitle;
+    final resolvedUnit = unit ?? AppMessages.speedDialUnitKmh;
 
     final double? value = (speedKmh != null && speedKmh!.isFinite)
         ? speedKmh!.clamp(0, double.infinity).toDouble()
@@ -46,7 +49,7 @@ class CurrentSpeedDial extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    title,
+                    resolvedTitle,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -70,7 +73,7 @@ class CurrentSpeedDial extends StatelessWidget {
                       padding: const EdgeInsets.only(
                         bottom: AppConstants.speedDialUnitBaselinePadding,
                       ),
-                      child: Text(unit, style: textTheme.titleSmall),
+                      child: Text(resolvedUnit, style: textTheme.titleSmall),
                     ),
                   ],
                 ),
