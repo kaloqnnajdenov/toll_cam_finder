@@ -1,415 +1,546 @@
+import 'localization/app_locale.dart';
+
 /// Collection of user-facing strings displayed throughout the app.
 ///
 /// Keeping messages together near [AppConstants] simplifies translation and
 /// ensures copy updates remain consistent across the UI.
 class AppMessages {
-  /// Shown after returning from the segment creation flow when a draft has
-  /// been saved to local storage instead of being published immediately.
-  static const String segmentSavedLocally = 'Segment saved locally.';
+  static const _fallbackLanguageCode = 'en';
 
-  /// Label shown when offering to reveal a segment that was previously hidden
-  /// on the map.
-  static const String showSegmentOnMapAction = 'Show segment on map';
+  static String get _languageCode => AppLocale.languageCode;
 
-  /// Label shown when offering to hide a segment from the map.
-  static const String hideSegmentOnMapAction = 'Hide segment on map';
+  static String _translate(String key) {
+    final translations = _localizedValues[key];
+    if (translations == null) {
+      return key;
+    }
+    return translations[_languageCode] ??
+        translations[_fallbackLanguageCode] ??
+        key;
+  }
 
-  /// Subtitle explaining that restoring a segment will re-enable cameras and
-  /// warnings for it.
-  static const String segmentVisibilityRestoreSubtitle =
-      'Cameras and warnings for this segment will be restored.';
+  static String _translateWithArgs(
+    String key,
+    Map<String, String> replacements,
+  ) {
+    var value = _translate(key);
+    replacements.forEach((placeholder, replacement) {
+      value = value.replaceAll('{$placeholder}', replacement);
+    });
+    return value;
+  }
 
-  /// Subtitle explaining that hiding a segment will disable cameras and
-  /// warnings for it.
-  static const String segmentVisibilityDisableSubtitle =
-      'No cameras or warnings will appear for this segment.';
+  static String get segmentSavedLocally =>
+      _translate('segmentSavedLocally');
 
-  /// Shown after the user hides a segment; confirms the display id is now
-  /// hidden and that related warnings are disabled.
+  static String get showSegmentOnMapAction =>
+      _translate('showSegmentOnMapAction');
+
+  static String get hideSegmentOnMapAction =>
+      _translate('hideSegmentOnMapAction');
+
+  static String get segmentVisibilityRestoreSubtitle =>
+      _translate('segmentVisibilityRestoreSubtitle');
+
+  static String get segmentVisibilityDisableSubtitle =>
+      _translate('segmentVisibilityDisableSubtitle');
+
   static String segmentHidden(String displayId) =>
-      'Segment $displayId hidden. Cameras and warnings are disabled.';
+      _translateWithArgs('segmentHidden', {'displayId': displayId});
 
-  /// Shown after the user reactivates a segment; confirms visibility and
-  /// warnings have been restored.
   static String segmentVisible(String displayId) =>
-      'Segment $displayId is visible again. Cameras and warnings restored.';
+      _translateWithArgs('segmentVisible', {'displayId': displayId});
 
-  /// Shown when updating a segment's metadata fails and the error message
-  /// should be surfaced to the user.
   static String failedToUpdateSegment(
     String displayId,
     String errorMessage,
   ) =>
-      'Failed to update segment $displayId: $errorMessage';
+      _translateWithArgs('failedToUpdateSegment', {
+        'displayId': displayId,
+        'errorMessage': errorMessage,
+      });
 
-  /// Shown when the user attempts to share a segment publicly without a valid
-  /// authenticated session.
-  static const String signInToShareSegment =
-      'Please sign in to share segments publicly.';
+  static String get signInToShareSegment =>
+      _translate('signInToShareSegment');
 
-  /// Label for the bottom sheet option that begins the public sharing flow for
-  /// a segment.
-  static const String shareSegmentPubliclyAction = 'Share segment publicly';
+  static String get shareSegmentPubliclyAction =>
+      _translate('shareSegmentPubliclyAction');
 
-  /// Shown when the remote sharing infrastructure is not available, preventing
-  /// the submission of public segments.
-  static const String publicSharingUnavailable =
-      'Public segment sharing is currently unavailable.';
+  static String get publicSharingUnavailable =>
+      _translate('publicSharingUnavailable');
 
-  /// Short subtitle explaining that public sharing is currently unavailable in
-  /// contexts where space is limited.
-  static const String publicSharingUnavailableShort =
-      'Public sharing is not available.';
+  static String get publicSharingUnavailableShort =>
+      _translate('publicSharingUnavailableShort');
 
-  /// Subtitle informing the user that choosing to share publicly will submit
-  /// the segment for moderation.
-  static const String submitSegmentForPublicReviewSubtitle =
-      'Submit this segment for public review.';
+  static String get submitSegmentForPublicReviewSubtitle =>
+      _translate('submitSegmentForPublicReviewSubtitle');
 
-  /// Shown when the app cannot determine the logged in user during a public
-  /// submission flow.
-  static const String unableToDetermineLoggedInAccount =
-      'Unable to determine the logged in account.';
+  static String get unableToDetermineLoggedInAccount =>
+      _translate('unableToDetermineLoggedInAccount');
 
-  /// Shown when loading local draft data fails while preparing a public
-  /// submission.
-  static const String failedToPrepareSegmentForReview =
-      'Failed to prepare the segment for public review.';
+  static String get failedToPrepareSegmentForReview =>
+      _translate('failedToPrepareSegmentForReview');
 
-  /// Shown when checking the public submission status fails with a generic
-  /// error.
-  static const String failedToCheckSubmissionStatus =
-      'Failed to check the public submission status.';
+  static String get failedToCheckSubmissionStatus =>
+      _translate('failedToCheckSubmissionStatus');
 
-  /// Shown when submitting a segment for moderation fails unexpectedly.
-  static const String failedToSubmitForModeration =
-      'Failed to submit the segment for moderation.';
+  static String get failedToSubmitForModeration =>
+      _translate('failedToSubmitForModeration');
 
-  /// Shown when a segment has already been submitted for public review by the
-  /// same user and is awaiting moderation.
-  static String segmentAlreadyAwaitingReview(String displayId) =>
-      'Segment $displayId is already awaiting public review.';
+  static String get unableToWithdrawSubmission =>
+      _translate('unableToWithdrawSubmission');
 
-  /// Shown when a segment is successfully submitted for public review and the
-  /// segment id should be echoed back to the user.
-  static String segmentSubmittedForPublicReview(String displayId) =>
-      'Segment $displayId submitted for public review.';
+  static String get signInToWithdrawSubmission =>
+      _translate('signInToWithdrawSubmission');
 
-  /// Shown when a segment is successfully submitted for public review but no
-  /// display id is available (e.g. immediately after draft creation).
-  static const String segmentSubmittedForPublicReviewGeneric =
-      'Segment submitted for public review.';
-
-  /// Shown when the app cannot withdraw a public submission due to missing
-  /// authentication state.
-  static const String unableToWithdrawSubmission =
-      'Unable to withdraw the public submission.';
-
-  /// Shown when the user must sign in before they can withdraw a public
-  /// submission.
-  static const String signInToWithdrawSubmission =
-      'Please sign in to withdraw the public submission.';
-
-  /// Shown when a public submission has been successfully cancelled and the
-  /// review process will no longer continue.
   static String segmentNoLongerUnderReview(String displayId) =>
-      'Segment $displayId will no longer be reviewed for public release.';
+      _translateWithArgs('segmentNoLongerUnderReview', {
+        'displayId': displayId,
+      });
 
-  /// Shown when withdrawing a public submission fails due to a missing internet
-  /// connection; informs the user that only the local delete will proceed.
-  static const String noConnectionCannotWithdrawSubmission =
-      'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.';
+  static String get noConnectionCannotWithdrawSubmission =>
+      _translate('noConnectionCannotWithdrawSubmission');
 
-  /// Shown when the app fails to cancel an in-progress public review request.
-  static const String failedToCancelPublicReview =
-      'Failed to cancel the public review for this segment.';
+  static String get failedToCancelPublicReview =>
+      _translate('failedToCancelPublicReview');
 
-  /// Shown when deleting a segment fails for any reason.
-  static const String failedToDeleteSegment =
-      'Failed to delete the segment.';
+  static String get failedToDeleteSegment =>
+      _translate('failedToDeleteSegment');
 
-  /// Label for the delete option in segment action sheets and dialogs.
-  static const String deleteSegmentAction = 'Delete segment';
+  static String get deleteSegmentAction =>
+      _translate('deleteSegmentAction');
 
-  /// Subtitle explaining why a segment cannot currently be deleted.
-  static const String onlyLocalSegmentsCanBeDeleted =
-      'Only local segments can be deleted.';
+  static String get onlyLocalSegmentsCanBeDeleted =>
+      _translate('onlyLocalSegmentsCanBeDeleted');
 
-  /// Shown after a segment has been deleted from the local store.
   static String segmentDeleted(String displayId) =>
-      'Segment $displayId deleted.';
+      _translateWithArgs('segmentDeleted', {'displayId': displayId});
 
-  /// Title shown when confirming whether a segment should be deleted.
-  static const String deleteSegmentConfirmationTitle = 'Delete segment';
+  static String get deleteSegmentConfirmationTitle =>
+      _translate('deleteSegmentConfirmationTitle');
 
-  /// Message shown when asking the user to confirm segment deletion.
   static String confirmDeleteSegment(String displayId) =>
-      'Are you sure you want to delete segment $displayId?';
+      _translateWithArgs('confirmDeleteSegment', {'displayId': displayId});
 
-  /// Shown when the app cannot determine the logged in account and suggests
-  /// signing in again.
-  static const String unableToDetermineLoggedInAccountRetry =
-      'Unable to determine the logged in account. Please sign in again.';
+  static String get unableToDetermineLoggedInAccountRetry =>
+      _translate('unableToDetermineLoggedInAccountRetry');
 
-  /// Shown when prompting the user to choose if a new segment should be visible
-  /// publicly after creation.
-  static const String chooseSegmentVisibilityQuestion =
-      'Do you want the segment to be publically visible?';
+  static String get chooseSegmentVisibilityQuestion =>
+      _translate('chooseSegmentVisibilityQuestion');
 
-  /// Shown when asking the user to confirm keeping a segment private.
-  static const String confirmKeepSegmentPrivate =
-      'Are you sure that you want to keep the segment only to yourself?';
+  static String get confirmKeepSegmentPrivate =>
+      _translate('confirmKeepSegmentPrivate');
 
-  /// Shown when asking the user to confirm making a segment public.
-  static const String confirmMakeSegmentPublic =
-      'Are you sure you want to make this segment public?';
+  static String get confirmMakeSegmentPublic =>
+      _translate('confirmMakeSegmentPublic');
 
-  /// Title used when asking the user to withdraw a public submission.
-  static const String withdrawPublicSubmissionTitle =
-      'Withdraw public submission?';
+  static String get withdrawPublicSubmissionTitle =>
+      _translate('withdrawPublicSubmissionTitle');
 
-  /// Message shown when confirming if the user wants to withdraw a submission.
-  static const String withdrawPublicSubmissionMessage =
-      'You have submitted this segment for review. Do you want to withdraw the submission?';
+  static String get withdrawPublicSubmissionMessage =>
+      _translate('withdrawPublicSubmissionMessage');
 
-  /// Generic fallback error shown when an operation fails unexpectedly.
-  static const String somethingWentWrongTryAgain =
-      'Something went wrong. Please try again.';
+  static String get somethingWentWrongTryAgain =>
+      _translate('somethingWentWrongTryAgain');
 
-  /// Shown after a new account is created to prompt email confirmation.
-  static const String accountCreatedCheckEmail =
-      'Account created! Check your email to confirm it.';
+  static String get accountCreatedCheckEmail =>
+      _translate('accountCreatedCheckEmail');
 
-  /// Shown when logging out fails unexpectedly.
-  static const String unableToLogOutTryAgain =
-      'Unable to log out. Please try again.';
+  static String get unableToLogOutTryAgain =>
+      _translate('unableToLogOutTryAgain');
 
-  /// Shown when authentication services have not been configured.
-  static const String authenticationNotConfigured =
-      'Authentication is not configured. Please add Supabase credentials.';
+  static String get authenticationNotConfigured =>
+      _translate('authenticationNotConfigured');
 
-  /// Shown when sign-in fails due to an unexpected platform error.
-  static const String unexpectedErrorSigningIn =
-      'Unexpected error while signing in.';
+  static String get unexpectedErrorSigningIn =>
+      _translate('unexpectedErrorSigningIn');
 
-  /// Shown when account creation fails due to an unexpected platform error.
-  static const String unexpectedErrorCreatingAccount =
-      'Unexpected error while creating the account.';
+  static String get unexpectedErrorCreatingAccount =>
+      _translate('unexpectedErrorCreatingAccount');
 
-  /// Shown when sign-out fails due to an unexpected platform error.
-  static const String unexpectedErrorSigningOut =
-      'Unexpected error while signing out.';
+  static String get unexpectedErrorSigningOut =>
+      _translate('unexpectedErrorSigningOut');
 
-  /// Validation message shown when the name field is left empty.
-  static const String enterYourName = 'Please enter your name';
+  static String get enterYourName => _translate('enterYourName');
 
-  /// Validation message shown when the email field is left empty.
-  static const String enterYourEmail = 'Please enter your email';
+  static String get enterYourEmail => _translate('enterYourEmail');
 
-  /// Validation message shown when the password field is left empty.
-  static const String enterYourPassword = 'Please enter your password';
+  static String get enterYourPassword =>
+      _translate('enterYourPassword');
 
-  /// Validation message shown when the password confirmation is missing.
-  static const String confirmYourPassword = 'Please confirm your password';
+  static String get confirmYourPassword =>
+      _translate('confirmYourPassword');
 
-  /// Validation message shown when creating a new password requires input.
-  static const String createPasswordPrompt = 'Please create a password';
+  static String get createPasswordPrompt =>
+      _translate('createPasswordPrompt');
 
-  /// Validation message shown when the password is shorter than the minimum.
-  static const String passwordTooShort =
-      'Password must be at least 6 characters';
+  static String get passwordTooShort =>
+      _translate('passwordTooShort');
 
-  /// Validation message shown when the password and confirmation do not match.
-  static const String passwordsDoNotMatch = 'Passwords do not match';
+  static String get passwordsDoNotMatch =>
+      _translate('passwordsDoNotMatch');
 
-  /// Message displayed when loading segments fails in list views.
-  static const String failedToLoadSegments = 'Failed to load segments.';
+  static String get createAccountTitle =>
+      _translate('createAccountTitle');
 
-  /// Generic retry button label used across error surfaces.
-  static const String retryAction = 'Retry';
+  static String get joinTollCamHeadline =>
+      _translate('joinTollCamHeadline');
 
-  /// Generic affirmative button label.
-  static const String yesAction = 'Yes';
+  static String get fullNameLabel => _translate('fullNameLabel');
 
-  /// Generic negative button label.
-  static const String noAction = 'No';
+  static String get emailLabel => _translate('emailLabel');
 
-  /// Generic cancel action label.
-  static const String cancelAction = 'Cancel';
+  static String get passwordLabel => _translate('passwordLabel');
 
-  /// Generic delete action label.
-  static const String deleteAction = 'Delete';
+  static String get confirmPasswordLabel =>
+      _translate('confirmPasswordLabel');
 
-  /// Hint shown before either endpoint has been positioned on the map.
-  static const String mapHintPlacePointA =
-      'Tap anywhere on the map to place point A.';
+  static String get createAccountAction =>
+      _translate('createAccountAction');
 
-  /// Hint shown after the start point has been placed but not the end point.
-  static const String mapHintPlacePointB =
-      'Tap a second location to place point B.';
+  static String get alreadyHaveAccountPrompt =>
+      _translate('alreadyHaveAccountPrompt');
 
-  /// Hint shown once both endpoints exist, explaining how to reposition them.
-  static const String mapHintDragPoint =
-      'Touch and hold A or B for 0.5s, then drag to reposition that point.';
+  static String get welcomeHeadline =>
+      _translate('welcomeHeadline');
 
-  /// Message shown when loading camera data fails.
+  static String get continueAction =>
+      _translate('continueAction');
+
+  static String get createNewAccountPrompt =>
+      _translate('createNewAccountPrompt');
+
+  static String get unknownUser => _translate('unknownUser');
+
+  static String get profileTitle => _translate('profileTitle');
+
+  static String get profileSubtitle => _translate('profileSubtitle');
+
+  static String get logOutAction => _translate('logOutAction');
+
+  static String get failedToLoadSegments =>
+      _translate('failedToLoadSegments');
+
+  static String get retryAction => _translate('retryAction');
+
+  static String get yesAction => _translate('yesAction');
+
+  static String get noAction => _translate('noAction');
+
+  static String get cancelAction => _translate('cancelAction');
+
+  static String get deleteAction => _translate('deleteAction');
+
+  static String get drawerSync => _translate('drawerSync');
+
+  static String get drawerSegments => _translate('drawerSegments');
+
+  static String get drawerLanguage => _translate('drawerLanguage');
+
+  static String get drawerProfile => _translate('drawerProfile');
+
+  static String get languageSelectionTitle =>
+      _translate('languageSelectionTitle');
+
+  static String get languageComingSoon =>
+      _translate('languageComingSoon');
+
+  static String get createAccountDrawerTitle =>
+      _translate('createAccountDrawerTitle');
+
+  static String get segmentsTitle => _translate('segmentsTitle');
+
+  static String get localSegmentsTooltip =>
+      _translate('localSegmentsTooltip');
+
+  static String get createSegmentAction =>
+      _translate('createSegmentAction');
+
+  static String get localSegmentsTitle =>
+      _translate('localSegmentsTitle');
+
+  static String get noSegmentsAvailable =>
+      _translate('noSegmentsAvailable');
+
+  static String get noLocalSegmentsSaved =>
+      _translate('noLocalSegmentsSaved');
+
+  static String get segmentStartLabel =>
+      _translate('segmentStartLabel');
+
+  static String get segmentEndLabel =>
+      _translate('segmentEndLabel');
+
+  static String get segmentHiddenBadge =>
+      _translate('segmentHiddenBadge');
+
+  static String get segmentLocalBadge =>
+      _translate('segmentLocalBadge');
+
+  static String get segmentReviewBadge =>
+      _translate('segmentReviewBadge');
+
+  static String get fineTuneSegmentHeadline =>
+      _translate('fineTuneSegmentHeadline');
+
+  static String get adjustSegmentInstructions =>
+      _translate('adjustSegmentInstructions');
+
+  static String get segmentCoordinatesAutoFill =>
+      _translate('segmentCoordinatesAutoFill');
+
+  static String get segmentDetailsSectionTitle =>
+      _translate('segmentDetailsSectionTitle');
+
+  static String get segmentNameLabel =>
+      _translate('segmentNameLabel');
+
+  static String get roadNameLabel => _translate('roadNameLabel');
+
+  static String get segmentStartNameHint =>
+      _translate('segmentStartNameHint');
+
+  static String get segmentEndNameHint =>
+      _translate('segmentEndNameHint');
+
+  static String get segmentStartCoordinatesLabel =>
+      _translate('segmentStartCoordinatesLabel');
+
+  static String get segmentEndPointLabel =>
+      _translate('segmentEndPointLabel');
+
+  static String get saveSegmentAction =>
+      _translate('saveSegmentAction');
+
+  static String get mapDataFromLabel =>
+      _translate('mapDataFromLabel');
+
+  static String get openStreetMapLabel =>
+      _translate('openStreetMapLabel');
+
+  static String segmentAlreadyApprovedAndPublic(String displayId) =>
+      _translateWithArgs('segmentAlreadyApprovedAndPublic', {
+        'displayId': displayId,
+      });
+
+  static String segmentDistanceMeters(String meters) =>
+      _translateWithArgs('segmentDistanceMeters', {'meters': meters});
+
+  static String segmentDistanceKmLeft(String kilometers) =>
+      _translateWithArgs('segmentDistanceKmLeft', {'kilometers': kilometers});
+
+  static String segmentHeadingDifference(String degrees) =>
+      _translateWithArgs('segmentHeadingDifference', {'degrees': degrees});
+
+  static String get segmentDebugTagDetailed =>
+      _translate('segmentDebugTagDetailed');
+
+  static String get segmentDebugTagApprox =>
+      _translate('segmentDebugTagApprox');
+
+  static String get segmentDebugTagDirectionPass =>
+      _translate('segmentDebugTagDirectionPass');
+
+  static String get segmentDebugTagDirectionFail =>
+      _translate('segmentDebugTagDirectionFail');
+
+  static String get segmentDebugTagStart =>
+      _translate('segmentDebugTagStart');
+
+  static String get segmentDebugTagEnd =>
+      _translate('segmentDebugTagEnd');
+
+  static String averageSpeedBanner(String speedKph) =>
+      _translateWithArgs('averageSpeedBanner', {'speed': speedKph});
+
+  static String segmentsDebugCountRadius({
+    required String count,
+    required String radius,
+  }) =>
+      _translateWithArgs('segmentsDebugCountRadius', {
+        'count': count,
+        'radius': radius,
+      });
+
+  static String get fabRecenterLabel =>
+      _translate('fabRecenterLabel');
+
+  static String segmentMaxSpeed(String speedLimit) =>
+      _translateWithArgs('segmentMaxSpeed', {'speed': speedLimit});
+
+  static String get avgSpeedDialLimitLabel =>
+      _translate('avgSpeedDialLimitLabel');
+
+  static String get avgSpeedDialNoSegment =>
+      _translate('avgSpeedDialNoSegment');
+
+  static String get averageSpeedTitle =>
+      _translate('averageSpeedTitle');
+
+  static String get mapHintPlacePointA =>
+      _translate('mapHintPlacePointA');
+
+  static String get mapHintPlacePointB =>
+      _translate('mapHintPlacePointB');
+
+  static String get mapHintDragPoint =>
+      _translate('mapHintDragPoint');
+
   static String failedToLoadCameras(String error) =>
-      'Failed to load cameras: $error';
+      _translateWithArgs('failedToLoadCameras', {'error': error});
 
-  /// Message shown when the app cannot access the segments metadata file.
-  static const String failedToAccessSegmentsMetadataFile =
-      'Failed to access the segments metadata file.';
+  static String distanceToSegmentEndKm(String distanceKm) =>
+      _translateWithArgs('distanceToSegmentEndKm', {'distance': distanceKm});
 
-  /// Message shown when the segments metadata file cannot be parsed.
-  static const String failedToParseSegmentsMetadataFile =
-      'Failed to parse the segments metadata file.';
+  static String distanceToSegmentEndMeters(String distanceMeters) =>
+      _translateWithArgs('distanceToSegmentEndMeters', {'distance': distanceMeters});
 
-  /// Message shown when the segments metadata file cannot be written.
-  static const String failedToWriteSegmentsMetadataFile =
-      'Failed to write to the segments metadata file.';
+  static String get segmentEndNearby =>
+      _translate('segmentEndNearby');
 
-  /// Message shown when submitting a segment for moderation fails.
-  static String failedToSubmitSegmentForModerationWithReason(String reason) =>
-      'Failed to submit the segment for moderation: $reason';
+  static String distanceToSegmentStartKm(String distanceKm) =>
+      _translateWithArgs('distanceToSegmentStartKm', {'distance': distanceKm});
 
-  /// Message shown when checking the submission status fails.
+  static String distanceToSegmentStartMeters(String distanceMeters) =>
+      _translateWithArgs('distanceToSegmentStartMeters', {
+        'distance': distanceMeters,
+      });
+
+  static String get segmentStartNearby =>
+      _translate('segmentStartNearby');
+
+  static String get openMenuTooltip => _translate('openMenuTooltip');
+
+  static String get failedToAccessSegmentsMetadataFile =>
+      _translate('failedToAccessSegmentsMetadataFile');
+
+  static String get failedToParseSegmentsMetadataFile =>
+      _translate('failedToParseSegmentsMetadataFile');
+
+  static String get failedToWriteSegmentsMetadataFile =>
+      _translate('failedToWriteSegmentsMetadataFile');
+
+  static String failedToSubmitSegmentForModerationWithReason(
+    String reason,
+  ) =>
+      _translateWithArgs(
+        'failedToSubmitSegmentForModerationWithReason',
+        {'reason': reason},
+      );
+
   static String failedToCheckSubmissionStatusWithReason(String reason) =>
-      'Failed to check the public submission status: $reason';
+      _translateWithArgs(
+        'failedToCheckSubmissionStatusWithReason',
+        {'reason': reason},
+      );
 
-  /// Message shown when cancelling a submission fails.
   static String failedToCancelSubmissionWithReason(String reason) =>
-      'Failed to cancel the public submission: $reason';
+      _translateWithArgs(
+        'failedToCancelSubmissionWithReason',
+        {'reason': reason},
+      );
 
-  /// Message shown when downloading toll segments fails.
   static String failedToDownloadTollSegments(String reason) =>
-      'Failed to download toll segments: $reason';
+      _translateWithArgs('failedToDownloadTollSegments', {'reason': reason});
 
-  /// Message shown when accessing the local toll segments file fails.
   static String failedToAccessTollSegmentsFile(String reason) =>
-      'Failed to access the toll segments file: $reason';
+      _translateWithArgs('failedToAccessTollSegmentsFile', {'reason': reason});
 
-  /// Message shown when the local storage path for toll segments cannot be
-  /// determined.
-  static const String failedToDetermineTollSegmentsPath =
-      'Failed to determine the local toll segments storage path.';
+  static String get failedToDetermineTollSegmentsPath =>
+      _translate('failedToDetermineTollSegmentsPath');
 
-  /// Message shown when attempting to edit metadata on unsupported platforms.
-  static const String segmentMetadataUpdateUnavailable =
-      'Segment metadata cannot be updated on the web.';
+  static String get segmentMetadataUpdateUnavailable =>
+      _translate('segmentMetadataUpdateUnavailable');
 
-  /// Message shown when Supabase is not configured for moderation submissions.
-  static const String supabaseNotConfiguredForModeration =
-      'Supabase is not configured. Unable to submit the segment for moderation.';
+  static String get supabaseNotConfiguredForModeration =>
+      _translate('supabaseNotConfiguredForModeration');
 
-  /// Message shown when Supabase is not configured for managing public submissions.
-  static const String supabaseNotConfiguredForPublicSubmissions =
-      'Supabase is not configured. Unable to manage public submissions.';
+  static String get supabaseNotConfiguredForPublicSubmissions =>
+      _translate('supabaseNotConfiguredForPublicSubmissions');
 
-  /// Message shown when a logged-in user is required to submit a segment.
-  static const String userRequiredForPublicModeration =
-      'A logged in user is required to submit a public segment for moderation.';
+  static String get userRequiredForPublicModeration =>
+      _translate('userRequiredForPublicModeration');
 
-  /// Message shown when there is no internet connection for moderation actions.
-  static const String noConnectionUnableToSubmitForModeration =
-      'No internet connection. Unable to submit the segment for moderation.';
+  static String get noConnectionUnableToSubmitForModeration =>
+      _translate('noConnectionUnableToSubmitForModeration');
 
-  /// Message shown when there is no internet connection for managing submissions.
-  static const String noConnectionUnableToManageSubmissions =
-      'No internet connection. Unable to manage public submissions.';
+  static String get noConnectionUnableToManageSubmissions =>
+      _translate('noConnectionUnableToManageSubmissions');
 
-  /// Message shown when an unexpected error occurs while submitting a segment.
-  static const String unexpectedErrorSubmittingForModeration =
-      'Unexpected error while submitting the segment for moderation.';
+  static String get unexpectedErrorSubmittingForModeration =>
+      _translate('unexpectedErrorSubmittingForModeration');
 
-  /// Message shown when an unexpected error occurs while checking submission status.
-  static const String unexpectedErrorCheckingSubmissionStatus =
-      'Unexpected error while checking the public submission status.';
+  static String get unexpectedErrorCheckingSubmissionStatus =>
+      _translate('unexpectedErrorCheckingSubmissionStatus');
 
-  /// Message shown when an unexpected error occurs while cancelling a submission.
-  static const String unexpectedErrorCancellingSubmission =
-      'Unexpected error while cancelling the public submission.';
+  static String get unexpectedErrorCancellingSubmission =>
+      _translate('unexpectedErrorCancellingSubmission');
 
-  /// Message shown when there are no more available segment ids.
-  static const String unableToAssignNewSegmentId =
-      'Unable to assign a new segment id: all smallint values are exhausted.';
+  static String get unableToAssignNewSegmentId =>
+      _translate('unableToAssignNewSegmentId');
 
-  /// Message shown when a non-numeric segment id is encountered.
-  static const String nonNumericSegmentIdEncountered =
-      'Encountered an existing segment with a non-numeric id.';
+  static String get nonNumericSegmentIdEncountered =>
+      _translate('nonNumericSegmentIdEncountered');
 
-  /// Message shown when sync is not supported on the current platform.
-  static const String syncNotSupportedOnWeb =
-      'Syncing toll segments is not supported on the web.';
+  static String get syncNotSupportedOnWeb =>
+      _translate('syncNotSupportedOnWeb');
 
-  /// Message shown when the remote table returns no rows.
   static String tableReturnedNoRows(String tableName) =>
-      'The $tableName table did not return any rows.';
+      _translateWithArgs('tableReturnedNoRows', {'tableName': tableName});
 
-  /// Message shown when none of the candidate tables returned any rows.
   static String noTollSegmentRowsFound(String tablesChecked) =>
-      'No toll segment rows were returned from Supabase. Checked tables: '
-      '$tablesChecked. Ensure your account has access to the data.';
+      _translateWithArgs('noTollSegmentRowsFound', {
+        'tablesChecked': tablesChecked,
+      });
 
-  /// Message shown when a required moderation column is missing.
-  static String tableMissingModerationColumn(String tableName, String column) =>
-      'The "$tableName" table is missing the "$column" column required for moderation.';
+  static String tableMissingModerationColumn(
+    String tableName,
+    String column,
+  ) =>
+      _translateWithArgs('tableMissingModerationColumn', {
+        'tableName': tableName,
+        'column': column,
+      });
 
-  /// Message shown when the local CSV is missing required start/end columns.
-  static const String csvMissingStartEndColumns =
-      'CSV must contain "Start" and "End" columns';
+  static String get csvMissingStartEndColumns =>
+      _translate('csvMissingStartEndColumns');
 
-  /// Message shown when an expected column is absent in the remote table.
   static String missingRequiredColumn(String column) =>
-      'Missing required column "$column" in the Toll_Segments table.';
+      _translateWithArgs('missingRequiredColumn', {'column': column});
 
-  /// Title for the dialog prompting the user to sign in before sharing a
-  /// segment publicly.
-  static const String signInToSharePubliclyTitle =
-      'Sign in to share publicly';
+  static String get signInToSharePubliclyTitle =>
+      _translate('signInToSharePubliclyTitle');
 
-  /// Body copy shown when the user must sign in before sharing publicly and is
-  /// given the option to save locally instead.
-  static const String signInToSharePubliclyBody =
-      'You need to be logged in to submit a public segment. Would you like to log in or save the segment locally instead?';
+  static String get signInToSharePubliclyBody =>
+      _translate('signInToSharePubliclyBody');
 
-  /// Label for dialog actions that save a draft locally instead of logging in.
-  static const String saveLocallyAction = 'Save locally';
+  static String get saveLocallyAction => _translate('saveLocallyAction');
 
-  /// Label for dialog actions that initiate the login flow.
-  static const String loginAction = 'Login';
+  static String get loginAction => _translate('loginAction');
 
-  /// Shown when saving a draft locally fails unexpectedly.
-  static const String failedToSaveSegmentLocally =
-      'Failed to save the segment locally.';
+  static String get failedToSaveSegmentLocally =>
+      _translate('failedToSaveSegmentLocally');
 
-  /// Shown when the draft form is missing required coordinate values.
-  static const String startEndCoordinatesRequired =
-      'Start and end coordinates are required.';
+  static String get startEndCoordinatesRequired =>
+      _translate('startEndCoordinatesRequired');
 
-  /// Shown after a successful login when the user is returned to the draft
-  /// flow and needs to press the save button again to continue submission.
-  static const String loggedInRetrySavePrompt =
-      'Logged in successfully. Tap "Save segment" again to submit the segment.';
+  static String get loggedInRetrySavePrompt =>
+      _translate('loggedInRetrySavePrompt');
 
-  /// Shown when launching the OpenStreetMap copyright page fails.
-  static const String osmCopyrightLaunchFailed =
-      'Could not open the OpenStreetMap copyright page.';
+  static String get osmCopyrightLaunchFailed =>
+      _translate('osmCopyrightLaunchFailed');
 
-  /// Shown when the app fails to load the persisted segment metadata
-  /// preferences and falls back to defaults.
   static String failedToLoadSegmentPreferences(String errorMessage) =>
-      'Failed to load segment preferences: $errorMessage';
+      _translateWithArgs('failedToLoadSegmentPreferences', {
+        'errorMessage': errorMessage,
+      });
 
-  /// Shown when Supabase credentials are missing and online sync cannot start.
-  static const String supabaseNotConfiguredForSync =
-      'Supabase is not configured. Please add credentials to enable sync.';
+  static String get supabaseNotConfiguredForSync =>
+      _translate('supabaseNotConfiguredForSync');
 
-  /// Shown when an unexpected error occurs during the toll segment sync flow.
-  static const String unexpectedSyncError =
-      'Unexpected error while syncing toll segments.';
+  static String get unexpectedSyncError =>
+      _translate('unexpectedSyncError');
 
-  /// Builds the sync completion summary shown after the toll segments database
-  /// has been refreshed.
   static String syncCompleteSummary({
     required int addedSegments,
     required int removedSegments,
@@ -418,32 +549,812 @@ class AppMessages {
   }) {
     final parts = <String>[];
     if (addedSegments > 0) {
-      final label = addedSegments == 1 ? 'segment' : 'segments';
-      parts.add('$addedSegments $label added');
+      parts.add(
+        _translateWithArgs('syncAddedSegments', {
+          'count': addedSegments.toString(),
+          'segmentLabel': addedSegments == 1
+              ? _translate('segmentLabelSingular')
+              : _translate('segmentLabelPlural'),
+        }),
+      );
     }
     if (removedSegments > 0) {
-      final label = removedSegments == 1 ? 'segment' : 'segments';
-      parts.add('$removedSegments $label removed');
+      parts.add(
+        _translateWithArgs('syncRemovedSegments', {
+          'count': removedSegments.toString(),
+          'segmentLabel': removedSegments == 1
+              ? _translate('segmentLabelSingular')
+              : _translate('segmentLabelPlural'),
+        }),
+      );
     }
 
     final changesSummary = parts.isEmpty
-        ? 'No changes detected.'
-        : parts.join(', ') + '.';
+        ? _translate('syncNoChangesDetected')
+        : parts.join(_translate('syncChangesSeparator')) +
+            _translate('syncChangesPeriod');
+
     final buffer = StringBuffer(
-      'Sync complete. $changesSummary $totalSegments total segments available.',
+      _translateWithArgs('syncCompleteHeadline', {
+        'changesSummary': changesSummary,
+        'totalSegments': totalSegments.toString(),
+      }),
     );
 
     if (approvedLocalSegments > 0) {
-      final verb = approvedLocalSegments == 1 ? 'was' : 'were';
-      final visibilityVerb = approvedLocalSegments == 1 ? 'is' : 'are';
+      buffer.write(' ');
       buffer.write(
-        ' $approvedLocalSegments of your submitted segments ',
-      );
-      buffer.write(
-        '$verb approved and now $visibilityVerb visible to everyone.',
+        _translateWithArgs('syncApprovedSegments', {
+          'count': approvedLocalSegments.toString(),
+          'wasVerb': approvedLocalSegments == 1
+              ? _translate('syncVerbWas')
+              : _translate('syncVerbWere'),
+          'visibilityVerb': approvedLocalSegments == 1
+              ? _translate('syncVerbIs')
+              : _translate('syncVerbAre'),
+        }),
       );
     }
 
     return buffer.toString();
   }
+
+  static const Map<String, Map<String, String>> _localizedValues = {
+    'segmentSavedLocally': {
+      'en': 'Segment saved locally.',
+      'es': 'Segmento guardado localmente.',
+    },
+    'showSegmentOnMapAction': {
+      'en': 'Show segment on map',
+      'es': 'Mostrar segmento en el mapa',
+    },
+    'hideSegmentOnMapAction': {
+      'en': 'Hide segment on map',
+      'es': 'Ocultar segmento en el mapa',
+    },
+    'segmentVisibilityRestoreSubtitle': {
+      'en': 'Cameras and warnings for this segment will be restored.',
+      'es': 'Se restaurarán las cámaras y alertas para este segmento.',
+    },
+    'segmentVisibilityDisableSubtitle': {
+      'en': 'No cameras or warnings will appear for this segment.',
+      'es': 'No aparecerán cámaras ni alertas para este segmento.',
+    },
+    'segmentHidden': {
+      'en':
+          'Segment {displayId} hidden. Cameras and warnings are disabled.',
+      'es':
+          'Segmento {displayId} oculto. Las cámaras y alertas están desactivadas.',
+    },
+    'segmentVisible': {
+      'en':
+          'Segment {displayId} is visible again. Cameras and warnings restored.',
+      'es':
+          'El segmento {displayId} vuelve a ser visible. Cámaras y alertas restauradas.',
+    },
+    'failedToUpdateSegment': {
+      'en': 'Failed to update segment {displayId}: {errorMessage}',
+      'es':
+          'No se pudo actualizar el segmento {displayId}: {errorMessage}',
+    },
+    'signInToShareSegment': {
+      'en': 'Please sign in to share segments publicly.',
+      'es': 'Inicia sesión para compartir segmentos públicamente.',
+    },
+    'shareSegmentPubliclyAction': {
+      'en': 'Share segment publicly',
+      'es': 'Compartir segmento públicamente',
+    },
+    'publicSharingUnavailable': {
+      'en': 'Public segment sharing is currently unavailable.',
+      'es': 'El uso compartido público de segmentos no está disponible.',
+    },
+    'publicSharingUnavailableShort': {
+      'en': 'Public sharing is not available.',
+      'es': 'El uso compartido público no está disponible.',
+    },
+    'submitSegmentForPublicReviewSubtitle': {
+      'en': 'Submit this segment for public review.',
+      'es': 'Enviar este segmento para revisión pública.',
+    },
+    'unableToDetermineLoggedInAccount': {
+      'en': 'Unable to determine the logged in account.',
+      'es': 'No se puede determinar la cuenta iniciada.',
+    },
+    'failedToPrepareSegmentForReview': {
+      'en': 'Failed to prepare the segment for public review.',
+      'es': 'No se pudo preparar el segmento para la revisión pública.',
+    },
+    'failedToCheckSubmissionStatus': {
+      'en': 'Failed to check the public submission status.',
+      'es': 'No se pudo comprobar el estado del envío público.',
+    },
+    'failedToSubmitForModeration': {
+      'en': 'Failed to submit the segment for moderation.',
+      'es': 'No se pudo enviar el segmento para moderación.',
+    },
+    'unableToWithdrawSubmission': {
+      'en': 'Unable to withdraw the public submission.',
+      'es': 'No se puede retirar el envío público.',
+    },
+    'signInToWithdrawSubmission': {
+      'en': 'Please sign in to withdraw the public submission.',
+      'es': 'Inicia sesión para retirar el envío público.',
+    },
+    'segmentNoLongerUnderReview': {
+      'en':
+          'Segment {displayId} will no longer be reviewed for public release.',
+      'es':
+          'El segmento {displayId} ya no se revisará para su publicación.',
+    },
+    'noConnectionCannotWithdrawSubmission': {
+      'en':
+          'No internet connection. The public submission cannot be withdrawn and the segment will only be deleted locally.',
+      'es':
+          'Sin conexión a internet. El envío público no puede retirarse y el segmento solo se eliminará localmente.',
+    },
+    'failedToCancelPublicReview': {
+      'en': 'Failed to cancel the public review for this segment.',
+      'es': 'No se pudo cancelar la revisión pública de este segmento.',
+    },
+    'failedToDeleteSegment': {
+      'en': 'Failed to delete the segment.',
+      'es': 'No se pudo eliminar el segmento.',
+    },
+    'deleteSegmentAction': {
+      'en': 'Delete segment',
+      'es': 'Eliminar segmento',
+    },
+    'onlyLocalSegmentsCanBeDeleted': {
+      'en': 'Only local segments can be deleted.',
+      'es': 'Solo se pueden eliminar segmentos locales.',
+    },
+    'segmentDeleted': {
+      'en': 'Segment {displayId} deleted.',
+      'es': 'Segmento {displayId} eliminado.',
+    },
+    'deleteSegmentConfirmationTitle': {
+      'en': 'Delete segment',
+      'es': 'Eliminar segmento',
+    },
+    'confirmDeleteSegment': {
+      'en': 'Are you sure you want to delete segment {displayId}?',
+      'es': '¿Seguro que deseas eliminar el segmento {displayId}?',
+    },
+    'unableToDetermineLoggedInAccountRetry': {
+      'en':
+          'Unable to determine the logged in account. Please sign in again.',
+      'es':
+          'No se puede determinar la cuenta iniciada. Inicia sesión nuevamente.',
+    },
+    'chooseSegmentVisibilityQuestion': {
+      'en': 'Do you want the segment to be publically visible?',
+      'es': '¿Quieres que el segmento sea visible públicamente?',
+    },
+    'confirmKeepSegmentPrivate': {
+      'en':
+          'Are you sure that you want to keep the segment only to yourself?',
+      'es': '¿Seguro que quieres mantener el segmento solo para ti?',
+    },
+    'confirmMakeSegmentPublic': {
+      'en': 'Are you sure you want to make this segment public?',
+      'es': '¿Seguro que quieres hacer público este segmento?',
+    },
+    'withdrawPublicSubmissionTitle': {
+      'en': 'Withdraw public submission?',
+      'es': '¿Retirar envío público?',
+    },
+    'withdrawPublicSubmissionMessage': {
+      'en':
+          'You have submitted this segment for review. Do you want to withdraw the submission?',
+      'es':
+          'Has enviado este segmento para revisión. ¿Quieres retirar el envío?',
+    },
+    'somethingWentWrongTryAgain': {
+      'en': 'Something went wrong. Please try again.',
+      'es': 'Algo salió mal. Inténtalo de nuevo.',
+    },
+    'accountCreatedCheckEmail': {
+      'en': 'Account created! Check your email to confirm it.',
+      'es': '¡Cuenta creada! Revisa tu correo para confirmarla.',
+    },
+    'unableToLogOutTryAgain': {
+      'en': 'Unable to log out. Please try again.',
+      'es': 'No se puede cerrar sesión. Inténtalo de nuevo.',
+    },
+    'authenticationNotConfigured': {
+      'en':
+          'Authentication is not configured. Please add Supabase credentials.',
+      'es':
+          'La autenticación no está configurada. Agrega las credenciales de Supabase.',
+    },
+    'unexpectedErrorSigningIn': {
+      'en': 'Unexpected error while signing in.',
+      'es': 'Error inesperado al iniciar sesión.',
+    },
+    'unexpectedErrorCreatingAccount': {
+      'en': 'Unexpected error while creating the account.',
+      'es': 'Error inesperado al crear la cuenta.',
+    },
+    'unexpectedErrorSigningOut': {
+      'en': 'Unexpected error while signing out.',
+      'es': 'Error inesperado al cerrar sesión.',
+    },
+    'enterYourName': {
+      'en': 'Please enter your name',
+      'es': 'Ingresa tu nombre',
+    },
+    'enterYourEmail': {
+      'en': 'Please enter your email',
+      'es': 'Ingresa tu correo electrónico',
+    },
+    'enterYourPassword': {
+      'en': 'Please enter your password',
+      'es': 'Ingresa tu contraseña',
+    },
+    'confirmYourPassword': {
+      'en': 'Please confirm your password',
+      'es': 'Confirma tu contraseña',
+    },
+    'createPasswordPrompt': {
+      'en': 'Please create a password',
+      'es': 'Crea una contraseña',
+    },
+    'passwordTooShort': {
+      'en': 'Password must be at least 6 characters',
+      'es': 'La contraseña debe tener al menos 6 caracteres',
+    },
+    'passwordsDoNotMatch': {
+      'en': 'Passwords do not match',
+      'es': 'Las contraseñas no coinciden',
+    },
+    'createAccountTitle': {
+      'en': 'Create account',
+      'es': 'Crear cuenta',
+    },
+    'joinTollCamHeadline': {
+      'en': 'Join TollCam',
+      'es': 'Únete a TollCam',
+    },
+    'fullNameLabel': {
+      'en': 'Full name',
+      'es': 'Nombre completo',
+    },
+    'emailLabel': {
+      'en': 'Email',
+      'es': 'Correo electrónico',
+    },
+    'passwordLabel': {
+      'en': 'Password',
+      'es': 'Contraseña',
+    },
+    'confirmPasswordLabel': {
+      'en': 'Confirm password',
+      'es': 'Confirmar contraseña',
+    },
+    'createAccountAction': {
+      'en': 'Create account',
+      'es': 'Crear cuenta',
+    },
+    'alreadyHaveAccountPrompt': {
+      'en': 'Already have an account? Log in',
+      'es': '¿Ya tienes una cuenta? Inicia sesión',
+    },
+    'welcomeHeadline': {
+      'en': 'Welcome',
+      'es': 'Bienvenido',
+    },
+    'continueAction': {
+      'en': 'Continue',
+      'es': 'Continuar',
+    },
+    'createNewAccountPrompt': {
+      'en': 'Create a new account',
+      'es': 'Crea una cuenta nueva',
+    },
+    'unknownUser': {
+      'en': 'Unknown user',
+      'es': 'Usuario desconocido',
+    },
+    'profileTitle': {
+      'en': 'Your profile',
+      'es': 'Tu perfil',
+    },
+    'profileSubtitle': {
+      'en': 'Manage your TollCam account and preferences.',
+      'es': 'Administra tu cuenta de TollCam y tus preferencias.',
+    },
+    'logOutAction': {
+      'en': 'Log out',
+      'es': 'Cerrar sesión',
+    },
+    'failedToLoadSegments': {
+      'en': 'Failed to load segments.',
+      'es': 'No se pudieron cargar los segmentos.',
+    },
+    'retryAction': {
+      'en': 'Retry',
+      'es': 'Reintentar',
+    },
+    'yesAction': {
+      'en': 'Yes',
+      'es': 'Sí',
+    },
+    'noAction': {
+      'en': 'No',
+      'es': 'No',
+    },
+    'cancelAction': {
+      'en': 'Cancel',
+      'es': 'Cancelar',
+    },
+    'deleteAction': {
+      'en': 'Delete',
+      'es': 'Eliminar',
+    },
+    'drawerSync': {
+      'en': 'Sync',
+      'es': 'Sincronizar',
+    },
+    'drawerSegments': {
+      'en': 'Segments',
+      'es': 'Segmentos',
+    },
+    'drawerLanguage': {
+      'en': 'Language',
+      'es': 'Idioma',
+    },
+    'drawerProfile': {
+      'en': 'Profile',
+      'es': 'Perfil',
+    },
+    'languageSelectionTitle': {
+      'en': 'Select language',
+      'es': 'Seleccionar idioma',
+    },
+    'languageComingSoon': {
+      'en': 'Coming soon',
+      'es': 'Muy pronto',
+    },
+    'createAccountDrawerTitle': {
+      'en': 'Create an account',
+      'es': 'Crear una cuenta',
+    },
+    'segmentsTitle': {
+      'en': 'Segments',
+      'es': 'Segmentos',
+    },
+    'localSegmentsTooltip': {
+      'en': 'Local segments',
+      'es': 'Segmentos locales',
+    },
+    'createSegmentAction': {
+      'en': 'Create segment',
+      'es': 'Crear segmento',
+    },
+    'localSegmentsTitle': {
+      'en': 'Local segments',
+      'es': 'Segmentos locales',
+    },
+    'noSegmentsAvailable': {
+      'en': 'No segments available.',
+      'es': 'No hay segmentos disponibles.',
+    },
+    'noLocalSegmentsSaved': {
+      'en': 'No local segments saved yet.',
+      'es': 'Aún no hay segmentos locales guardados.',
+    },
+    'segmentStartLabel': {
+      'en': 'Start',
+      'es': 'Inicio',
+    },
+    'segmentEndLabel': {
+      'en': 'End',
+      'es': 'Fin',
+    },
+    'segmentHiddenBadge': {
+      'en': 'Hidden',
+      'es': 'Oculto',
+    },
+    'segmentLocalBadge': {
+      'en': 'Local',
+      'es': 'Local',
+    },
+    'segmentReviewBadge': {
+      'en': 'Review',
+      'es': 'Revisión',
+    },
+    'fineTuneSegmentHeadline': {
+      'en': 'Fine-tune the segment on the map',
+      'es': 'Ajusta el segmento en el mapa',
+    },
+    'adjustSegmentInstructions': {
+      'en': 'Drop or drag markers to adjust the start and end points.',
+      'es': 'Suelta o arrastra marcadores para ajustar los puntos inicial y final.',
+    },
+    'segmentCoordinatesAutoFill': {
+      'en': 'Coordinates are filled automatically as you move them.',
+      'es': 'Las coordenadas se completan automáticamente al moverlos.',
+    },
+    'segmentDetailsSectionTitle': {
+      'en': 'Segment details',
+      'es': 'Detalles del segmento',
+    },
+    'segmentNameLabel': {
+      'en': 'Segment name',
+      'es': 'Nombre del segmento',
+    },
+    'roadNameLabel': {
+      'en': 'Road name',
+      'es': 'Nombre de la vía',
+    },
+    'segmentStartNameHint': {
+      'en': 'Start name',
+      'es': 'Nombre de inicio',
+    },
+    'segmentEndNameHint': {
+      'en': 'End name',
+      'es': 'Nombre de finalización',
+    },
+    'segmentStartCoordinatesLabel': {
+      'en': 'Start coordinates',
+      'es': 'Coordenadas de inicio',
+    },
+    'segmentEndPointLabel': {
+      'en': 'End point',
+      'es': 'Punto final',
+    },
+    'saveSegmentAction': {
+      'en': 'Save segment',
+      'es': 'Guardar segmento',
+    },
+    'mapDataFromLabel': {
+      'en': 'Map data from ',
+      'es': 'Datos del mapa de ',
+    },
+    'openStreetMapLabel': {
+      'en': 'OpenStreetMap',
+      'es': 'OpenStreetMap',
+    },
+    'segmentAlreadyApprovedAndPublic': {
+      'en':
+          'Segment {displayId} was already approved by the administrators and is public.',
+      'es':
+          'El segmento {displayId} ya fue aprobado por los administradores y es público.',
+    },
+    'segmentDistanceMeters': {
+      'en': '{meters} m',
+      'es': '{meters} m',
+    },
+    'segmentDistanceKmLeft': {
+      'en': '{kilometers} km left',
+      'es': 'quedan {kilometers} km',
+    },
+    'segmentHeadingDifference': {
+      'en': 'Δθ={degrees}°',
+      'es': 'Δθ={degrees}°',
+    },
+    'segmentDebugTagDetailed': {
+      'en': 'detailed',
+      'es': 'detallado',
+    },
+    'segmentDebugTagApprox': {
+      'en': 'approx',
+      'es': 'aprox',
+    },
+    'segmentDebugTagDirectionPass': {
+      'en': 'dir✔',
+      'es': 'dir✔',
+    },
+    'segmentDebugTagDirectionFail': {
+      'en': 'dir✖',
+      'es': 'dir✖',
+    },
+    'segmentDebugTagStart': {
+      'en': 'start',
+      'es': 'inicio',
+    },
+    'segmentDebugTagEnd': {
+      'en': 'end',
+      'es': 'fin',
+    },
+    'averageSpeedBanner': {
+      'en': 'avg speed for the last segment: {speed}kph',
+      'es': 'vel. media del último segmento: {speed} km/h',
+    },
+    'segmentsDebugCountRadius': {
+      'en': 'Segments: {count}  r={radius}m',
+      'es': 'Segmentos: {count}  r={radius}m',
+    },
+    'fabRecenterLabel': {
+      'en': 'Recenter',
+      'es': 'Centrar',
+    },
+    'segmentMaxSpeed': {
+      'en': 'Max speed: {speed} km/h',
+      'es': 'Velocidad máx.: {speed} km/h',
+    },
+    'avgSpeedDialLimitLabel': {
+      'en': 'Limit: ',
+      'es': 'Límite: ',
+    },
+    'avgSpeedDialNoSegment': {
+      'en': 'no active segment',
+      'es': 'sin segmento activo',
+    },
+    'averageSpeedTitle': {
+      'en': 'Avg Speed',
+      'es': 'Vel. media',
+    },
+    'mapHintPlacePointA': {
+      'en': 'Tap anywhere on the map to place point A.',
+      'es': 'Toca cualquier lugar del mapa para colocar el punto A.',
+    },
+    'mapHintPlacePointB': {
+      'en': 'Tap a second location to place point B.',
+      'es': 'Toca un segundo lugar para colocar el punto B.',
+    },
+    'mapHintDragPoint': {
+      'en':
+          'Touch and hold A or B for 0.5s, then drag to reposition that point.',
+      'es':
+          'Mantén presionado A o B durante 0,5 s y arrastra para reposicionar ese punto.',
+    },
+    'failedToLoadCameras': {
+      'en': 'Failed to load cameras: {error}',
+      'es': 'No se pudieron cargar las cámaras: {error}',
+    },
+    'distanceToSegmentEndKm': {
+      'en': '{distance} km to segment end',
+      'es': '{distance} km hasta el final del segmento',
+    },
+    'distanceToSegmentEndMeters': {
+      'en': '{distance} m to segment end',
+      'es': '{distance} m hasta el final del segmento',
+    },
+    'segmentEndNearby': {
+      'en': 'Segment end nearby',
+      'es': 'Fin del segmento cercano',
+    },
+    'distanceToSegmentStartKm': {
+      'en': '{distance} km to segment start',
+      'es': '{distance} km hasta el inicio del segmento',
+    },
+    'distanceToSegmentStartMeters': {
+      'en': '{distance} m to segment start',
+      'es': '{distance} m hasta el inicio del segmento',
+    },
+    'segmentStartNearby': {
+      'en': 'Segment start nearby',
+      'es': 'Inicio del segmento cercano',
+    },
+    'openMenuTooltip': {
+      'en': 'Open menu',
+      'es': 'Abrir menú',
+    },
+    'failedToAccessSegmentsMetadataFile': {
+      'en': 'Failed to access the segments metadata file.',
+      'es': 'No se pudo acceder al archivo de metadatos de segmentos.',
+    },
+    'failedToParseSegmentsMetadataFile': {
+      'en': 'Failed to parse the segments metadata file.',
+      'es': 'No se pudieron analizar los metadatos de segmentos.',
+    },
+    'failedToWriteSegmentsMetadataFile': {
+      'en': 'Failed to write to the segments metadata file.',
+      'es': 'No se pudo escribir en el archivo de metadatos de segmentos.',
+    },
+    'failedToSubmitSegmentForModerationWithReason': {
+      'en': 'Failed to submit the segment for moderation: {reason}',
+      'es': 'No se pudo enviar el segmento para moderación: {reason}',
+    },
+    'failedToCheckSubmissionStatusWithReason': {
+      'en': 'Failed to check the public submission status: {reason}',
+      'es': 'No se pudo comprobar el estado del envío público: {reason}',
+    },
+    'failedToCancelSubmissionWithReason': {
+      'en': 'Failed to cancel the public submission: {reason}',
+      'es': 'No se pudo cancelar el envío público: {reason}',
+    },
+    'failedToDownloadTollSegments': {
+      'en': 'Failed to download toll segments: {reason}',
+      'es': 'No se pudieron descargar los segmentos de peaje: {reason}',
+    },
+    'failedToAccessTollSegmentsFile': {
+      'en': 'Failed to access the toll segments file: {reason}',
+      'es': 'No se pudo acceder al archivo de segmentos de peaje: {reason}',
+    },
+    'failedToDetermineTollSegmentsPath': {
+      'en': 'Failed to determine the local toll segments storage path.',
+      'es': 'No se pudo determinar la ruta local para guardar los segmentos.',
+    },
+    'segmentMetadataUpdateUnavailable': {
+      'en': 'Segment metadata cannot be updated on the web.',
+      'es': 'Los metadatos de segmentos no se pueden actualizar en la web.',
+    },
+    'supabaseNotConfiguredForModeration': {
+      'en':
+          'Supabase is not configured. Unable to submit the segment for moderation.',
+      'es':
+          'Supabase no está configurado. No es posible enviar el segmento para moderación.',
+    },
+    'supabaseNotConfiguredForPublicSubmissions': {
+      'en':
+          'Supabase is not configured. Unable to manage public submissions.',
+      'es':
+          'Supabase no está configurado. No es posible gestionar envíos públicos.',
+    },
+    'userRequiredForPublicModeration': {
+      'en':
+          'A logged in user is required to submit a public segment for moderation.',
+      'es':
+          'Se necesita un usuario autenticado para enviar un segmento público a moderación.',
+    },
+    'noConnectionUnableToSubmitForModeration': {
+      'en':
+          'No internet connection. Unable to submit the segment for moderation.',
+      'es':
+          'Sin conexión a internet. No es posible enviar el segmento para moderación.',
+    },
+    'noConnectionUnableToManageSubmissions': {
+      'en': 'No internet connection. Unable to manage public submissions.',
+      'es': 'Sin conexión a internet. No es posible gestionar envíos públicos.',
+    },
+    'unexpectedErrorSubmittingForModeration': {
+      'en': 'Unexpected error while submitting the segment for moderation.',
+      'es': 'Error inesperado al enviar el segmento para moderación.',
+    },
+    'unexpectedErrorCheckingSubmissionStatus': {
+      'en': 'Unexpected error while checking the public submission status.',
+      'es': 'Error inesperado al comprobar el estado del envío público.',
+    },
+    'unexpectedErrorCancellingSubmission': {
+      'en': 'Unexpected error while cancelling the public submission.',
+      'es': 'Error inesperado al cancelar el envío público.',
+    },
+    'unableToAssignNewSegmentId': {
+      'en':
+          'Unable to assign a new segment id: all smallint values are exhausted.',
+      'es':
+          'No se puede asignar un nuevo ID de segmento: se agotaron los valores smallint.',
+    },
+    'nonNumericSegmentIdEncountered': {
+      'en': 'Encountered an existing segment with a non-numeric id.',
+      'es': 'Se encontró un segmento existente con un ID no numérico.',
+    },
+    'syncNotSupportedOnWeb': {
+      'en': 'Syncing toll segments is not supported on the web.',
+      'es': 'La sincronización de segmentos de peaje no es compatible en la web.',
+    },
+    'tableReturnedNoRows': {
+      'en': 'The {tableName} table did not return any rows.',
+      'es': 'La tabla {tableName} no devolvió ninguna fila.',
+    },
+    'noTollSegmentRowsFound': {
+      'en':
+          'No toll segment rows were returned from Supabase. Checked tables: {tablesChecked}. Ensure your account has access to the data.',
+      'es':
+          'Supabase no devolvió filas de segmentos de peaje. Tablas verificadas: {tablesChecked}. Asegúrate de que tu cuenta tenga acceso a los datos.',
+    },
+    'tableMissingModerationColumn': {
+      'en':
+          'The "{tableName}" table is missing the "{column}" column required for moderation.',
+      'es':
+          'La tabla "{tableName}" no tiene la columna "{column}" necesaria para la moderación.',
+    },
+    'csvMissingStartEndColumns': {
+      'en': 'CSV must contain "Start" and "End" columns',
+      'es': 'El CSV debe contener las columnas "Start" y "End"',
+    },
+    'missingRequiredColumn': {
+      'en': 'Missing required column "{column}" in the Toll_Segments table.',
+      'es': 'Falta la columna obligatoria "{column}" en la tabla Toll_Segments.',
+    },
+    'signInToSharePubliclyTitle': {
+      'en': 'Sign in to share publicly',
+      'es': 'Inicia sesión para compartir públicamente',
+    },
+    'signInToSharePubliclyBody': {
+      'en':
+          'You need to be logged in to submit a public segment. Would you like to log in or save the segment locally instead?',
+      'es':
+          'Debes iniciar sesión para enviar un segmento público. ¿Quieres iniciar sesión o guardar el segmento localmente?',
+    },
+    'saveLocallyAction': {
+      'en': 'Save locally',
+      'es': 'Guardar localmente',
+    },
+    'loginAction': {
+      'en': 'Login',
+      'es': 'Iniciar sesión',
+    },
+    'failedToSaveSegmentLocally': {
+      'en': 'Failed to save the segment locally.',
+      'es': 'No se pudo guardar el segmento localmente.',
+    },
+    'startEndCoordinatesRequired': {
+      'en': 'Start and end coordinates are required.',
+      'es': 'Se requieren las coordenadas de inicio y fin.',
+    },
+    'loggedInRetrySavePrompt': {
+      'en':
+          'Logged in successfully. Tap "Save segment" again to submit the segment.',
+      'es':
+          'Inicio de sesión correcto. Pulsa "Guardar segmento" nuevamente para enviarlo.',
+    },
+    'osmCopyrightLaunchFailed': {
+      'en': 'Could not open the OpenStreetMap copyright page.',
+      'es': 'No se pudo abrir la página de derechos de autor de OpenStreetMap.',
+    },
+    'failedToLoadSegmentPreferences': {
+      'en': 'Failed to load segment preferences: {errorMessage}',
+      'es': 'No se pudieron cargar las preferencias de segmentos: {errorMessage}',
+    },
+    'supabaseNotConfiguredForSync': {
+      'en':
+          'Supabase is not configured. Please add credentials to enable sync.',
+      'es':
+          'Supabase no está configurado. Agrega credenciales para habilitar la sincronización.',
+    },
+    'unexpectedSyncError': {
+      'en': 'Unexpected error while syncing toll segments.',
+      'es': 'Error inesperado al sincronizar segmentos de peaje.',
+    },
+    'segmentLabelSingular': {
+      'en': 'segment',
+      'es': 'segmento',
+    },
+    'segmentLabelPlural': {
+      'en': 'segments',
+      'es': 'segmentos',
+    },
+    'syncAddedSegments': {
+      'en': '{count} {segmentLabel} added',
+      'es': 'Se añadieron {count} {segmentLabel}',
+    },
+    'syncRemovedSegments': {
+      'en': '{count} {segmentLabel} removed',
+      'es': 'Se eliminaron {count} {segmentLabel}',
+    },
+    'syncNoChangesDetected': {
+      'en': 'No changes detected.',
+      'es': 'No se detectaron cambios.',
+    },
+    'syncChangesSeparator': {
+      'en': ', ',
+      'es': ', ',
+    },
+    'syncChangesPeriod': {
+      'en': '.',
+      'es': '.',
+    },
+    'syncCompleteHeadline': {
+      'en':
+          'Sync complete. {changesSummary} {totalSegments} total segments available.',
+      'es':
+          'Sincronización completa. {changesSummary} {totalSegments} segmentos totales disponibles.',
+    },
+    'syncApprovedSegments': {
+      'en':
+          '{count} of your submitted segments {wasVerb} approved and now {visibilityVerb} visible to everyone.',
+      'es':
+          '{count} de tus segmentos enviados {wasVerb} aprobados y ahora {visibilityVerb} visibles para todos.',
+    },
+    'syncVerbWas': {
+      'en': 'was',
+      'es': 'fue',
+    },
+    'syncVerbWere': {
+      'en': 'were',
+      'es': 'fueron',
+    },
+    'syncVerbIs': {
+      'en': 'is',
+      'es': 'está',
+    },
+    'syncVerbAre': {
+      'en': 'are',
+      'es': 'están',
+    },
+  };
 }

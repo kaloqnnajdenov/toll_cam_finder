@@ -45,11 +45,11 @@ class _SegmentsPageState extends State<SegmentsPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Segments'),
+          title: Text(AppMessages.segmentsTitle),
           actions: [
             IconButton(
               icon: const Icon(Icons.folder_special_outlined),
-              tooltip: 'Local segments',
+              tooltip: AppMessages.localSegmentsTooltip,
               onPressed: _onShowLocalSegmentsPressed,
             ),
           ],
@@ -93,7 +93,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: const Text('Create segment'),
+          label: Text(AppMessages.createSegmentAction),
         ),
       ),
     );
@@ -258,7 +258,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} is already awaiting public review.',
+              AppMessages.segmentAlreadyAwaitingReview(segment.displayId),
             ),
           ),
         );
@@ -301,7 +301,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          'Segment ${segment.displayId} submitted for public review.',
+          AppMessages.segmentSubmittedForPublicReview(segment.displayId),
         ),
       ),
     );
@@ -390,7 +390,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} was already approved by the administrators and is public.',
+              AppMessages.segmentAlreadyApprovedAndPublic(segment.displayId),
             ),
           ),
         );
@@ -410,7 +410,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                'Segment ${segment.displayId} will no longer be reviewed for public release.',
+                AppMessages.segmentNoLongerUnderReview(segment.displayId),
               ),
             ),
           );
@@ -513,7 +513,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         return false;
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Local segments')),
+        appBar: AppBar(title: Text(AppMessages.localSegmentsTitle)),
         body: FutureBuilder<List<SegmentInfo>>(
           future: _segmentsFuture,
           builder: (context, snapshot) {
@@ -553,7 +553,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: const Text('Create segment'),
+          label: Text(AppMessages.createSegmentAction),
         ),
       ),
     );
@@ -836,7 +836,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} was already approved by the administrators and is public.',
+              AppMessages.segmentAlreadyApprovedAndPublic(segment.displayId),
             ),
           ),
         );

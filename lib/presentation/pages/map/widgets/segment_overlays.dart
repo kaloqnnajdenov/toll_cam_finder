@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
@@ -218,10 +219,14 @@ class _SegmentDebugMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final tags = <String>[
-      path.isDetailed ? 'detailed' : 'approx',
-      path.passesDirection ? 'dir✔' : 'dir✖',
-      if (path.startHit) 'start',
-      if (path.endHit) 'end',
+      path.isDetailed
+          ? AppMessages.segmentDebugTagDetailed
+          : AppMessages.segmentDebugTagApprox,
+      path.passesDirection
+          ? AppMessages.segmentDebugTagDirectionPass
+          : AppMessages.segmentDebugTagDirectionFail,
+      if (path.startHit) AppMessages.segmentDebugTagStart,
+      if (path.endHit) AppMessages.segmentDebugTagEnd,
     ];
 
     return Column(
@@ -248,13 +253,24 @@ class _SegmentDebugMarker extends StatelessWidget {
                   path.id,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                Text('${path.distanceMeters.toStringAsFixed(1)} m'),
+                Text(
+                  AppMessages.segmentDistanceMeters(
+                    path.distanceMeters.toStringAsFixed(1),
+                  ),
+                ),
                 if (path.remainingDistanceMeters.isFinite)
                   Text(
-                    '${(path.remainingDistanceMeters / 1000).toStringAsFixed(2)} km left',
+                    AppMessages.segmentDistanceKmLeft(
+                      (path.remainingDistanceMeters / 1000)
+                          .toStringAsFixed(2),
+                    ),
                   ),
                 if (path.headingDiffDeg != null)
-                  Text('Δθ=${path.headingDiffDeg!.toStringAsFixed(0)}°'),
+                  Text(
+                    AppMessages.segmentHeadingDifference(
+                      path.headingDiffDeg!.toStringAsFixed(0),
+                    ),
+                  ),
                 if (tags.isNotEmpty) Text(tags.join(' · ')),
               ],
             ),

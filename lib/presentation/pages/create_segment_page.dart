@@ -88,7 +88,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create segment')),
+      appBar: AppBar(title: Text(AppMessages.createSegmentAction)),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -148,14 +148,18 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Fine-tune the segment on the map',
+                                    AppMessages.fineTuneSegmentHeadline,
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Drop or drag markers to adjust the start and end points. '
-                                    'Coordinates are filled automatically as you move them.',
+                                    AppMessages.adjustSegmentInstructions,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    AppMessages.segmentCoordinatesAutoFill,
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ],
@@ -184,7 +188,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Segment details',
+                                AppMessages.segmentDetailsSectionTitle,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -193,38 +197,38 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _nameController,
-                                  label: 'Segment name',
-                                  hintText: 'Segment name',
+                                  label: AppMessages.segmentNameLabel,
+                                  hintText: AppMessages.segmentNameLabel,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _roadNameController,
-                                  label: 'Road name',
-                                  hintText: 'Road name',
+                                  label: AppMessages.roadNameLabel,
+                                  hintText: AppMessages.roadNameLabel,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _startNameController,
-                                  label: 'Start',
-                                  hintText: 'Start name',
+                                  label: AppMessages.segmentStartLabel,
+                                  hintText: AppMessages.segmentStartNameHint,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _endNameController,
-                                  label: 'End',
-                                  hintText: 'End name',
+                                  label: AppMessages.segmentEndLabel,
+                                  hintText: AppMessages.segmentEndNameHint,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _startController,
-                                  label: 'Start coordinates',
+                                  label: AppMessages.segmentStartCoordinatesLabel,
                                   hintText: '41.8626802,26.0873785',
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _endController,
-                                  label: 'End point',
+                                  label: AppMessages.segmentEndPointLabel,
                                   hintText: '41.8322163,26.1404669',
                                 ),
                               ),
@@ -238,7 +242,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                         child: FilledButton.icon(
                           onPressed: _onSavePressed,
                           icon: const Icon(Icons.check_circle),
-                          label: const Text('Save segment'),
+                          label: Text(AppMessages.saveSegmentAction),
                         ),
                       ),
                     ],
@@ -265,13 +269,13 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.private);
               },
-              child: const Text(AppMessages.noAction),
+              child: Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop(_SegmentVisibilityChoice.public);
               },
-              child: const Text(AppMessages.yesAction),
+              child: Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -311,11 +315,11 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(AppMessages.noAction),
+              child: Text(AppMessages.noAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(AppMessages.yesAction),
+              child: Text(AppMessages.yesAction),
             ),
           ],
         );
@@ -348,20 +352,20 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         useRootNavigator: true,
         builder: (context) {
           return AlertDialog(
-            title: const Text(AppMessages.signInToSharePubliclyTitle),
-            content: const Text(AppMessages.signInToSharePubliclyBody),
+            title: Text(AppMessages.signInToSharePubliclyTitle),
+            content: Text(AppMessages.signInToSharePubliclyBody),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.saveLocally);
                 },
-                child: const Text(AppMessages.saveLocallyAction),
+                child: Text(AppMessages.saveLocallyAction),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop(_LoginOrLocalChoice.login);
                 },
-                child: const Text(AppMessages.loginAction),
+                child: Text(AppMessages.loginAction),
               ),
             ],
           );
@@ -440,7 +444,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(AppMessages.segmentSubmittedForPublicReviewGeneric),
       ),
     );

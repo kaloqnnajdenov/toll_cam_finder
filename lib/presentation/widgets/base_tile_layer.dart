@@ -47,7 +47,7 @@ class BaseTileLayer extends StatelessWidget {
 
   static void _showLaunchError(BuildContext context) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(AppMessages.osmCopyrightLaunchFailed),
       ),
     );
@@ -101,9 +101,9 @@ class _OsmAttributionText extends StatelessWidget {
       text: TextSpan(
         style: baseStyle,
         children: [
-          const TextSpan(text: 'Map data from '),
+          TextSpan(text: AppMessages.mapDataFromLabel),
           TextSpan(
-            text: 'OpenStreetMap',
+            text: AppMessages.openStreetMapLabel,
             style: linkStyle,
             recognizer: TapGestureRecognizer()..onTap = onLinkTap,
           ),

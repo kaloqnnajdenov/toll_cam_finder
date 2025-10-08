@@ -262,7 +262,7 @@ class SegmentIndexService {
     final endIdx = header.indexOf('end');
 
     if (startIdx == -1 || endIdx == -1) {
-      throw const FormatException(AppMessages.csvMissingStartEndColumns);
+      throw FormatException(AppMessages.csvMissingStartEndColumns);
     }
 
     final nameIdx = header.indexOf('name');

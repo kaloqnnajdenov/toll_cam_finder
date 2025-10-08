@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
@@ -78,8 +79,9 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialBannerRadius),
             ),
             child: Text(
-              'avg speed for the last segment: '
-              '${lastSegmentAvgKmh!.toStringAsFixed(1)}kph',
+              AppMessages.averageSpeedBanner(
+                lastSegmentAvgKmh!.toStringAsFixed(1),
+              ),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
@@ -100,7 +102,10 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialDebugBadgeRadius),
             ),
             child: Text(
-              'Segments: $segmentCount  r=${segmentRadiusMeters.toInt()}m',
+              AppMessages.segmentsDebugCountRadius(
+                count: segmentCount.toString(),
+                radius: segmentRadiusMeters.toInt().toString(),
+              ),
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),

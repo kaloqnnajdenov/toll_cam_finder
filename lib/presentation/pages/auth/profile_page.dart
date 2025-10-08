@@ -12,11 +12,11 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
-    final email = auth.currentEmail ?? 'Unknown user';
+    final email = auth.currentEmail ?? AppMessages.unknownUser;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your profile'),
+        title: Text(AppMessages.profileTitle),
       ),
       body: SafeArea(
         child: Padding(
@@ -36,7 +36,7 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Manage your TollCam account and preferences.',
+                AppMessages.profileSubtitle,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -56,13 +56,13 @@ class ProfilePage extends StatelessWidget {
                   } catch (error, stackTrace) {
                     debugPrint('Logout error: $error\n$stackTrace');
                     messenger.showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(AppMessages.unableToLogOutTryAgain),
                       ),
                     );
                   }
                 },
-                child: const Text('Log out'),
+                child: Text(AppMessages.logOutAction),
               ),
             ],
           ),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
+
 class EmptySegmentsView extends StatelessWidget {
   const EmptySegmentsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('No segments available.'));
+    return Center(child: Text(AppMessages.noSegmentsAvailable));
   }
 }
 
@@ -14,6 +16,6 @@ class EmptyLocalSegmentsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('No local segments saved yet.'));
+    return Center(child: Text(AppMessages.noLocalSegmentsSaved));
   }
 }

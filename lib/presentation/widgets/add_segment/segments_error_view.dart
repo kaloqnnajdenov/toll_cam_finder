@@ -15,11 +15,11 @@ class SegmentsErrorView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(AppMessages.failedToLoadSegments),
+          Text(AppMessages.failedToLoadSegments),
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: onRetry,
-            child: const Text(AppMessages.retryAction),
+            child: Text(AppMessages.retryAction),
           ),
         ],
       ),

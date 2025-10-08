@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
@@ -8,7 +9,7 @@ class AverageSpeedDial extends StatelessWidget {
   const AverageSpeedDial({
     super.key,
     required this.controller,
-    this.title = 'Avg Speed',
+    this.title,
     this.decimals = AppConstants.speedDialDefaultDecimals,
     this.unit = 'km/h',
     this.width = AppConstants.speedDialDefaultWidth,
@@ -17,7 +18,7 @@ class AverageSpeedDial extends StatelessWidget {
   });
 
   final AverageSpeedController controller;
-  final String title;
+  final String? title;
   final int decimals;
   final String unit;
   final double width;
@@ -28,6 +29,7 @@ class AverageSpeedDial extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final effectiveTitle = title ?? AppMessages.averageSpeedTitle;
 
     return AnimatedBuilder(
       animation: controller,
@@ -53,7 +55,7 @@ class AverageSpeedDial extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        title,
+                        effectiveTitle,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -90,9 +92,9 @@ class AverageSpeedDial extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          'Limit: '
-                          '${speedLimitKph!.toStringAsFixed(speedLimitKph! % 1 == 0 ? 0 : decimals)} '
-                          '$unit',
+                          AppMessages.avgSpeedDialLimitLabel +
+                              '${speedLimitKph!.toStringAsFixed(speedLimitKph! % 1 == 0 ? 0 : decimals)} '
+                              '$unit',
                           textAlign: TextAlign.center,
                           style: textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -107,7 +109,7 @@ class AverageSpeedDial extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
-                        'no active segment',
+                        AppMessages.avgSpeedDialNoSegment,
                         textAlign: TextAlign.center,
                         style: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
