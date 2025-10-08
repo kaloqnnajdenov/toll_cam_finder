@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
@@ -14,10 +15,13 @@ class AverageSpeedButton extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final running = controller.isRunning;
+        final localizations = AppLocalizations.of(context);
         return FloatingActionButton.small(
           heroTag: 'avg_speed_btn',
           onPressed: () => running ? controller.reset() : controller.start(),
-          tooltip: running ? 'Reset Avg' : 'Start Avg',
+          tooltip: running
+              ? localizations.averageSpeedResetTooltip
+              : localizations.averageSpeedStartTooltip,
           child: AnimatedSwitcher(
             duration: const Duration(
               milliseconds: AppConstants.avgSpeedButtonAnimationMs,

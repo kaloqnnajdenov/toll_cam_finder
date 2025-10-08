@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../app/localization/app_localizations.dart';
+import '../core/app_messages.dart';
+
 class LanguageOption {
   const LanguageOption({
     required this.locale,
@@ -13,7 +16,9 @@ class LanguageOption {
 }
 
 class LanguageController extends ChangeNotifier {
-  LanguageController();
+  LanguageController() {
+    AppMessages.updateLocale(_locale);
+  }
 
   static const List<LanguageOption> _languageOptions = [
     LanguageOption(
@@ -24,7 +29,7 @@ class LanguageController extends ChangeNotifier {
     LanguageOption(
       locale: Locale('es'),
       label: 'Español',
-      available: false,
+      available: true,
     ),
   ];
 
@@ -34,10 +39,7 @@ class LanguageController extends ChangeNotifier {
 
   List<LanguageOption> get languageOptions => _languageOptions;
 
-  List<Locale> get supportedLocales => _languageOptions
-      .where((option) => option.available)
-      .map((option) => option.locale)
-      .toList();
+  List<Locale> get supportedLocales => AppLocalizations.supportedLocales;
 
   LanguageOption get currentOption => _languageOptions.firstWhere(
         (option) => option.locale == _locale,
@@ -56,6 +58,7 @@ class LanguageController extends ChangeNotifier {
     }
 
     _locale = locale;
+    AppMessages.updateLocale(_locale);
     notifyListeners();
   }
 }

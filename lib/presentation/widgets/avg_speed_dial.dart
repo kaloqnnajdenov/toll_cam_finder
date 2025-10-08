@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/smooth_number_text.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
@@ -28,6 +29,8 @@ class AverageSpeedDial extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+
+    final localizations = AppLocalizations.of(context);
 
     return AnimatedBuilder(
       animation: controller,
@@ -90,9 +93,16 @@ class AverageSpeedDial extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          'Limit: '
-                          '${speedLimitKph!.toStringAsFixed(speedLimitKph! % 1 == 0 ? 0 : decimals)} '
-                          '$unit',
+                          localizations.translate(
+                            'speedDialLimitLabel',
+                            {
+                              'value': speedLimitKph!
+                                  .toStringAsFixed(
+                                    speedLimitKph! % 1 == 0 ? 0 : decimals,
+                                  ),
+                              'unit': unit,
+                            },
+                          ),
                           textAlign: TextAlign.center,
                           style: textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -107,7 +117,7 @@ class AverageSpeedDial extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
-                        'no active segment',
+                        localizations.speedDialNoActiveSegment,
                         textAlign: TextAlign.center,
                         style: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,

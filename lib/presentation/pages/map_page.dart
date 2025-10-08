@@ -21,6 +21,7 @@ import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
 
 import '../../app/app_routes.dart';
+import '../../app/localization/app_localizations.dart';
 import '../../services/auth_controller.dart';
 import '../../services/language_controller.dart';
 import '../../services/location_service.dart';
@@ -254,6 +255,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return null;
     }
 
+    final localizations = AppLocalizations.of(context);
+
     final String? activeId = event.activeSegmentId;
     if (activeId != null) {
       final activePath =
@@ -266,12 +269,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           activePath.remainingDistanceMeters >= 0) {
         final remaining = activePath.remainingDistanceMeters;
         if (remaining >= 1000) {
-          return '${(remaining / 1000).toStringAsFixed(2)} km to segment end';
+          return localizations.translate(
+            'segmentProgressEndKilometers',
+            {'distance': (remaining / 1000).toStringAsFixed(2)},
+          );
         }
         if (remaining >= 1) {
-          return '${remaining.toStringAsFixed(0)} m to segment end';
+          return localizations.translate(
+            'segmentProgressEndMeters',
+            {'distance': remaining.toStringAsFixed(0)},
+          );
         }
-        return 'Segment end nearby';
+        return localizations.translate('segmentProgressEndNearby');
       }
       return null;
     }
@@ -293,12 +302,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     final double distance = upcoming.startDistanceMeters;
     if (distance >= 1000) {
-      return '${(distance / 1000).toStringAsFixed(2)} km to segment start';
+      return localizations.translate(
+        'segmentProgressStartKilometers',
+        {'distance': (distance / 1000).toStringAsFixed(2)},
+      );
     }
     if (distance >= 1) {
-      return '${distance.toStringAsFixed(0)} m to segment start';
+      return localizations.translate(
+        'segmentProgressStartMeters',
+        {'distance': distance.toStringAsFixed(0)},
+      );
     }
-    return 'Segment start nearby';
+    return localizations.translate('segmentProgressStartNearby');
   }
 
   SegmentDebugPath? _firstPathMatching(
@@ -508,7 +523,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                       child: IconButton(
                         onPressed: () => Scaffold.of(context).openEndDrawer(),
                         icon: const Icon(Icons.menu, color: Colors.white),
-                        tooltip: 'Open menu',
+                        tooltip: AppLocalizations.of(context).openMenu,
                       ),
                     );
                   },
@@ -528,6 +543,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Drawer _buildOptionsDrawer() {
+    final localizations = AppLocalizations.of(context);
     final languageController = context.watch<LanguageController>();
     return Drawer(
       child: SafeArea(
@@ -536,7 +552,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           children: [
             ListTile(
               leading: const Icon(Icons.sync),
-              title: const Text('Sync'),
+              title: Text(localizations.sync),
               enabled: !_isSyncing,
               trailing: _isSyncing
                   ? const SizedBox(
@@ -549,18 +565,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             ),
             ListTile(
               leading: const Icon(Icons.segment),
-              title: const Text('Segments'),
+              title: Text(localizations.segments),
               onTap: _onSegmentsSelected,
             ),
             ListTile(
               leading: const Icon(Icons.language),
-              title: const Text('Language'),
+              title: Text(localizations.languageButton),
               subtitle: Text(languageController.currentOption.label),
               onTap: _onLanguageSelected,
             ),
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: const Text('Profile'),
+              title: Text(localizations.profile),
               onTap: () {
                 Navigator.of(context).pop();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -576,6 +592,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   void _onLanguageSelected() {
+    final localizations = AppLocalizations.of(context);
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -589,8 +606,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                 return ListView(
                   shrinkWrap: true,
                   children: [
-                    const ListTile(
-                      title: Text('Select language'),
+                    ListTile(
+                      title: Text(localizations.selectLanguage),
                     ),
                     for (final option in options)
                       ListTile(
@@ -601,7 +618,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                         enabled: option.available,
                         subtitle: option.available
                             ? null
-                            : const Text('Coming soon'),
+                            : Text(localizations.comingSoon),
                         onTap: option.available
                             ? () {
                                 controller.setLocale(option.locale);
@@ -620,6 +637,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   void _onProfileSelected() {
+    final localizations = AppLocalizations.of(context);
     final auth = context.read<AuthController>();
     if (auth.isLoggedIn) {
       Navigator.of(context).pushNamed(AppRoutes.profile);
@@ -634,7 +652,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             children: [
               ListTile(
                 leading: const Icon(Icons.login),
-                title: const Text('Log in'),
+                title: Text(localizations.logIn),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   Navigator.of(context).pushNamed(AppRoutes.login);
@@ -642,7 +660,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
               ListTile(
                 leading: const Icon(Icons.person_add_alt),
-                title: const Text('Create an account'),
+                title: Text(localizations.createAccountCta),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   Navigator.of(context).pushNamed(AppRoutes.signUp);
@@ -726,7 +744,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     if (client == null) {
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(AppMessages.supabaseNotConfiguredForSync),
         ),
       );
@@ -764,7 +782,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     } catch (error, stackTrace) {
       debugPrint('Failed to sync toll segments: $error\n$stackTrace');
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(AppMessages.unexpectedSyncError),
         ),
       );

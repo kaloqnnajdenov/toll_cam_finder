@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
@@ -217,12 +219,19 @@ class _SegmentDebugMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final localizations = AppLocalizations.of(context);
     final tags = <String>[
-      path.isDetailed ? 'detailed' : 'approx',
-      path.passesDirection ? 'dir✔' : 'dir✖',
-      if (path.startHit) 'start',
-      if (path.endHit) 'end',
+      path.isDetailed
+          ? localizations.translate('segmentDebugTagDetailed')
+          : localizations.translate('segmentDebugTagApprox'),
+      path.passesDirection
+          ? localizations.translate('segmentDebugTagDirectionPass')
+          : localizations.translate('segmentDebugTagDirectionFail'),
+      if (path.startHit)
+        localizations.translate('segmentDebugTagStart'),
+      if (path.endHit) localizations.translate('segmentDebugTagEnd'),
     ];
+    final separator = localizations.translate('segmentDebugTagSeparator');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -248,14 +257,30 @@ class _SegmentDebugMarker extends StatelessWidget {
                   path.id,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                Text('${path.distanceMeters.toStringAsFixed(1)} m'),
+                Text(
+                  localizations.translate(
+                    'segmentDebugDistanceMeters',
+                    {'distance': path.distanceMeters.toStringAsFixed(1)},
+                  ),
+                ),
                 if (path.remainingDistanceMeters.isFinite)
                   Text(
-                    '${(path.remainingDistanceMeters / 1000).toStringAsFixed(2)} km left',
+                    localizations.translate(
+                      'segmentDebugDistanceKilometersLeft',
+                      {
+                        'distance': (path.remainingDistanceMeters / 1000)
+                            .toStringAsFixed(2),
+                      },
+                    ),
                   ),
                 if (path.headingDiffDeg != null)
-                  Text('Δθ=${path.headingDiffDeg!.toStringAsFixed(0)}°'),
-                if (tags.isNotEmpty) Text(tags.join(' · ')),
+                  Text(
+                    localizations.translate(
+                      'segmentDebugHeadingDiff',
+                      {'angle': path.headingDiffDeg!.toStringAsFixed(0)},
+                    ),
+                  ),
+                if (tags.isNotEmpty) Text(tags.join(separator)),
               ],
             ),
           ),

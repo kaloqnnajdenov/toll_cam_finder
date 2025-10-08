@@ -11,6 +11,7 @@ import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/segments_repository.dart';
 
 import '../../app/app_routes.dart';
+import '../../app/localization/app_localizations.dart';
 import '../widgets/add_segment/empty_segments_views.dart';
 import '../widgets/add_segment/segment_action_dialogs.dart';
 import '../widgets/add_segment/segment_card.dart';
@@ -38,6 +39,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(_segmentsUpdated);
@@ -45,11 +47,11 @@ class _SegmentsPageState extends State<SegmentsPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Segments'),
+          title: Text(localizations.segments),
           actions: [
             IconButton(
               icon: const Icon(Icons.folder_special_outlined),
-              tooltip: 'Local segments',
+              tooltip: localizations.localSegments,
               onPressed: _onShowLocalSegmentsPressed,
             ),
           ],
@@ -93,7 +95,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: const Text('Create segment'),
+          label: Text(localizations.createSegment),
         ),
       ),
     );
@@ -507,13 +509,14 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(_segmentsUpdated);
         return false;
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Local segments')),
+        appBar: AppBar(title: Text(localizations.localSegments)),
         body: FutureBuilder<List<SegmentInfo>>(
           future: _segmentsFuture,
           builder: (context, snapshot) {
@@ -553,7 +556,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: const Text('Create segment'),
+          label: Text(localizations.createSegment),
         ),
       ),
     );
