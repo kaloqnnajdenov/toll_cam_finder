@@ -104,7 +104,12 @@ class AppConstants {
   /// Radius (meters) used to query nearby toll-road segments; expanding it
   /// yields more candidates at the cost of extra processing, shrinking risks
   /// missing relevant segments.
-  static const double candidateRadiusMeters = 3000;
+  ///
+  /// The previous value of 3000 m pulled in a large chunk of the dataset on
+  /// every GPS fix, which had a measurable CPU and battery cost. Dropping the
+  /// radius keeps more of the work local to the driver's immediate vicinity
+  /// while still leaving plenty of margin for GPS noise on fast roads.
+  static const double candidateRadiusMeters = 1200;
 
   ///Acts as the half-life for the exponential smoothing that blends the previously
   ///displayed position with each new GPS fix. Shortening it makes the blue dot
@@ -138,7 +143,16 @@ class AppConstants {
   /// Requested interval (ms) between GPS samples on Android; lowering it asks
   /// for more frequent updates (better responsiveness, more battery), raising
   /// it saves power but slows tracking.
-  static const int gpsSampleIntervalMs = 100;
+  ///
+  /// We previously sampled at 100 ms (10 Hz) which overwhelms devices when the
+  /// UI also performs spatial lookups for each fix. Asking for 1 Hz updates
+  /// keeps the dot responsive without the heavy energy footprint.
+  static const int gpsSampleIntervalMs = 1000;
+
+  /// Minimum distance (in meters) that the user must travel before another GPS
+  /// update is emitted. A zero filter floods the app with fixes even when the
+  /// user is stationary, which wastes battery and heats devices unnecessarily.
+  static const int gpsDistanceFilterMeters = 5;
 
   /// HTTP user-agent package identifier sent to the tile server; replace with a
   /// real app id to stay within OpenStreetMap usage policy.
