@@ -1,6 +1,8 @@
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
+
 import 'segments_metadata_service.dart';
 import 'toll_segments_csv_constants.dart';
 import 'toll_segments_file_system.dart';
@@ -63,7 +65,7 @@ class LocalSegmentsService {
     double? speedLimitKph,
   }) {
     final normalizedName = name.trim().isEmpty
-        ? 'Personal segment'
+        ? AppMessages.personalSegmentDefaultName
         : name.trim();
     final normalizedRoadName = roadName?.trim() ?? '';
     final normalizedStartDisplayName = startDisplayName?.trim();
@@ -76,10 +78,10 @@ class LocalSegmentsService {
       roadName: normalizedRoadName,
       startDisplayName: normalizedStartDisplayName?.isNotEmpty == true
           ? normalizedStartDisplayName!
-          : '$normalizedName start',
+          : AppMessages.segmentDefaultStartName(normalizedName),
       endDisplayName: normalizedEndDisplayName?.isNotEmpty == true
           ? normalizedEndDisplayName!
-          : '$normalizedName end',
+          : AppMessages.segmentDefaultEndName(normalizedName),
       startCoordinates: normalizedStart,
       endCoordinates: normalizedEnd,
       isPublic: isPublic,
@@ -90,8 +92,8 @@ class LocalSegmentsService {
   /// Persists a [SegmentDraft] locally and returns the generated identifier.
   Future<String> saveDraft(SegmentDraft draft) async {
     if (kIsWeb) {
-      throw const LocalSegmentsServiceException(
-        'Saving local segments is not supported on the web.',
+      throw LocalSegmentsServiceException(
+        AppMessages.savingLocalSegmentsNotSupportedOnWeb,
       );
     }
 
@@ -138,14 +140,14 @@ class LocalSegmentsService {
   /// Loads the locally stored segment that matches the provided identifier.
   Future<SegmentDraft> loadDraft(String id) async {
     if (kIsWeb) {
-      throw const LocalSegmentsServiceException(
-        'Loading local segments is not supported on the web.',
+      throw LocalSegmentsServiceException(
+        AppMessages.loadingLocalSegmentsNotSupportedOnWeb,
       );
     }
 
     if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
-      throw const LocalSegmentsServiceException(
-        'Only segments saved locally can be shared publicly.',
+      throw LocalSegmentsServiceException(
+        AppMessages.onlySegmentsSavedLocallyCanBeShared,
       );
     }
 
@@ -154,15 +156,15 @@ class LocalSegmentsService {
     );
 
     if (!await _fileSystem.exists(csvPath)) {
-      throw const LocalSegmentsServiceException(
-        'The segment could not be found locally.',
+      throw LocalSegmentsServiceException(
+        AppMessages.segmentNotFoundLocally,
       );
     }
 
     final rows = await _readExistingRows(csvPath);
     if (rows.isEmpty) {
-      throw const LocalSegmentsServiceException(
-        'The segment could not be found locally.',
+      throw LocalSegmentsServiceException(
+        AppMessages.segmentNotFoundLocally,
       );
     }
 
@@ -186,18 +188,19 @@ class LocalSegmentsService {
           speedLimit.isEmpty ? null : double.tryParse(speedLimit);
 
       if (startCoordinates.isEmpty || endCoordinates.isEmpty) {
-        throw const LocalSegmentsServiceException(
-          'The saved segment is missing coordinates and cannot be shared publicly.',
+        throw LocalSegmentsServiceException(
+          AppMessages.segmentMissingCoordinates,
         );
       }
 
-      final resolvedName = name.isNotEmpty ? name : 'Personal segment';
+      final resolvedName =
+          name.isNotEmpty ? name : AppMessages.personalSegmentDefaultName;
       final resolvedStartDisplayName = startDisplayName.isNotEmpty
           ? startDisplayName
-          : '$resolvedName start';
+          : AppMessages.segmentDefaultStartName(resolvedName);
       final resolvedEndDisplayName = endDisplayName.isNotEmpty
           ? endDisplayName
-          : '$resolvedName end';
+          : AppMessages.segmentDefaultEndName(resolvedName);
 
       return SegmentDraft(
         name: resolvedName,
@@ -211,21 +214,21 @@ class LocalSegmentsService {
       );
     }
 
-    throw const LocalSegmentsServiceException(
-      'The segment could not be found locally.',
+    throw LocalSegmentsServiceException(
+      AppMessages.segmentNotFoundLocally,
     );
   }
 
   Future<bool> deleteLocalSegment(String id) async {
     if (kIsWeb) {
-      throw const LocalSegmentsServiceException(
-        'Deleting local segments is not supported on the web.',
+      throw LocalSegmentsServiceException(
+        AppMessages.deletingLocalSegmentsNotSupportedOnWeb,
       );
     }
 
     if (!id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
-      throw const LocalSegmentsServiceException(
-        'Only segments saved locally can be deleted.',
+      throw LocalSegmentsServiceException(
+        AppMessages.onlyLocalSegmentsCanBeDeleted,
       );
     }
 
@@ -423,16 +426,16 @@ class LocalSegmentsService {
   String _normalizeCoordinates(String input) {
     final parts = input.split(',');
     if (parts.length < 2) {
-      throw const LocalSegmentsServiceException(
-        'Coordinates must be provided in the format "lat, lon".',
+      throw LocalSegmentsServiceException(
+        AppMessages.coordinatesMustBeProvided,
       );
     }
 
     final lat = double.tryParse(parts[0].trim());
     final lon = double.tryParse(parts[1].trim());
     if (lat == null || lon == null) {
-      throw const LocalSegmentsServiceException(
-        'Coordinates must be valid decimal numbers.',
+      throw LocalSegmentsServiceException(
+        AppMessages.coordinatesMustBeDecimalNumbers,
       );
     }
 
