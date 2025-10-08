@@ -80,6 +80,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   String? _segmentProgressLabel;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
+  DateTime? _nextCameraCheckAt;
 
   @override
   void initState() {
@@ -153,6 +154,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       compassHeading: _compassHeading,
     );
     _applySegmentEvent(segEvent);
+    _updateCameraPollingSchedule(firstFix);
 
     if (mounted) setState(() {});
 
@@ -174,14 +176,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _avgCtrl.addSample(shownKmh);
     final previous = _userLatLng;
     _moveBlueDot(next);
-    final segEvent = _segmentTracker.handleLocationUpdate(
-      current: next,
-      previous: previous,
-      rawHeading: position.heading,
-      speedKmh: smoothedKmh,
-      compassHeading: _compassHeading,
-    );
-    _applySegmentEvent(segEvent);
+    final now = DateTime.now();
+    if (_shouldProcessSegmentUpdate(now)) {
+      final segEvent = _segmentTracker.handleLocationUpdate(
+        current: next,
+        previous: previous,
+        rawHeading: position.heading,
+        speedKmh: smoothedKmh,
+        compassHeading: _compassHeading,
+      );
+      _applySegmentEvent(segEvent);
+      _updateCameraPollingSchedule(next);
+    }
 
     if (!mounted) return;
 
@@ -222,6 +228,53 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
+    _nextCameraCheckAt = null;
+  }
+
+  bool _shouldProcessSegmentUpdate(DateTime now) {
+    if (_segmentTracker.activeSegmentId != null) {
+      return true;
+    }
+    final DateTime? nextCheck = _nextCameraCheckAt;
+    if (nextCheck == null) {
+      return true;
+    }
+    return !now.isBefore(nextCheck);
+  }
+
+  void _updateCameraPollingSchedule(LatLng position) {
+    if (_segmentTracker.activeSegmentId != null) {
+      _nextCameraCheckAt = null;
+      return;
+    }
+
+    final double? distance =
+        _cameraController.nearestCameraDistanceMeters(position);
+    final Duration delay = _cameraPollingDelayForDistance(distance);
+    if (delay <= Duration.zero) {
+      _nextCameraCheckAt = null;
+    } else {
+      _nextCameraCheckAt = DateTime.now().add(delay);
+    }
+  }
+
+  Duration _cameraPollingDelayForDistance(double? distanceMeters) {
+    if (distanceMeters == null) {
+      return const Duration(minutes: 3);
+    }
+    if (distanceMeters > 10000) {
+      return const Duration(minutes: 3);
+    }
+    if (distanceMeters > 5000) {
+      return const Duration(minutes: 1, seconds: 30);
+    }
+    if (distanceMeters > 2000) {
+      return const Duration(seconds: 40);
+    }
+    if (distanceMeters > 1000) {
+      return const Duration(seconds: 15);
+    }
+    return Duration.zero;
   }
 
   double _normalizeSpeed(double metersPerSecond) {
@@ -395,6 +448,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       excludedSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
     );
     if (!mounted) return;
+    _nextCameraCheckAt = null;
     _updateVisibleCameras();
   }
 
@@ -438,6 +492,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         compassHeading: _compassHeading,
       );
       _applySegmentEvent(seedEvent);
+      _updateCameraPollingSchedule(_userLatLng!);
     }
 
     setState(() {});

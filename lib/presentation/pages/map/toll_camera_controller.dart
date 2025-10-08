@@ -30,4 +30,8 @@ class TollCameraController {
   void updateVisible({LatLngBounds? bounds}) {
     _cameras.updateVisible(bounds: bounds);
   }
+
+  double? nearestCameraDistanceMeters(LatLng point) {
+    return _cameras.nearestCameraDistanceMeters(point);
+  }
 }

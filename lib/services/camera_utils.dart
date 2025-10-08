@@ -28,6 +28,7 @@ class CameraUtils {
   List<LatLng> _visibleCameras = [];
   bool _loading = true;
   String? _error;
+  final Distance _distance = const Distance();
 
   // --- public getters (read-only to the outside) ---
   List<LatLng> get allCameras => _allCameras;
@@ -73,6 +74,23 @@ class CameraUtils {
       if (_boundsContains(padded, p)) res.add(p);
     }
     _visibleCameras = res;
+  }
+
+  /// Calculates the distance to the nearest camera from [point], returning the
+  /// value in meters. When no cameras are loaded the method yields `null`.
+  double? nearestCameraDistanceMeters(LatLng point) {
+    if (_allCameras.isEmpty) {
+      return null;
+    }
+
+    double? best;
+    for (final camera in _allCameras) {
+      final double meters = _distance(point, camera);
+      if (best == null || meters < best) {
+        best = meters;
+      }
+    }
+    return best;
   }
 
   // --- helpers ---
