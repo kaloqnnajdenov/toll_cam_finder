@@ -39,7 +39,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(_segmentsUpdated);
@@ -47,11 +47,11 @@ class _SegmentsPageState extends State<SegmentsPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(l10n.segments),
+          title: Text(localizations.segments),
           actions: [
             IconButton(
               icon: const Icon(Icons.folder_special_outlined),
-              tooltip: l10n.localSegments,
+              tooltip: localizations.localSegments,
               onPressed: _onShowLocalSegmentsPressed,
             ),
           ],
@@ -95,7 +95,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: Text(l10n.createSegment),
+          label: Text(localizations.createSegment),
         ),
       ),
     );
@@ -509,14 +509,14 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(_segmentsUpdated);
         return false;
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.localSegments)),
+        appBar: AppBar(title: Text(localizations.localSegments)),
         body: FutureBuilder<List<SegmentInfo>>(
           future: _segmentsFuture,
           builder: (context, snapshot) {
@@ -556,7 +556,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _onCreateSegmentPressed,
           icon: const Icon(Icons.add),
-          label: Text(l10n.createSegment),
+          label: Text(localizations.createSegment),
         ),
       ),
     );

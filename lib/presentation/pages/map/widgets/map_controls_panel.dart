@@ -33,21 +33,21 @@ class MapControlsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CurrentSpeedDial(
           speedKmh: speedKmh,
-          title: l10n.speedDialCurrentTitle,
-          unit: l10n.speedDialUnitKmh,
+          title: localizations.speedDialCurrentTitle,
+          unit: localizations.speedDialUnitKmh,
         ),
         const SizedBox(height: AppConstants.speedDialStackSpacing),
         AverageSpeedDial(
           controller: avgController,
-          title: l10n.speedDialAverageTitle,
-          unit: l10n.speedDialUnitKmh,
+          title: localizations.speedDialAverageTitle,
+          unit: localizations.speedDialUnitKmh,
           isActive: hasActiveSegment,
           speedLimitKph:
               hasActiveSegment ? segmentSpeedLimitKph : null,
@@ -86,12 +86,12 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialBannerRadius),
             ),
             child: Text(
-              l10n.translate(
+              localizations.translate(
                 'speedDialLastSegmentAverage',
                 {
                   'value': lastSegmentAvgKmh!
                       .toStringAsFixed(1),
-                  'unit': l10n.speedDialUnitKmh,
+                  'unit': localizations.speedDialUnitKmh,
                 },
               ),
               style: const TextStyle(
@@ -114,12 +114,12 @@ class MapControlsPanel extends StatelessWidget {
                   BorderRadius.circular(AppConstants.speedDialDebugBadgeRadius),
             ),
             child: Text(
-              l10n.translate(
+              localizations.translate(
                 'speedDialDebugSummary',
                 {
                   'count': '$segmentCount',
                   'radius': '${segmentRadiusMeters.toInt()}',
-                  'unit': l10n.translate('unitMetersShort'),
+                  'unit': localizations.translate('unitMetersShort'),
                 },
               ),
               style: const TextStyle(color: Colors.white, fontSize: 12),

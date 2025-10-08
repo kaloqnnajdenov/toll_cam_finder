@@ -219,18 +219,19 @@ class _SegmentDebugMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     final tags = <String>[
       path.isDetailed
-          ? l10n.translate('segmentDebugTagDetailed')
-          : l10n.translate('segmentDebugTagApprox'),
+          ? localizations.translate('segmentDebugTagDetailed')
+          : localizations.translate('segmentDebugTagApprox'),
       path.passesDirection
-          ? l10n.translate('segmentDebugTagDirectionPass')
-          : l10n.translate('segmentDebugTagDirectionFail'),
-      if (path.startHit) l10n.translate('segmentDebugTagStart'),
-      if (path.endHit) l10n.translate('segmentDebugTagEnd'),
+          ? localizations.translate('segmentDebugTagDirectionPass')
+          : localizations.translate('segmentDebugTagDirectionFail'),
+      if (path.startHit)
+        localizations.translate('segmentDebugTagStart'),
+      if (path.endHit) localizations.translate('segmentDebugTagEnd'),
     ];
-    final separator = l10n.translate('segmentDebugTagSeparator');
+    final separator = localizations.translate('segmentDebugTagSeparator');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -257,14 +258,14 @@ class _SegmentDebugMarker extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  l10n.translate(
+                  localizations.translate(
                     'segmentDebugDistanceMeters',
                     {'distance': path.distanceMeters.toStringAsFixed(1)},
                   ),
                 ),
                 if (path.remainingDistanceMeters.isFinite)
                   Text(
-                    l10n.translate(
+                    localizations.translate(
                       'segmentDebugDistanceKilometersLeft',
                       {
                         'distance': (path.remainingDistanceMeters / 1000)
@@ -274,7 +275,7 @@ class _SegmentDebugMarker extends StatelessWidget {
                   ),
                 if (path.headingDiffDeg != null)
                   Text(
-                    l10n.translate(
+                    localizations.translate(
                       'segmentDebugHeadingDiff',
                       {'angle': path.headingDiffDeg!.toStringAsFixed(0)},
                     ),

@@ -77,9 +77,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.createAccount)),
+      appBar: AppBar(title: Text(localizations.createAccount)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -90,7 +90,7 @@ class _SignUpPageState extends State<SignUpPage> {
               children: [
                 const SizedBox(height: 32),
                 Text(
-                  l10n.joinTollCam,
+                  localizations.joinTollCam,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -99,7 +99,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
-                    labelText: l10n.fullNameLabel,
+                    labelText: localizations.fullNameLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -114,7 +114,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: l10n.emailLabel,
+                    labelText: localizations.emailLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -129,7 +129,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: l10n.passwordLabel,
+                    labelText: localizations.passwordLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -147,7 +147,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   controller: _confirmPasswordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: l10n.confirmPasswordLabel,
+                    labelText: localizations.confirmPasswordLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -169,14 +169,14 @@ class _SignUpPageState extends State<SignUpPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(l10n.createAccount),
+                      : Text(localizations.createAccount),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacementNamed(AppRoutes.login);
                   },
-                  child: Text(l10n.createAccountDescription),
+                  child: Text(localizations.createAccountDescription),
                 ),
               ],
             ),

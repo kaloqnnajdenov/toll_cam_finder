@@ -87,10 +87,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.createSegment)),
+      appBar: AppBar(title: Text(localizations.createSegment)),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -240,7 +240,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                         child: FilledButton.icon(
                           onPressed: _onSavePressed,
                           icon: const Icon(Icons.check_circle),
-                          label: Text(l10n.saveSegment),
+                          label: Text(localizations.saveSegment),
                         ),
                       ),
                     ],

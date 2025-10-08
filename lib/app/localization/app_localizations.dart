@@ -341,14 +341,15 @@ class AppLocalizations {
   String get logIn => _value('logIn');
   String get createAccount => _value('createAccount');
   String get createAccountCta => _value('createAccountCta');
-  String get createAccountDescription => _value('createAccountDescription');
+  String get createAccountDescription =>
+      _value('createAccountDescription');
   String get continueLabel => _value('continue');
   String get createNewAccount => _value('createNewAccount');
   String get yourProfile => _value('yourProfile');
   String get logOut => _value('logOut');
   String get localSegments => _value('localSegments');
-  String get createSegmentLabel => _value('createSegment');
-  String get saveSegmentLabel => _value('saveSegment');
+  String get createSegment => _value('createSegment');
+  String get saveSegment => _value('saveSegment');
   String get noSegmentsAvailable => _value('noSegmentsAvailable');
   String get noLocalSegments => _value('noLocalSegments');
   String get recenter => _value('recenter');

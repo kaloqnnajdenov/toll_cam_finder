@@ -15,13 +15,13 @@ class AverageSpeedButton extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final running = controller.isRunning;
-        final l10n = AppLocalizations.of(context);
+        final localizations = AppLocalizations.of(context);
         return FloatingActionButton.small(
           heroTag: 'avg_speed_btn',
           onPressed: () => running ? controller.reset() : controller.start(),
           tooltip: running
-              ? l10n.averageSpeedResetTooltip
-              : l10n.averageSpeedStartTooltip,
+              ? localizations.averageSpeedResetTooltip
+              : localizations.averageSpeedStartTooltip,
           child: AnimatedSwitcher(
             duration: const Duration(
               milliseconds: AppConstants.avgSpeedButtonAnimationMs,

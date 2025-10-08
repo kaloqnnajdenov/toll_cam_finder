@@ -16,10 +16,10 @@ class ProfilePage extends StatelessWidget {
     final email = auth.currentEmail ??
         AppLocalizations.of(context).unknownUserLabel;
 
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.yourProfile),
+        title: Text(localizations.yourProfile),
       ),
       body: SafeArea(
         child: Padding(
@@ -39,7 +39,7 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.profileSubtitle,
+                localizations.profileSubtitle,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -65,7 +65,7 @@ class ProfilePage extends StatelessWidget {
                     );
                   }
                 },
-                child: Text(l10n.logOut),
+                child: Text(localizations.logOut),
               ),
             ],
           ),

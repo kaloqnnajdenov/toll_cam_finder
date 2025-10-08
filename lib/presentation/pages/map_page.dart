@@ -255,7 +255,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return null;
     }
 
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
 
     final String? activeId = event.activeSegmentId;
     if (activeId != null) {
@@ -269,18 +269,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           activePath.remainingDistanceMeters >= 0) {
         final remaining = activePath.remainingDistanceMeters;
         if (remaining >= 1000) {
-          return l10n.translate(
+          return localizations.translate(
             'segmentProgressEndKilometers',
             {'distance': (remaining / 1000).toStringAsFixed(2)},
           );
         }
         if (remaining >= 1) {
-          return l10n.translate(
+          return localizations.translate(
             'segmentProgressEndMeters',
             {'distance': remaining.toStringAsFixed(0)},
           );
         }
-        return l10n.translate('segmentProgressEndNearby');
+        return localizations.translate('segmentProgressEndNearby');
       }
       return null;
     }
@@ -302,18 +302,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     final double distance = upcoming.startDistanceMeters;
     if (distance >= 1000) {
-      return l10n.translate(
+      return localizations.translate(
         'segmentProgressStartKilometers',
         {'distance': (distance / 1000).toStringAsFixed(2)},
       );
     }
     if (distance >= 1) {
-      return l10n.translate(
+      return localizations.translate(
         'segmentProgressStartMeters',
         {'distance': distance.toStringAsFixed(0)},
       );
     }
-    return l10n.translate('segmentProgressStartNearby');
+    return localizations.translate('segmentProgressStartNearby');
   }
 
   SegmentDebugPath? _firstPathMatching(
@@ -543,7 +543,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Drawer _buildOptionsDrawer() {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     final languageController = context.watch<LanguageController>();
     return Drawer(
       child: SafeArea(
@@ -552,7 +552,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           children: [
             ListTile(
               leading: const Icon(Icons.sync),
-              title: Text(l10n.sync),
+              title: Text(localizations.sync),
               enabled: !_isSyncing,
               trailing: _isSyncing
                   ? const SizedBox(
@@ -565,18 +565,18 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             ),
             ListTile(
               leading: const Icon(Icons.segment),
-              title: Text(l10n.segments),
+              title: Text(localizations.segments),
               onTap: _onSegmentsSelected,
             ),
             ListTile(
               leading: const Icon(Icons.language),
-              title: Text(l10n.languageButton),
+              title: Text(localizations.languageButton),
               subtitle: Text(languageController.currentOption.label),
               onTap: _onLanguageSelected,
             ),
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: Text(l10n.profile),
+              title: Text(localizations.profile),
               onTap: () {
                 Navigator.of(context).pop();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -592,6 +592,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   void _onLanguageSelected() {
+    final localizations = AppLocalizations.of(context);
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -606,7 +607,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   shrinkWrap: true,
                   children: [
                     ListTile(
-                      title: Text(l10n.selectLanguage),
+                      title: Text(localizations.selectLanguage),
                     ),
                     for (final option in options)
                       ListTile(
@@ -617,7 +618,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                         enabled: option.available,
                         subtitle: option.available
                             ? null
-                            : Text(l10n.comingSoon),
+                            : Text(localizations.comingSoon),
                         onTap: option.available
                             ? () {
                                 controller.setLocale(option.locale);
@@ -636,6 +637,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   void _onProfileSelected() {
+    final localizations = AppLocalizations.of(context);
     final auth = context.read<AuthController>();
     if (auth.isLoggedIn) {
       Navigator.of(context).pushNamed(AppRoutes.profile);
@@ -650,7 +652,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             children: [
               ListTile(
                 leading: const Icon(Icons.login),
-                title: Text(l10n.logIn),
+                title: Text(localizations.logIn),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   Navigator.of(context).pushNamed(AppRoutes.login);
@@ -658,7 +660,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               ),
               ListTile(
                 leading: const Icon(Icons.person_add_alt),
-                title: Text(l10n.createAccountCta),
+                title: Text(localizations.createAccountCta),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   Navigator.of(context).pushNamed(AppRoutes.signUp);

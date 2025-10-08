@@ -88,10 +88,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.logIn),
+        title: Text(localizations.logIn),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -103,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 32),
                 Text(
-                  l10n.welcomeTitle,
+                  localizations.welcomeTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -112,7 +112,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: l10n.emailLabel,
+                    labelText: localizations.emailLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -127,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: l10n.passwordLabel,
+                    labelText: localizations.passwordLabel,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -146,14 +146,14 @@ class _LoginPageState extends State<LoginPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(l10n.continueLabel),
+                      : Text(localizations.continueLabel),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacementNamed(AppRoutes.signUp);
                   },
-                  child: Text(l10n.createNewAccount),
+                  child: Text(localizations.createNewAccount),
                 ),
               ],
             ),

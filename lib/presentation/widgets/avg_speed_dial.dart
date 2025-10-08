@@ -30,7 +30,7 @@ class AverageSpeedDial extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    final l10n = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(context);
 
     return AnimatedBuilder(
       animation: controller,
@@ -93,7 +93,7 @@ class AverageSpeedDial extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          l10n.translate(
+                          localizations.translate(
                             'speedDialLimitLabel',
                             {
                               'value': speedLimitKph!
@@ -117,7 +117,7 @@ class AverageSpeedDial extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
-                        l10n.speedDialNoActiveSegment,
+                        localizations.speedDialNoActiveSegment,
                         textAlign: TextAlign.center,
                         style: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
