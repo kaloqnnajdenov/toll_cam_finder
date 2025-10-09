@@ -150,14 +150,14 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Fine-tune the segment on the map',
+                                    AppMessages.createSegmentMapInstructionTitle,
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Drop or drag markers to adjust the start and end points. '
-                                    'Coordinates are filled automatically as you move them.',
+                                    AppMessages
+                                        .createSegmentMapInstructionBody,
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ],
@@ -186,7 +186,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Segment details',
+                                AppMessages.createSegmentDetailsTitle,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -195,39 +195,45 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _nameController,
-                                  label: 'Segment name',
-                                  hintText: 'Segment name',
+                                  label: AppMessages.createSegmentNameLabel,
+                                  hintText: AppMessages.createSegmentNameHint,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _roadNameController,
-                                  label: 'Road name',
-                                  hintText: 'Road name',
+                                  label: AppMessages.createSegmentRoadNameLabel,
+                                  hintText:
+                                      AppMessages.createSegmentRoadNameHint,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _startNameController,
-                                  label: 'Start',
-                                  hintText: 'Start name',
+                                  label: AppMessages.createSegmentStartLabel,
+                                  hintText:
+                                      AppMessages.createSegmentStartNameHint,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _endNameController,
-                                  label: 'End',
-                                  hintText: 'End name',
+                                  label: AppMessages.createSegmentEndLabel,
+                                  hintText: AppMessages.createSegmentEndNameHint,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               buildFieldPair(
                                 SegmentLabeledTextField(
                                   controller: _startController,
-                                  label: 'Start coordinates',
-                                  hintText: '41.8626802,26.0873785',
+                                  label: AppMessages
+                                      .createSegmentStartCoordinatesLabel,
+                                  hintText: AppMessages
+                                      .createSegmentStartCoordinatesHint,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _endController,
-                                  label: 'End point',
-                                  hintText: '41.8322163,26.1404669',
+                                  label: AppMessages
+                                      .createSegmentEndCoordinatesLabel,
+                                  hintText: AppMessages
+                                      .createSegmentEndCoordinatesHint,
                                 ),
                               ),
                             ],

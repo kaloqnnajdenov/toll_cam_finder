@@ -171,6 +171,36 @@ class AppMessages {
   static String get mapHintPlacePointB =>
       _l.translate('mapHintPlacePointB');
   static String get mapHintDragPoint => _l.translate('mapHintDragPoint');
+  static String get createSegmentMapInstructionTitle =>
+      _l.translate('createSegmentMapInstructionTitle');
+  static String get createSegmentMapInstructionBody =>
+      _l.translate('createSegmentMapInstructionBody');
+  static String get createSegmentDetailsTitle =>
+      _l.translate('createSegmentDetailsTitle');
+  static String get createSegmentNameLabel =>
+      _l.translate('createSegmentNameLabel');
+  static String get createSegmentNameHint =>
+      _l.translate('createSegmentNameHint');
+  static String get createSegmentRoadNameLabel =>
+      _l.translate('createSegmentRoadNameLabel');
+  static String get createSegmentRoadNameHint =>
+      _l.translate('createSegmentRoadNameHint');
+  static String get createSegmentStartLabel =>
+      _l.translate('createSegmentStartLabel');
+  static String get createSegmentStartNameHint =>
+      _l.translate('createSegmentStartNameHint');
+  static String get createSegmentEndLabel =>
+      _l.translate('createSegmentEndLabel');
+  static String get createSegmentEndNameHint =>
+      _l.translate('createSegmentEndNameHint');
+  static String get createSegmentStartCoordinatesLabel =>
+      _l.translate('createSegmentStartCoordinatesLabel');
+  static String get createSegmentStartCoordinatesHint =>
+      _l.translate('createSegmentStartCoordinatesHint');
+  static String get createSegmentEndCoordinatesLabel =>
+      _l.translate('createSegmentEndCoordinatesLabel');
+  static String get createSegmentEndCoordinatesHint =>
+      _l.translate('createSegmentEndCoordinatesHint');
   static String failedToLoadCameras(String error) =>
       _l.translate('failedToLoadCameras', {'error': error});
   static String get failedToAccessSegmentsMetadataFile =>
