@@ -1,5 +1,4 @@
 import 'package:csv/csv.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:toll_cam_finder/core/app_messages.dart';
@@ -9,7 +8,7 @@ import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
-import 'package:toll_cam_finder/services/toll_segments_paths.dart';
+import 'package:toll_cam_finder/services/toll_segments_data_store.dart';
 
 class SegmentInfo {
   const SegmentInfo({
@@ -239,15 +238,11 @@ class SegmentsRepository {
   }
 
   Future<String> _loadSegmentsData(String assetPath) async {
-    if (!kIsWeb && assetPath == kTollSegmentsAssetPath) {
-      try {
-        final localPath = await resolveTollSegmentsDataPath();
-        if (await _fileSystem.exists(localPath)) {
-          return await _fileSystem.readAsString(localPath);
-        }
-      } catch (_) {
-        // Fall back to bundled asset if local file access fails.
-      }
+    if (assetPath == kTollSegmentsAssetPath) {
+      return TollSegmentsDataStore.instance.loadCombinedCsv(
+        fileSystem: _fileSystem,
+        assetPath: assetPath,
+      );
     }
 
     return rootBundle.loadString(assetPath);

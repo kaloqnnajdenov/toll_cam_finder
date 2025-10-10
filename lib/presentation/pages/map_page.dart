@@ -484,6 +484,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _initSegmentsIndex() async {
+    await _runStartupSync();
     final ready = await _segmentTracker.initialise(
       assetPath: AppConstants.pathToTollSegments,
     );
@@ -511,6 +512,37 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
 
     setState(() {});
+  }
+
+  Future<void> _runStartupSync() async {
+    if (_isSyncing) {
+      return;
+    }
+
+    final auth = context.read<AuthController>();
+    final client = auth.client;
+    if (client == null) {
+      debugPrint('MapPage: skipping startup sync (no Supabase client).');
+      return;
+    }
+
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      await _syncService.sync(client: client);
+    } on TollSegmentsSyncException catch (error) {
+      debugPrint('MapPage: startup sync failed (${error.message}).');
+    } catch (error, stackTrace) {
+      debugPrint('MapPage: unexpected startup sync error: $error\n$stackTrace');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      }
+    }
   }
 
   @override

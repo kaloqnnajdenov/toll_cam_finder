@@ -1,7 +1,6 @@
 // imports you likely already have:
 import 'dart:convert';
 import 'package:csv/csv.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
@@ -14,7 +13,7 @@ import 'package:toll_cam_finder/services/toll_segments_file_system.dart';
 import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
-import 'package:toll_cam_finder/services/toll_segments_paths.dart';
+import 'package:toll_cam_finder/services/toll_segments_data_store.dart';
 
 // -----------------------------------------------------------------------------
 // SegmentIndexService
@@ -380,12 +379,12 @@ class SegmentIndexService {
       _toGeoPointsFromLonLatList(coords);
 
   Future<String> _loadSegmentsData(String assetPath) async {
-    if (!kIsWeb && assetPath == kTollSegmentsAssetPath) {
+    if (assetPath == kTollSegmentsAssetPath) {
       try {
-        final localPath = await resolveTollSegmentsDataPath();
-        if (await _fileSystem.exists(localPath)) {
-          return await _fileSystem.readAsString(localPath);
-        }
+        return await TollSegmentsDataStore.instance.loadCombinedCsv(
+          fileSystem: _fileSystem,
+          assetPath: assetPath,
+        );
       } catch (error) {
         debugPrint('SegmentIndexService: falling back to asset ($error).');
       }
