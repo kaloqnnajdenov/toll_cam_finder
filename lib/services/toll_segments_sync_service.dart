@@ -11,9 +11,10 @@ import 'toll_segments_file_system_stub.dart'
     as fs_impl;
 import 'toll_segments_paths.dart';
 import 'toll_segments_csv_constants.dart';
+import 'toll_segments_data_store.dart';
 
 /// Handles downloading the latest toll segments from Supabase, comparing them
-/// with the local CSV asset, and writing back the updated data.
+/// with the locally stored custom entries, and caching the merged data.
 class TollSegmentsSyncService {
   TollSegmentsSyncService({
     this.tableName = 'Toll_Segments',
@@ -36,7 +37,7 @@ class TollSegmentsSyncService {
   ///
   /// 1. Downloads the latest table contents from Supabase.
   /// 2. Compares them to the current local CSV, calculating additions/removals.
-  /// 3. Writes the downloaded data to the local CSV file.
+  /// 3. Updates the in-memory cache and trims the locally stored custom rows.
   Future<TollSegmentsSyncResult> sync({required SupabaseClient client}) async {
     if (kIsWeb) {
       throw  TollSegmentsSyncException(
@@ -60,11 +61,12 @@ class TollSegmentsSyncService {
         remoteRows,
         approvedLocalSegments: approvalOutcome.approvedCount,
       );
-      await _writeRowsToLocal(
+
+      await _writeLocalRows(
         localCsvPath,
-        remoteRows,
         approvalOutcome.remainingLocalRows,
       );
+      TollSegmentsDataStore.instance.updateRemoteRows(remoteRows);
 
       return diff;
     } on TollSegmentsSyncException {
@@ -229,56 +231,58 @@ class TollSegmentsSyncService {
   }
 
   Future<_PartitionedLocalRows> _readLocalRows(String localCsvPath) async {
-    final exists = await _fileSystem.exists(localCsvPath);
-    if (!exists) {
-      return const _PartitionedLocalRows();
-    }
-
-    final raw = await _fileSystem.readAsString(localCsvPath);
-    if (raw.trim().isEmpty) {
-      return const _PartitionedLocalRows();
-    }
-
-    final parsed = const CsvToListConverter(
-      fieldDelimiter: ';',
-      shouldParseNumbers: false,
-    ).convert(raw);
-
-    if (parsed.length <= 1) {
-      return const _PartitionedLocalRows();
-    }
-
     final remoteRows = <List<String>>[];
     final localRows = <List<String>>[];
 
-    for (final row in parsed.skip(1)) {
-      final normalized = row
-          .map((value) => value.toString())
-          .toList(growable: false);
-      if (normalized.isEmpty) {
-        continue;
-      }
+    try {
+      final exists = await _fileSystem.exists(localCsvPath);
+      if (exists) {
+        final raw = await _fileSystem.readAsString(localCsvPath);
+        if (raw.trim().isNotEmpty) {
+          final parsed = const CsvToListConverter(
+            fieldDelimiter: ';',
+            shouldParseNumbers: false,
+          ).convert(raw);
 
-      final id = normalized.first;
-      if (id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
-        localRows.add(normalized);
-      } else {
-        remoteRows.add(normalized);
+          for (final row in parsed.skip(1)) {
+            final normalized = row
+                .map((value) => value.toString())
+                .toList(growable: false);
+            if (normalized.isEmpty) {
+              continue;
+            }
+
+            final id = normalized.first;
+            if (id.startsWith(TollSegmentsCsvSchema.localSegmentIdPrefix)) {
+              localRows.add(normalized);
+            } else {
+              remoteRows.add(normalized);
+            }
+          }
+        }
+      }
+    } on TollSegmentsFileSystemException {
+      // Surface the failure to the caller so it can be reported to the user.
+      rethrow;
+    }
+
+    if (remoteRows.isEmpty) {
+      final cachedRemote = TollSegmentsDataStore.instance.remoteRows;
+      if (cachedRemote != null) {
+        remoteRows.addAll(cachedRemote.map((row) => List<String>.from(row)));
       }
     }
 
     return _PartitionedLocalRows(remoteRows: remoteRows, localRows: localRows);
   }
 
-  Future<void> _writeRowsToLocal(
+  Future<void> _writeLocalRows(
     String localCsvPath,
-    List<List<String>> remoteRows,
     List<List<String>> localRows,
   ) async {
-    final csvRows = <List<String>>[];
-    csvRows.add(TollSegmentsCsvSchema.header);
-    csvRows.addAll(remoteRows);
-    csvRows.addAll(localRows);
+    final csvRows = <List<String>>[]
+      ..add(TollSegmentsCsvSchema.header)
+      ..addAll(localRows);
 
     final csv = const ListToCsvConverter(
       fieldDelimiter: ';',
