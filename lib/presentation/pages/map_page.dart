@@ -19,6 +19,7 @@ import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
+import 'package:toll_cam_finder/services/audio/segment_audio_cues.dart';
 
 import '../../app/app_routes.dart';
 import '../../app/localization/app_localizations.dart';
@@ -67,6 +68,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  final SegmentAudioCues _segmentAudioCues = SegmentAudioCues();
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
 
@@ -82,6 +84,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
+  String? _upcomingCueSegmentId;
+  double? _previousUpcomingDistance;
+  bool _hasPlayedUpcomingCue = false;
 
   @override
   void initState() {
@@ -109,6 +114,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
     _segmentTracker.dispose();
+    unawaited(_segmentAudioCues.dispose());
     super.dispose();
   }
 
@@ -207,20 +213,24 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
+      _resetUpcomingCueTracking();
     } else if (segEvent.endedSegment) {
       final double avgForSegment = _avgCtrl.average;
       _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
       _avgCtrl.reset();
+      _resetUpcomingCueTracking();
     }
 
     if (segEvent.activeSegmentId == null) {
       _activeSegmentSpeedLimitKph = null;
     } else {
       _activeSegmentSpeedLimitKph = segEvent.activeSegmentSpeedLimitKph;
+      _resetUpcomingCueTracking();
     }
 
     _segmentDebugData = segEvent.debugData;
     _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+    _handleUpcomingSegmentAudioCue(segEvent);
   }
 
   void _resetSegmentState() {
@@ -230,6 +240,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
     _nextCameraCheckAt = null;
+    _resetUpcomingCueTracking();
   }
 
   bool _shouldProcessSegmentUpdate(DateTime now) {
@@ -367,6 +378,69 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       );
     }
     return localizations.translate('segmentProgressStartNearby');
+  }
+
+  void _handleUpcomingSegmentAudioCue(SegmentTrackerEvent event) {
+    if (event.activeSegmentId != null) {
+      _resetUpcomingCueTracking();
+      return;
+    }
+
+    final paths = event.debugData.candidatePaths;
+    if (paths.isEmpty) {
+      _resetUpcomingCueTracking();
+      return;
+    }
+
+    final upcoming = _firstPathMatching(
+      paths,
+      (path) =>
+          path.startDistanceMeters.isFinite &&
+          path.startDistanceMeters <=
+              AppConstants.upcomingSegmentCueDistanceMeters,
+    ) ??
+        _firstPathMatching(
+          paths,
+          (path) => path.startDistanceMeters.isFinite,
+        );
+
+    if (upcoming == null) {
+      _resetUpcomingCueTracking();
+      return;
+    }
+
+    final double distance = upcoming.startDistanceMeters;
+    if (!distance.isFinite) {
+      return;
+    }
+
+    if (_upcomingCueSegmentId != upcoming.id) {
+      _upcomingCueSegmentId = upcoming.id;
+      _previousUpcomingDistance = null;
+      _hasPlayedUpcomingCue = false;
+    }
+
+    final double threshold = AppConstants.upcomingSegmentCueDistanceMeters;
+    final double? previousDistance = _previousUpcomingDistance;
+    _previousUpcomingDistance = distance;
+
+    final bool crossedThreshold =
+        distance <= threshold && (previousDistance == null || previousDistance > threshold);
+
+    if (!_hasPlayedUpcomingCue && crossedThreshold) {
+      _hasPlayedUpcomingCue = true;
+      unawaited(_segmentAudioCues.playUpcomingSegmentCue());
+    }
+
+    if (distance > threshold && distance - threshold > 200) {
+      _hasPlayedUpcomingCue = false;
+    }
+  }
+
+  void _resetUpcomingCueTracking() {
+    _upcomingCueSegmentId = null;
+    _previousUpcomingDistance = null;
+    _hasPlayedUpcomingCue = false;
   }
 
   SegmentDebugPath? _firstPathMatching(

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
 class AppConstants {
@@ -116,6 +117,13 @@ class AppConstants {
   ///react quickly (less smoothing, more jitter); lengthening it keeps motion buttery
   /// smooth but lags further behind abrupt path changes.
   static const double smoothingHalfLifeMs = 400.0;
+
+  /// Distance (in meters) at which the upcoming-segment audio cue is triggered.
+  static const double upcomingSegmentCueDistanceMeters = 500.0;
+
+  /// System sound that plays when a new segment is approaching.
+  static const SystemSoundType upcomingSegmentCueSoundType =
+      SystemSoundType.alert;
 
   /// Sets the distance scale that boosts the smoothing factor when the raw fix
   /// diverges sharply from the smoothed track. Lowering it means even modest
