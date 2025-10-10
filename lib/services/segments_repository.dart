@@ -168,6 +168,16 @@ class SegmentsRepository {
 
     if (onlyLocal) {
       segments.retainWhere((segment) => segment.isLocalOnly);
+       } else {
+      // When a local segment is submitted for public review it should only be
+      // surfaced in the dedicated "Local segments" view where it is labelled
+      // with the "Review" badge. Showing the same entry alongside the
+      // published network segments creates the impression that it is already
+      // public. Hide such rows from the combined listing until they are
+      // approved and synced back as real public entries.
+      segments.removeWhere(
+        (segment) => segment.isLocalOnly && segment.isMarkedPublic,
+      );
     }
 
     segments.sort(_compareSegments);
