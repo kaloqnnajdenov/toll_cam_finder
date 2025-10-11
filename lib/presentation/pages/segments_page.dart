@@ -260,7 +260,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} is already awaiting public review.',
+              AppMessages.segmentAlreadyAwaitingReview(segment.displayId),
             ),
           ),
         );
@@ -303,7 +303,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          'Segment ${segment.displayId} submitted for public review.',
+          AppMessages.segmentSubmittedForPublicReview(segment.displayId),
         ),
       ),
     );
@@ -392,7 +392,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} was already approved by the administrators and is public.',
+              AppMessages.segmentAlreadyApprovedAndPublic(segment.displayId),
             ),
           ),
         );
@@ -412,7 +412,7 @@ class _SegmentsPageState extends State<SegmentsPage> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                'Segment ${segment.displayId} will no longer be reviewed for public release.',
+                AppMessages.segmentNoLongerUnderReview(segment.displayId),
               ),
             ),
           );
@@ -839,7 +839,7 @@ class _LocalSegmentsPageState extends State<LocalSegmentsPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Segment ${segment.displayId} was already approved by the administrators and is public.',
+              AppMessages.segmentAlreadyApprovedAndPublic(segment.displayId),
             ),
           ),
         );

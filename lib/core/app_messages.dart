@@ -101,6 +101,8 @@ class AppMessages {
       _l.translate('segmentSubmittedForPublicReview', {'displayId': displayId});
   static String get segmentSubmittedForPublicReviewGeneric =>
       _l.translate('segmentSubmittedForPublicReviewGeneric');
+  static String segmentAlreadyApprovedAndPublic(String displayId) =>
+      _l.translate('segmentAlreadyApprovedAndPublic', {'displayId': displayId});
   static String get unableToWithdrawSubmission =>
       _l.translate('unableToWithdrawSubmission');
   static String get signInToWithdrawSubmission =>
