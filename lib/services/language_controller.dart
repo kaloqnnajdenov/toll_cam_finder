@@ -16,8 +16,8 @@ class LanguageOption {
 
   String get label {
     switch (languageCode) {
-      case 'es':
-        return AppMessages.languageLabelSpanish;
+      case 'bg':
+        return AppMessages.languageLabelBulgarian;
       case 'en':
       default:
         return AppMessages.languageLabelEnglish;
@@ -37,8 +37,8 @@ class LanguageController extends ChangeNotifier {
       available: true,
     ),
     LanguageOption(
-      locale: Locale('es'),
-      languageCode: 'es',
+      locale: Locale('bg'),
+      languageCode: 'bg',
       available: true,
     ),
   ];
