@@ -155,11 +155,6 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                         ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(
-                                    AppMessages
-                                        .createSegmentMapInstructionBody,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
                                 ],
                               ),
                             ),
@@ -204,38 +199,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                   hintText:
                                       AppMessages.createSegmentRoadNameHint,
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              buildFieldPair(
-                                SegmentLabeledTextField(
-                                  controller: _startNameController,
-                                  label: AppMessages.createSegmentStartLabel,
-                                  hintText:
-                                      AppMessages.createSegmentStartNameHint,
-                                ),
-                                SegmentLabeledTextField(
-                                  controller: _endNameController,
-                                  label: AppMessages.createSegmentEndLabel,
-                                  hintText: AppMessages.createSegmentEndNameHint,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              buildFieldPair(
-                                SegmentLabeledTextField(
-                                  controller: _startController,
-                                  label: AppMessages
-                                      .createSegmentStartCoordinatesLabel,
-                                  hintText: AppMessages
-                                      .createSegmentStartCoordinatesHint,
-                                ),
-                                SegmentLabeledTextField(
-                                  controller: _endController,
-                                  label: AppMessages
-                                      .createSegmentEndCoordinatesLabel,
-                                  hintText: AppMessages
-                                      .createSegmentEndCoordinatesHint,
-                                ),
-                              ),
+                              ),                           
                             ],
                           ),
                         ),

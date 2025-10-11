@@ -46,7 +46,7 @@ class AppLocalizations {
       'createSegmentMapInstructionBody':
           'Drop or drag markers to adjust the start and end points. Coordinates are filled automatically as you move them.',
       'createSegmentMapInstructionTitle':
-          'Fine-tune the segment on the map',
+          'Set the start and end points on the map',
       'createSegmentNameHint': 'Segment name',
       'createSegmentNameLabel': 'Segment name',
       'createSegmentRoadNameHint': 'Road name',
@@ -297,7 +297,7 @@ class AppLocalizations {
       'createSegmentEndNameHint': 'Име на края',
       'createSegmentMapInstructionBody':
           'Постави или премести маркерите, за да коригираш началната и крайната точка. Координатите се попълват автоматично при преместване.',
-      'createSegmentMapInstructionTitle': 'Коригирай сегмента върху картата',
+      'createSegmentMapInstructionTitle': 'Поставете началната и крайната точка на картата',
       'createSegmentNameHint': 'Име на сегмента',
       'createSegmentNameLabel': 'Име на сегмента',
       'createSegmentRoadNameHint': 'Име на пътя',
@@ -322,7 +322,7 @@ class AppLocalizations {
       'passwordLabel': 'Парола',
       'profile': 'Профил',
       'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',
-      'recenter': 'Центрирай отново',
+      'recenter': 'Центрирай Екрана',
       'saveSegment': 'Запази сегмента',
       'segmentDebugDistanceKilometersLeft': '{distance} км оставащи',
       'segmentDebugDistanceMeters': '{distance} м',
@@ -386,7 +386,7 @@ class AppLocalizations {
       'unitKilometersShort': 'км',
       'unitMetersShort': 'м',
       'unknownUserLabel': 'Непознат потребител',
-      'welcomeTitle': 'Добре дошъл',
+      'welcomeTitle': 'Добре Дошли!',
       'yourProfile': 'Твоят профил',
 
     },
