@@ -17,7 +17,7 @@ class SegmentLabeledTextField extends StatelessWidget {
   final FocusNode? focusNode;
 
   @visibleForTesting
-  static const RegExp allowedCharactersPattern = RegExp(
+  static final RegExp allowedCharactersPattern = RegExp(
     r'[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]',
     unicode: true,
   );
@@ -27,7 +27,7 @@ class SegmentLabeledTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,
-      inputFormatters: const [
+      inputFormatters: [
         FilteringTextInputFormatter.allow(allowedCharactersPattern),
       ],
       decoration: InputDecoration(
