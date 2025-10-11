@@ -222,6 +222,7 @@ class AppLocalizations {
       'syncRemovedMany': '{count} segments removed',
       'syncRemovedOne': '{count} segment removed',
       'syncTotalSegmentsSummary': '{count} total segments available.',
+      'segmentNameRequired': 'Segment name is required.',
       'startEndCoordinatesRequired': 'Start and end coordinates are required.',
       'submitSegmentForPublicReviewSubtitle':
           'Submit this segment for public review.',
@@ -337,6 +338,8 @@ class AppLocalizations {
       'recenter': 'Центрирай Екрана',
       'saveLocallyAction': 'Save locally',
       'saveSegment': 'Запази сегмента',
+      'segmentNameRequired': 'Моля, въведете име на сегмента.',
+      'startEndCoordinatesRequired': 'Моля, въведете начални и крайни координати.',
       'segmentDebugDistanceKilometersLeft': '{distance} км оставащи',
       'segmentDebugDistanceMeters': '{distance} м',
       'segmentDebugHeadingDiff': 'Δθ={angle}°',

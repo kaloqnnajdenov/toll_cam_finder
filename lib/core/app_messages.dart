@@ -278,6 +278,8 @@ class AppMessages {
   static String get loginAction => _l.translate('loginAction');
   static String get failedToSaveSegmentLocally =>
       _l.translate('failedToSaveSegmentLocally');
+  static String get segmentNameRequired =>
+      _l.translate('segmentNameRequired');
   static String get startEndCoordinatesRequired =>
       _l.translate('startEndCoordinatesRequired');
   static String get loggedInRetrySavePrompt =>

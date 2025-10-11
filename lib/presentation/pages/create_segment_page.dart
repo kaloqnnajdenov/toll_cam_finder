@@ -31,6 +31,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final TextEditingController _endNameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   bool _persistDraftOnDispose = true;
   bool _isNavigatingToLogin = false;
@@ -81,6 +82,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _endNameController.dispose();
     _startController.dispose();
     _endController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -192,6 +194,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                   controller: _nameController,
                                   label: AppMessages.createSegmentNameLabel,
                                   hintText: AppMessages.createSegmentNameHint,
+                                  focusNode: _nameFocusNode,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _roadNameController,
@@ -225,6 +228,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   }
 
   Future<void> _onSavePressed() async {
+    if (!_validateRequiredInputs()) {
+      return;
+    }
+
     final visibilityChoice = await showDialog<_SegmentVisibilityChoice>(
       context: context,
       builder: (context) {
@@ -272,6 +279,22 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         }
         break;
     }
+  }
+
+  bool _validateRequiredInputs() {
+    if (_nameController.text.trim().isEmpty) {
+      _showSnackBar(AppMessages.segmentNameRequired);
+      FocusScope.of(context).requestFocus(_nameFocusNode);
+      return false;
+    }
+
+    if (_startController.text.trim().isEmpty ||
+        _endController.text.trim().isEmpty) {
+      _showSnackBar(AppMessages.startEndCoordinatesRequired);
+      return false;
+    }
+
+    return true;
   }
 
   Future<bool?> _showConfirmationDialog({required String message}) {
