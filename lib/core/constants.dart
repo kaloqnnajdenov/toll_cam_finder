@@ -154,6 +154,18 @@ class AppConstants {
   /// user is stationary, which wastes battery and heats devices unnecessarily.
   static const int gpsDistanceFilterMeters = 5;
 
+  /// Human readable channel name for the persistent location notification.
+  static const String backgroundNotificationChannelName =
+      'Segment monitoring';
+
+  /// Title shown on the persistent notification while tracking in background.
+  static const String backgroundNotificationTitle =
+      'Toll Cam Finder running';
+
+  /// Message describing why the notification is present while tracking.
+  static const String backgroundNotificationText =
+      'Monitoring toll segments and average speed.';
+
   /// HTTP user-agent package identifier sent to the tile server; replace with a
   /// real app id to stay within OpenStreetMap usage policy.
   static const String userAgentPackageName = 'com.example.toll_cam';

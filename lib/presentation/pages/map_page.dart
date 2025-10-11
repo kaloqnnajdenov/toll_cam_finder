@@ -41,7 +41,8 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+class _MapPageState extends State<MapPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const double _speedDeadbandKmh = 1.0;
   // External services
@@ -49,13 +50,16 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
   final SegmentsMetadataService _metadataService = SegmentsMetadataService();
-final AudioPlayer player = AudioPlayer();
+  final AudioPlayer player = AudioPlayer();
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
   bool _mapReady = false;
   bool _followUser = false;
   double _currentZoom = AppConstants.initialZoom;
+  bool _isAppInBackground = false;
+  bool _initialPositionReady = false;
+  bool _needsUiRefreshOnResume = false;
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
@@ -91,6 +95,7 @@ final AudioPlayer player = AudioPlayer();
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
@@ -108,6 +113,7 @@ final AudioPlayer player = AudioPlayer();
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _posSub?.cancel();
     _mapEvtSub?.cancel();
     _compassSub?.cancel();
@@ -115,6 +121,33 @@ final AudioPlayer player = AudioPlayer();
     _avgCtrl.dispose();
     _segmentTracker.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _updateBackgroundMode(false);
+    } else if (_shouldTreatAsBackground(state)) {
+      _updateBackgroundMode(true);
+    }
+  }
+
+  bool _shouldTreatAsBackground(AppLifecycleState state) {
+    return state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive;
+  }
+
+  void _updateBackgroundMode(bool isBackground) {
+    if (_isAppInBackground == isBackground) return;
+    _isAppInBackground = isBackground;
+    if (_initialPositionReady) {
+      _subscribeToPositionUpdates();
+    }
+    if (!isBackground && _needsUiRefreshOnResume && mounted) {
+      _needsUiRefreshOnResume = false;
+      setState(() {});
+    }
   }
 
   void _handleCompassEvent(CompassEvent event) {
@@ -162,15 +195,27 @@ final AudioPlayer player = AudioPlayer();
     _applySegmentEvent(segEvent);
     _updateCameraPollingSchedule(firstFix);
 
-    if (mounted) setState(() {});
+    if (mounted && !_isAppInBackground) {
+      setState(() {});
+    } else {
+      _needsUiRefreshOnResume = true;
+    }
 
-    if (_mapReady) {
+    if (_mapReady && !_isAppInBackground) {
       _mapController.move(_center, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
     }
 
+    _initialPositionReady = true;
+    _subscribeToPositionUpdates();
+  }
+
+  void _subscribeToPositionUpdates() {
+    if (!_initialPositionReady) return;
     _posSub?.cancel();
-    _posSub = _locationService.getPositionStream().listen(
+    _posSub = _locationService
+        .getPositionStream(useForegroundService: _isAppInBackground)
+        .listen(
       _handlePositionUpdate,
     );
   }
@@ -179,9 +224,13 @@ final AudioPlayer player = AudioPlayer();
     final shownKmh = _normalizeSpeed(position.speed);
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
-    _avgCtrl.addSample(shownKmh);
     final previous = _userLatLng;
-    _moveBlueDot(next);
+    if (_isAppInBackground) {
+      _userLatLng = next;
+    } else {
+      _moveBlueDot(next);
+    }
+    _avgCtrl.addSample(shownKmh);
     final now = DateTime.now();
     if (_shouldProcessSegmentUpdate(now)) {
       final segEvent = _segmentTracker.handleLocationUpdate(
@@ -195,7 +244,13 @@ final AudioPlayer player = AudioPlayer();
       _updateCameraPollingSchedule(next);
     }
 
-    if (!mounted) return;
+    if (!mounted || _isAppInBackground) {
+      _speedKmh = smoothedKmh;
+      if (_isAppInBackground) {
+        _needsUiRefreshOnResume = true;
+      }
+      return;
+    }
 
     setState(() {
       _speedKmh = smoothedKmh;
@@ -437,6 +492,7 @@ final AudioPlayer player = AudioPlayer();
   }
 
   void _onBlueDotTick() {
+    if (_isAppInBackground) return;
     if (_followUser && _mapReady) {
       final target = _blueDotAnimator.position;
       if (target != null) {
