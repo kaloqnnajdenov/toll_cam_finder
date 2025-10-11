@@ -203,6 +203,18 @@ class AppMessages {
       _l.translate('createSegmentEndCoordinatesLabel');
   static String get createSegmentEndCoordinatesHint =>
       _l.translate('createSegmentEndCoordinatesHint');
+  static String createSegmentMissingFields(String fields) =>
+      _l.translate('createSegmentMissingFields', {'fields': fields});
+  static String get createSegmentMissingFieldSegmentName =>
+      _l.translate('createSegmentMissingFieldSegmentName');
+  static String get createSegmentMissingFieldStartCoordinates =>
+      _l.translate('createSegmentMissingFieldStartCoordinates');
+  static String get createSegmentMissingFieldEndCoordinates =>
+      _l.translate('createSegmentMissingFieldEndCoordinates');
+  static String get createSegmentMissingFieldsDelimiter =>
+      _l.translate('createSegmentMissingFieldsDelimiter');
+  static String get createSegmentMissingFieldsConjunction =>
+      _l.translate('createSegmentMissingFieldsConjunction');
   static String failedToLoadCameras(String error) =>
       _l.translate('failedToLoadCameras', {'error': error});
   static String get failedToAccessSegmentsMetadataFile =>
