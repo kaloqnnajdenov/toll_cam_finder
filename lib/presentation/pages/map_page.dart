@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -82,6 +83,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
+
+  String? _upcomingMetersCueSegmentId;
+  bool _upcomingMetersCuePlayed = false;
 
   @override
   void initState() {
@@ -230,6 +234,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
     _nextCameraCheckAt = null;
+    _resetUpcomingSegmentSoundCue();
   }
 
   bool _shouldProcessSegmentUpdate(DateTime now) {
@@ -305,6 +310,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   String? _buildSegmentProgressLabel(SegmentTrackerEvent event) {
     final paths = event.debugData.candidatePaths;
     if (paths.isEmpty) {
+      _resetUpcomingSegmentSoundCue();
       return null;
     }
 
@@ -312,6 +318,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     final String? activeId = event.activeSegmentId;
     if (activeId != null) {
+      _resetUpcomingSegmentSoundCue();
       final activePath =
           _firstPathMatching(paths, (p) => p.id == activeId && p.isActive) ??
           _firstPathMatching(paths, (p) => p.id == activeId) ??
@@ -350,10 +357,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
 
     if (upcoming == null) {
+      _resetUpcomingSegmentSoundCue();
       return null;
     }
 
     final double distance = upcoming.startDistanceMeters;
+    _updateUpcomingSegmentSoundCue(upcoming);
     if (distance >= 1000) {
       return localizations.translate(
         'segmentProgressStartKilometers',
@@ -367,6 +376,31 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       );
     }
     return localizations.translate('segmentProgressStartNearby');
+  }
+
+  void _updateUpcomingSegmentSoundCue(SegmentDebugPath upcoming) {
+    final String segmentId = upcoming.id;
+    final double distance = upcoming.startDistanceMeters;
+
+    if (_upcomingMetersCueSegmentId != segmentId) {
+      _upcomingMetersCueSegmentId = segmentId;
+      _upcomingMetersCuePlayed = false;
+    }
+
+    if (distance >= 1000) {
+      _upcomingMetersCuePlayed = false;
+      return;
+    }
+
+    if (distance >= 1 && !_upcomingMetersCuePlayed) {
+      _upcomingMetersCuePlayed = true;
+      unawaited(SystemSound.play(SystemSoundType.click));
+    }
+  }
+
+  void _resetUpcomingSegmentSoundCue() {
+    _upcomingMetersCueSegmentId = null;
+    _upcomingMetersCuePlayed = false;
   }
 
   SegmentDebugPath? _firstPathMatching(
