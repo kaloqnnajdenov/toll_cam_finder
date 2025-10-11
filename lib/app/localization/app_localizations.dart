@@ -43,6 +43,13 @@ class AppLocalizations {
       'createSegmentEndCoordinatesLabel': 'End point',
       'createSegmentEndLabel': 'End',
       'createSegmentEndNameHint': 'End name',
+      'createSegmentMissingFields':
+          'Please provide the following before saving: {fields}.',
+      'createSegmentMissingFieldSegmentName': 'segment name',
+      'createSegmentMissingFieldStartCoordinates': 'start coordinates',
+      'createSegmentMissingFieldEndCoordinates': 'end coordinates',
+      'createSegmentMissingFieldsDelimiter': ', ',
+      'createSegmentMissingFieldsConjunction': 'and',
       'createSegmentMapInstructionBody':
           'Drop or drag markers to adjust the start and end points. Coordinates are filled automatically as you move them.',
       'createSegmentMapInstructionTitle':
@@ -300,10 +307,17 @@ class AppLocalizations {
 'createSegment': 'Създай сегмент',
 'createSegmentDetailsTitle': 'Детайли за сегмента',
 'createSegmentEndCoordinatesHint': '41.8322163,26.1404669',
-'createSegmentEndCoordinatesLabel': 'Крайна точка',
-'createSegmentEndLabel': 'Край',
-'createSegmentEndNameHint': 'Име на края',
-'createSegmentMapInstructionBody':
+      'createSegmentEndCoordinatesLabel': 'Крайна точка',
+      'createSegmentEndLabel': 'Край',
+      'createSegmentEndNameHint': 'Име на края',
+      'createSegmentMissingFields':
+          'Моля, попълни следните полета преди да запазиш: {fields}.',
+      'createSegmentMissingFieldSegmentName': 'име на сегмента',
+      'createSegmentMissingFieldStartCoordinates': 'начални координати',
+      'createSegmentMissingFieldEndCoordinates': 'крайни координати',
+      'createSegmentMissingFieldsDelimiter': ', ',
+      'createSegmentMissingFieldsConjunction': 'и',
+      'createSegmentMapInstructionBody':
 'Постави или премести маркерите, за да коригираш началната и крайната точка. Координатите се попълват автоматично при преместване.',
 'createSegmentMapInstructionTitle': 'Поставете началната и крайната точка на картата',
 'createSegmentNameHint': 'Име на сегмента',

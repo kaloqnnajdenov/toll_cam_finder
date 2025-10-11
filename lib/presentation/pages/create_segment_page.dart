@@ -31,6 +31,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final TextEditingController _endNameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   bool _persistDraftOnDispose = true;
   bool _isNavigatingToLogin = false;
@@ -81,6 +82,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _endNameController.dispose();
     _startController.dispose();
     _endController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -192,6 +194,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                   controller: _nameController,
                                   label: AppMessages.createSegmentNameLabel,
                                   hintText: AppMessages.createSegmentNameHint,
+                                  focusNode: _nameFocusNode,
                                 ),
                                 SegmentLabeledTextField(
                                   controller: _roadNameController,
@@ -199,7 +202,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                   hintText:
                                       AppMessages.createSegmentRoadNameHint,
                                 ),
-                              ),                           
+                              ),
                             ],
                           ),
                         ),
@@ -225,6 +228,10 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   }
 
   Future<void> _onSavePressed() async {
+    if (!_validateRequiredFields()) {
+      return;
+    }
+
     final visibilityChoice = await showDialog<_SegmentVisibilityChoice>(
       context: context,
       builder: (context) {
@@ -272,6 +279,57 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         }
         break;
     }
+  }
+
+  bool _validateRequiredFields() {
+    final missingFields = <String>[];
+    FocusNode? focusNode;
+
+    if (_nameController.text.trim().isEmpty) {
+      missingFields.add(AppMessages.createSegmentMissingFieldSegmentName);
+      focusNode ??= _nameFocusNode;
+    }
+
+    if (_startController.text.trim().isEmpty) {
+      missingFields.add(AppMessages.createSegmentMissingFieldStartCoordinates);
+    }
+
+    if (_endController.text.trim().isEmpty) {
+      missingFields.add(AppMessages.createSegmentMissingFieldEndCoordinates);
+    }
+
+    if (missingFields.isEmpty) {
+      return true;
+    }
+
+    if (focusNode != null && focusNode.attached) {
+      focusNode.requestFocus();
+    }
+
+    final formattedFields = _formatMissingFields(missingFields);
+    _showSnackBar(
+      AppMessages.createSegmentMissingFields(formattedFields),
+    );
+    return false;
+  }
+
+  String _formatMissingFields(List<String> fields) {
+    if (fields.isEmpty) {
+      return '';
+    }
+
+    if (fields.length <= 1) {
+      return fields.first;
+    }
+
+    if (fields.length == 2) {
+      return '${fields[0]} ${AppMessages.createSegmentMissingFieldsConjunction} ${fields[1]}';
+    }
+
+    final delimiter = AppMessages.createSegmentMissingFieldsDelimiter;
+    final conjunction = AppMessages.createSegmentMissingFieldsConjunction;
+    final head = fields.sublist(0, fields.length - 1).join(delimiter);
+    return '$head$delimiter$conjunction ${fields.last}';
   }
 
   Future<bool?> _showConfirmationDialog({required String message}) {
