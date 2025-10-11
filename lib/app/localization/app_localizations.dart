@@ -149,6 +149,8 @@ class AppLocalizations {
       'saveSegment': 'Save segment',
       'segmentAlreadyAwaitingReview':
           'Segment {displayId} is already awaiting public review.',
+      'segmentAlreadyApprovedAndPublic':
+          'Segment {displayId} was already approved by the administrators and is public.',
       'segmentDebugDistanceKilometersLeft': '{distance} km left',
       'segmentDebugDistanceMeters': '{distance} m',
       'segmentDebugHeadingDiff': 'Δθ={angle}°',
@@ -276,8 +278,14 @@ class AppLocalizations {
     },
     'es': {
       'appTitle': 'TollCam',
+      'chooseSegmentVisibilityQuestion':
+          'Do you want the segment to be publically visible?',
       'averageSpeedResetTooltip': 'Нулирай средната скорост',
       'averageSpeedStartTooltip': 'Започни средната скорост',
+      'confirmKeepSegmentPrivate':
+          'Are you sure that you want to keep the segment only to yourself?',
+      'confirmMakeSegmentPublic':
+          'Are you sure you want to make this segment public?',
       'comingSoon': 'Очаквайте скоро',
       'coordinatesMustBeProvided':
           'Координатите трябва да бъдат въведени във формат „ширина, дължина“.',
@@ -314,8 +322,12 @@ class AppLocalizations {
       'languageLabelSpanish': 'Български',
       'languageButton': 'Смени езика',
       'localSegments': 'Локални сегменти',
+      'loginAction': 'Login',
       'logIn': 'Вход',
       'logOut': 'Изход',
+      'loggedInRetrySavePrompt':
+          'Logged in successfully. Tap "Save segment" again to submit the segment.',
+      'noAction': 'No',
       'noLocalSegments': 'Все още няма запазени локални сегменти.',
       'noSegmentsAvailable': 'Няма налични сегменти.',
       'openMenu': 'Отвори менюто',
@@ -323,6 +335,7 @@ class AppLocalizations {
       'profile': 'Профил',
       'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',
       'recenter': 'Центрирай Екрана',
+      'saveLocallyAction': 'Save locally',
       'saveSegment': 'Запази сегмента',
       'segmentDebugDistanceKilometersLeft': '{distance} км оставащи',
       'segmentDebugDistanceMeters': '{distance} м',
@@ -344,6 +357,9 @@ class AppLocalizations {
       'segmentProgressStartNearby': 'Началото на сегмента е близо',
       'segments': 'Сегменти',
       'selectLanguage': 'Избери език',
+      'signInToSharePubliclyBody':
+          'You need to be logged in to submit a public segment. Would you like to log in or save the segment locally instead?',
+      'signInToSharePubliclyTitle': 'Sign in to share publicly',
       'segmentDefaultStartName': 'Начало на {name}',
       'segmentDefaultEndName': 'Край на {name}',
       'segmentPickerStartMarkerLabel': 'A',
@@ -354,6 +370,8 @@ class AppLocalizations {
       'personalSegmentDefaultName': 'Личен сегмент',
       'onlySegmentsSavedLocallyCanBeShared':
           'Само сегменти, запазени локално, могат да бъдат споделяни публично.',
+      'segmentAlreadyApprovedAndPublic':
+          'Segment {displayId} was already approved by the administrators and is public.',
       'speedDialAverageTitle': 'Средна скорост',
       'speedDialCurrentTitle': 'Скорост',
       'speedDialDebugSummary': 'Сегменти: {count}  r={radius}{unit}',
@@ -387,6 +405,7 @@ class AppLocalizations {
       'unitMetersShort': 'м',
       'unknownUserLabel': 'Непознат потребител',
       'welcomeTitle': 'Добре Дошли!',
+      'yesAction': 'Yes',
       'yourProfile': 'Твоят профил',
 
     },
