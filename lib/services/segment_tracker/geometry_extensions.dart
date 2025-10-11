@@ -189,6 +189,39 @@ extension _SegmentTrackerGeometry on SegmentTracker {
 
     return remaining;
   }
+
+  /// Computes the distance along [path] between its start point and the
+  /// location described by [segmentIndex] / [segmentFraction].
+  double _distanceToPathStart(
+    List<GeoPoint> path,
+    int segmentIndex,
+    double segmentFraction,
+  ) {
+    if (path.length < 2) {
+      return 0.0;
+    }
+
+    final int clampedIndex = math.max(0, math.min(segmentIndex, path.length - 2));
+    final double clampedFraction = segmentFraction.clamp(0.0, 1.0);
+
+    double travelled = 0.0;
+
+    for (int i = 0; i < clampedIndex; i++) {
+      final double segLen = _distanceBetween(path[i], path[i + 1]);
+      if (segLen.isFinite && segLen > 0) {
+        travelled += segLen;
+      }
+    }
+
+    final GeoPoint start = path[clampedIndex];
+    final GeoPoint end = path[clampedIndex + 1];
+    final double segmentLength = _distanceBetween(start, end);
+    if (segmentLength.isFinite && segmentLength > 0) {
+      travelled += clampedFraction * segmentLength;
+    }
+
+    return travelled;
+  }
 }
 
 /// Captures the result of projecting a point onto a polyline.

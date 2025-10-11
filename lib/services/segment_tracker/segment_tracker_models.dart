@@ -79,6 +79,7 @@ class SegmentDebugPath {
     required this.distanceMeters,
     required this.startDistanceMeters,
     required this.remainingDistanceMeters,
+    required this.distanceAlongPathToStartMeters,
     required this.isWithinTolerance,
     required this.passesDirection,
     required this.startHit,
@@ -103,6 +104,9 @@ class SegmentDebugPath {
 
   /// Estimated distance remaining along the segment to its end point.
   final double remainingDistanceMeters;
+
+  /// Estimated travel distance along the segment back to its start point.
+  final double distanceAlongPathToStartMeters;
 
   /// Whether the candidate fell within the acceptable distance threshold.
   final bool isWithinTolerance;

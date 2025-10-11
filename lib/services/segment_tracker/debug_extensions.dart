@@ -36,6 +36,8 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           isActive: match.geometry.id == activeId,
           isDetailed: match.isDetailed,
           remainingDistanceMeters: match.remainingDistanceMeters,
+          distanceAlongPathToStartMeters:
+              match.distanceAlongPathToStartMeters,
           nearestPoint: LatLng(match.nearestPoint.lat, match.nearestPoint.lon),
           headingDiffDeg: match.headingDiffDeg,
         ),
@@ -61,6 +63,8 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           isActive: true,
           isDetailed: match.isDetailed,
           remainingDistanceMeters: match.remainingDistanceMeters,
+          distanceAlongPathToStartMeters:
+              match.distanceAlongPathToStartMeters,
           nearestPoint: LatLng(match.nearestPoint.lat, match.nearestPoint.lon),
           headingDiffDeg: match.headingDiffDeg,
         ),

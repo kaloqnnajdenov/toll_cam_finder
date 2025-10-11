@@ -85,7 +85,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
   String? _upcomingCueSegmentId;
-  double? _previousUpcomingDistance;
+  double? _previousUpcomingPathDistance;
   bool _hasPlayedUpcomingCue = false;
 
   @override
@@ -351,10 +351,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     SegmentDebugPath? upcoming;
     for (final path in paths) {
-      final startDist = path.startDistanceMeters;
-      if (!startDist.isFinite) continue;
-      if (startDist <= 500) {
-        if (upcoming == null || startDist < upcoming!.startDistanceMeters) {
+      final double distanceToStart = path.distanceAlongPathToStartMeters;
+      if (!distanceToStart.isFinite) continue;
+      if (distanceToStart <= AppConstants.upcomingSegmentCueDistanceMeters) {
+        if (upcoming == null ||
+            distanceToStart < upcoming!.distanceAlongPathToStartMeters) {
           upcoming = path;
         }
       }
@@ -364,7 +365,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return null;
     }
 
-    final double distance = upcoming.startDistanceMeters;
+    final double distance = upcoming.distanceAlongPathToStartMeters;
     if (distance >= 1000) {
       return localizations.translate(
         'segmentProgressStartKilometers',
@@ -395,13 +396,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     final upcoming = _firstPathMatching(
       paths,
       (path) =>
-          path.startDistanceMeters.isFinite &&
-          path.startDistanceMeters <=
+          path.distanceAlongPathToStartMeters.isFinite &&
+          path.distanceAlongPathToStartMeters <=
               AppConstants.upcomingSegmentCueDistanceMeters,
     ) ??
         _firstPathMatching(
           paths,
-          (path) => path.startDistanceMeters.isFinite,
+          (path) => path.distanceAlongPathToStartMeters.isFinite,
         );
 
     if (upcoming == null) {
@@ -409,23 +410,23 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       return;
     }
 
-    final double distance = upcoming.startDistanceMeters;
+    final double distance = upcoming.distanceAlongPathToStartMeters;
     if (!distance.isFinite) {
       return;
     }
 
     if (_upcomingCueSegmentId != upcoming.id) {
       _upcomingCueSegmentId = upcoming.id;
-      _previousUpcomingDistance = null;
+      _previousUpcomingPathDistance = null;
       _hasPlayedUpcomingCue = false;
     }
 
     final double threshold = AppConstants.upcomingSegmentCueDistanceMeters;
-    final double? previousDistance = _previousUpcomingDistance;
-    _previousUpcomingDistance = distance;
+    final double? previousDistance = _previousUpcomingPathDistance;
+    _previousUpcomingPathDistance = distance;
 
-    final bool crossedThreshold =
-        distance <= threshold && (previousDistance == null || previousDistance > threshold);
+    final bool crossedThreshold = distance < threshold &&
+        (previousDistance == null || previousDistance >= threshold);
 
     if (!_hasPlayedUpcomingCue && crossedThreshold) {
       _hasPlayedUpcomingCue = true;
@@ -439,7 +440,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   void _resetUpcomingCueTracking() {
     _upcomingCueSegmentId = null;
-    _previousUpcomingDistance = null;
+    _previousUpcomingPathDistance = null;
     _hasPlayedUpcomingCue = false;
   }
 

@@ -12,6 +12,7 @@ class SegmentMatch {
     required this.startDistanceMeters,
     required this.endDistanceMeters,
     required this.remainingDistanceMeters,
+    required this.distanceAlongPathToStartMeters,
     required this.headingDiffDeg,
     required this.withinTolerance,
     required this.startHit,
@@ -40,6 +41,9 @@ class SegmentMatch {
 
   /// Estimated distance remaining until the end of the segment along the path.
   final double remainingDistanceMeters;
+
+  /// Estimated travel distance along the path back to the start of the segment.
+  final double distanceAlongPathToStartMeters;
 
   /// Difference between the vehicle heading and the segment heading, if known.
   final double? headingDiffDeg;

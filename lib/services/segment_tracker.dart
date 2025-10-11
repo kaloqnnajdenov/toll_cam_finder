@@ -153,6 +153,11 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
         nearest.segmentIndex,
         nearest.segmentFraction,
       );
+      final double distanceToStart = _distanceToPathStart(
+        path,
+        nearest.segmentIndex,
+        nearest.segmentFraction,
+      );
       final bool detailed = _isPathDetailed(geom, path);
 
       double? headingDiff;
@@ -171,6 +176,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
           startDistanceMeters: startDist,
           endDistanceMeters: endDist,
           remainingDistanceMeters: remainingDist,
+          distanceAlongPathToStartMeters: distanceToStart,
           headingDiffDeg: headingDiff,
           withinTolerance: nearest.distanceMeters <= onPathToleranceMeters,
           startHit: startDist <= startGeofenceRadiusMeters,

@@ -119,7 +119,9 @@ class AppConstants {
   static const double smoothingHalfLifeMs = 400.0;
 
   /// Distance (in meters) at which the upcoming-segment audio cue is triggered.
-  static const double upcomingSegmentCueDistanceMeters = 500.0;
+  // Trigger the audio cue slightly earlier to ensure fast-moving users hear it
+  // even if they skip directly past the previous 500 m threshold.
+  static const double upcomingSegmentCueDistanceMeters = 550.0;
 
   /// System sound that plays when a new segment is approaching.
   static const SystemSoundType upcomingSegmentCueSoundType =
