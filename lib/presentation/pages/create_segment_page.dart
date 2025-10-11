@@ -302,7 +302,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       return true;
     }
 
-    if (focusNode != null && focusNode.attached) {
+    if (focusNode != null) {
       focusNode.requestFocus();
     }
 
