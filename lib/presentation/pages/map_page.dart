@@ -20,6 +20,7 @@ import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../app/app_routes.dart';
 import '../../app/localization/app_localizations.dart';
@@ -48,7 +49,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
   final SegmentsMetadataService _metadataService = SegmentsMetadataService();
-
+final AudioPlayer player = AudioPlayer();
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
@@ -265,21 +266,22 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   }
 
   Duration _cameraPollingDelayForDistance(double? distanceMeters) {
-    if (distanceMeters == null) {
-      return const Duration(minutes: 3);
-    }
-    if (distanceMeters > 10000) {
-      return const Duration(minutes: 3);
-    }
-    if (distanceMeters > 5000) {
-      return const Duration(minutes: 1, seconds: 30);
-    }
-    if (distanceMeters > 2000) {
-      return const Duration(seconds: 40);
-    }
-    if (distanceMeters > 1000) {
-      return const Duration(seconds: 15);
-    }
+    // if (distanceMeters == null) {
+    //-TODO: improvethis
+    //   return const Duration(minutes: 3);
+    // }
+    // if (distanceMeters > 10000) {
+    //   return const Duration(minutes: 3);
+    // }
+    // if (distanceMeters > 5000) {
+    //   return const Duration(minutes: 1, seconds: 30);
+    // }
+    // if (distanceMeters > 2000) {
+    //   return const Duration(seconds: 40);
+    // }
+    // if (distanceMeters > 1000) {
+    //   return const Duration(seconds: 15);
+    // }
     return Duration.zero;
   }
 
@@ -394,7 +396,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     if (distance >= 1 && !_upcomingMetersCuePlayed) {
       _upcomingMetersCuePlayed = true;
-      unawaited(SystemSound.play(SystemSoundType.click));
+      unawaited(player.play(AssetSource('data/ding_sound.mp3')));
     }
   }
 

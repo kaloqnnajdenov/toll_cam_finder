@@ -1,6 +1,7 @@
 // imports you likely already have:
 import 'dart:convert';
 import 'package:csv/csv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
@@ -14,6 +15,7 @@ import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
 import 'package:toll_cam_finder/services/toll_segments_data_store.dart';
+import 'package:toll_cam_finder/services/toll_segments_paths.dart';
 
 // -----------------------------------------------------------------------------
 // SegmentIndexService

@@ -9,6 +9,7 @@ import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
 import 'package:toll_cam_finder/services/toll_segments_data_store.dart';
+import 'package:toll_cam_finder/services/toll_segments_paths.dart';
 
 class SegmentInfo {
   const SegmentInfo({

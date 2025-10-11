@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:csv/csv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,6 +14,7 @@ import 'package:toll_cam_finder/services/toll_segments_file_system_stub.dart'
     if (dart.library.io) 'package:toll_cam_finder/services/toll_segments_file_system_io.dart'
     as fs_impl;
 import 'package:toll_cam_finder/services/toll_segments_data_store.dart';
+import 'package:toll_cam_finder/services/toll_segments_paths.dart';
 
 class CameraUtils {
   CameraUtils({
