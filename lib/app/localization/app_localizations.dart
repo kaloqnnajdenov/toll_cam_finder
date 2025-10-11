@@ -6,7 +6,7 @@ class AppLocalizations {
 
   final Locale locale;
 
-  static const supportedLanguageCodes = ['en', 'es'];
+  static const supportedLanguageCodes = ['en', 'bg'];
 
   static const Map<String, Map<String, String>> _localizedStrings = {
     'en': {
@@ -109,7 +109,7 @@ class AppLocalizations {
       'joinTollCam': 'Join TollCam',
       'language': 'Language',
       'languageLabelEnglish': 'English',
-      'languageLabelSpanish': 'Bulgarian',
+      'languageLabelBulgarian': 'Bulgarian',
       'languageButton': 'Change language',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
@@ -283,7 +283,7 @@ class AppLocalizations {
       'yesAction': 'Yes',
       'yourProfile': 'Your profile',
     },
-    'es': {
+    'bg': {
 'appTitle': 'TollCam',
 'chooseSegmentVisibilityQuestion':
 'Искаш ли сегментът да бъде видим публично?',
@@ -332,8 +332,8 @@ class AppLocalizations {
 'fullNameLabel': 'Пълно име',
 'joinTollCam': 'Присъедини се към TollCam',
 'language': 'Език',
-'languageLabelEnglish': 'Английски',
-'languageLabelSpanish': 'Български',
+      'languageLabelEnglish': 'Английски',
+      'languageLabelBulgarian': 'Български',
 'languageButton': 'Смени езика',
 'localSegments': 'Локални сегменти',
 'loginAction': 'Вход',

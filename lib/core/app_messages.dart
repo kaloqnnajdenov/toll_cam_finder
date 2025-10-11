@@ -29,8 +29,8 @@ class AppMessages {
       _l.translate('segmentPickerEndMarkerLabel');
   static String get languageLabelEnglish =>
       _l.translate('languageLabelEnglish');
-  static String get languageLabelSpanish =>
-      _l.translate('languageLabelSpanish');
+  static String get languageLabelBulgarian =>
+      _l.translate('languageLabelBulgarian');
   static String get personalSegmentDefaultName =>
       _l.translate('personalSegmentDefaultName');
   static String segmentDefaultStartName(String name) =>
