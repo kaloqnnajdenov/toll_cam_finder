@@ -42,7 +42,6 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
           _active!
             ..path = stored
             ..forceKeepUntilEnd = false
-            ..enforceDirection = true
             ..consecutiveMisses = 0
             ..lastMatch = null;
         }
@@ -54,8 +53,7 @@ extension _SegmentTrackerPathFetching on SegmentTracker {
         _fetchFailures.add(geometry.id);
         if (_active != null && _active!.geometry.id == geometry.id) {
           _active!
-            ..forceKeepUntilEnd = true
-            ..enforceDirection = false;
+            .forceKeepUntilEnd = true;
         }
         if (kDebugMode) {
           debugPrint('[SEG] enhanced path unavailable for ${geometry.id}');
