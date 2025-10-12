@@ -16,6 +16,7 @@ import 'package:toll_cam_finder/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
+import 'package:toll_cam_finder/services/background_notification_service.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
@@ -69,6 +70,7 @@ final AudioPlayer player = AudioPlayer();
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  BackgroundNotificationService? _notificationService;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
 
@@ -87,6 +89,7 @@ final AudioPlayer player = AudioPlayer();
 
   String? _upcomingMetersCueSegmentId;
   bool _upcomingMetersCuePlayed = false;
+  String? _notificationStatusMessage;
 
   @override
   void initState() {
@@ -104,6 +107,16 @@ final AudioPlayer player = AudioPlayer();
     }
     unawaited(_initLocation());
     unawaited(_initSegmentsIndex());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _notificationService ??= context.read<BackgroundNotificationService>();
+    final String? latestMessage = _notificationStatusMessage;
+    if (latestMessage != null) {
+      _notificationService?.updateStatus(latestMessage);
+    }
   }
 
   @override
@@ -200,6 +213,8 @@ final AudioPlayer player = AudioPlayer();
     setState(() {
       _speedKmh = smoothedKmh;
     });
+
+    _refreshNotificationStatus();
   }
 
   void _moveBlueDot(LatLng next) {
@@ -226,6 +241,7 @@ final AudioPlayer player = AudioPlayer();
 
     _segmentDebugData = segEvent.debugData;
     _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+    _refreshNotificationStatus();
   }
 
   void _resetSegmentState() {
@@ -236,6 +252,7 @@ final AudioPlayer player = AudioPlayer();
     _avgCtrl.reset();
     _nextCameraCheckAt = null;
     _resetUpcomingSegmentSoundCue();
+    _refreshNotificationStatus();
   }
 
   bool _shouldProcessSegmentUpdate(DateTime now) {
@@ -347,17 +364,7 @@ final AudioPlayer player = AudioPlayer();
       return null;
     }
 
-    SegmentDebugPath? upcoming;
-    for (final path in paths) {
-      final startDist = path.startDistanceMeters;
-      if (!startDist.isFinite) continue;
-      if (startDist <= 500) {
-        if (upcoming == null || startDist < upcoming!.startDistanceMeters) {
-          upcoming = path;
-        }
-      }
-    }
-
+    final SegmentDebugPath? upcoming = _findUpcomingSegment(paths, 1500);
     if (upcoming == null) {
       _resetUpcomingSegmentSoundCue();
       return null;
@@ -389,7 +396,7 @@ final AudioPlayer player = AudioPlayer();
       _upcomingMetersCuePlayed = false;
     }
 
-    if (distance >= 1000) {
+    if (distance > 500 || distance.isNaN) {
       _upcomingMetersCuePlayed = false;
       return;
     }
@@ -398,6 +405,76 @@ final AudioPlayer player = AudioPlayer();
       _upcomingMetersCuePlayed = true;
       unawaited(player.play(AssetSource('data/ding_sound.mp3')));
     }
+  }
+
+  SegmentDebugPath? _findUpcomingSegment(
+    List<SegmentDebugPath> paths,
+    double maxDistanceMeters,
+  ) {
+    SegmentDebugPath? closest;
+    for (final path in paths) {
+      final double distance = path.startDistanceMeters;
+      if (!distance.isFinite || distance < 0 || distance > maxDistanceMeters) {
+        continue;
+      }
+      if (closest == null || distance < closest.startDistanceMeters) {
+        closest = path;
+      }
+    }
+    return closest;
+  }
+
+  void _refreshNotificationStatus() {
+    if (!mounted) return;
+    final String message = _buildNotificationStatusMessage();
+    _notificationStatusMessage = message;
+    _notificationService?.updateStatus(message);
+  }
+
+  String _buildNotificationStatusMessage() {
+    final localizations = AppLocalizations.of(context);
+    final String? activeId = _segmentTracker.activeSegmentId;
+    if (activeId != null) {
+      final double average = _avgCtrl.average;
+      final double? limit = _activeSegmentSpeedLimitKph;
+      final double sanitizedAverage =
+          average.isFinite && average >= 0 ? average : 0.0;
+      final String averageLabel = sanitizedAverage.toStringAsFixed(1);
+      if (limit != null && limit.isFinite) {
+        return localizations.translate(
+          'segmentStatusActiveWithLimit',
+          {
+            'limit': limit.toStringAsFixed(0),
+            'average': averageLabel,
+          },
+        );
+      }
+      return localizations.translate(
+        'segmentStatusActiveNoLimit',
+        {'average': averageLabel},
+      );
+    }
+
+    final SegmentDebugPath? upcoming =
+        _findUpcomingSegment(_segmentDebugData.candidatePaths, 1500);
+    if (upcoming == null) {
+      return localizations.translate('segmentStatusNoNearby');
+    }
+
+    final double distance = upcoming.startDistanceMeters;
+    if (distance >= 1000) {
+      return localizations.translate(
+        'segmentStatusStartKilometers',
+        {'distance': (distance / 1000).toStringAsFixed(2)},
+      );
+    }
+    if (distance >= 1) {
+      return localizations.translate(
+        'segmentStatusStartMeters',
+        {'distance': distance.toStringAsFixed(0)},
+      );
+    }
+    return localizations.translate('segmentStatusStartNearby');
   }
 
   void _resetUpcomingSegmentSoundCue() {

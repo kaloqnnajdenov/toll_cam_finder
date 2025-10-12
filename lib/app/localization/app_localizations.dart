@@ -184,6 +184,13 @@ class AppLocalizations {
       'segmentProgressStartKilometers': '{distance} km to segment start',
       'segmentProgressStartMeters': '{distance} m to segment start',
       'segmentProgressStartNearby': 'Segment start nearby',
+      'segmentStatusNoNearby': 'No segment nearby',
+      'segmentStatusStartKilometers': '{distance} km to segment start',
+      'segmentStatusStartMeters': '{distance} m to segment start',
+      'segmentStatusStartNearby': 'Segment start nearby',
+      'segmentStatusActiveWithLimit':
+          'Limit {limit} km/h · Avg {average} km/h',
+      'segmentStatusActiveNoLimit': 'Avg {average} km/h on segment',
       'segmentSavedLocally': 'Segment saved locally.',
       'segmentDefaultStartName': '{name} start',
       'segmentDefaultEndName': '{name} end',
@@ -369,6 +376,13 @@ class AppLocalizations {
 '{distance} км до началото на сегмента',
 'segmentProgressStartMeters': '{distance} м до началото на сегмента',
 'segmentProgressStartNearby': 'Началото на сегмента е близо',
+'segmentStatusNoNearby': 'Няма близък сегмент',
+'segmentStatusStartKilometers': '{distance} км до началото на сегмента',
+'segmentStatusStartMeters': '{distance} м до началото на сегмента',
+'segmentStatusStartNearby': 'Началото на сегмента е близо',
+'segmentStatusActiveWithLimit':
+'Ограничение {limit} км/ч · Ср. скорост {average} км/ч',
+'segmentStatusActiveNoLimit': 'Ср. скорост {average} км/ч в сегмента',
 'segments': 'Сегменти',
 'selectLanguage': 'Избери език',
 'signInToSharePubliclyBody':
