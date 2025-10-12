@@ -136,8 +136,6 @@ class MapSegmentsService {
   Future<SegmentsRefreshResult> refreshSegmentsData({
     required bool showMetadataErrors,
     required LatLng? userLatLng,
-    required double? speedKmh,
-    required double? compassHeading,
   }) async {
     final metadataResult =
         await loadSegmentsMetadata(showErrors: showMetadataErrors);
@@ -157,10 +155,6 @@ class MapSegmentsService {
     if (reloaded && userLatLng != null) {
       seedEvent = _segmentTracker.handleLocationUpdate(
         current: userLatLng,
-        previous: null,
-        rawHeading: null,
-        speedKmh: speedKmh,
-        compassHeading: compassHeading,
       );
     }
 
@@ -176,8 +170,6 @@ class MapSegmentsService {
     required SupabaseClient? client,
     required Set<String> ignoredSegmentIds,
     required LatLng? userLatLng,
-    required double? speedKmh,
-    required double? compassHeading,
   }) async {
     if (client == null) {
       return SegmentsSyncResult(
@@ -200,10 +192,6 @@ class MapSegmentsService {
       if (reloaded && userLatLng != null) {
         seedEvent = _segmentTracker.handleLocationUpdate(
           current: userLatLng,
-          previous: null,
-          rawHeading: null,
-          speedKmh: speedKmh,
-          compassHeading: compassHeading,
         );
       }
 

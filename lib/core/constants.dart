@@ -201,15 +201,6 @@ class AppConstants {
   /// user enters this bubble we treat the segment as complete.
   static const double segmentEndGeofenceRadiusMeters = 40.0;
 
-  /// Heading difference (degrees) permitted between the user's travel heading
-  /// and the local bearing of the matched polyline when direction checks are
-  /// enforced.
-  static const double segmentDirectionToleranceDegrees = 75.0;
-
-  /// Minimum speed (km/h) before we trust the heading sensor enough to enforce
-  /// direction checks. Below this, heading readings are typically unstable.
-  static const double segmentDirectionMinSpeedKmh = 5.0;
-
   /// Default diameter (logical pixels) for the blue location dot rendered on
   /// the map. Adjust to enlarge or shrink the marker footprint.
   static const double blueDotMarkerSize = 40.0;
