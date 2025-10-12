@@ -298,11 +298,12 @@ final AudioPlayer player = AudioPlayer();
     final DateTime timestamp = now ?? DateTime.now();
     final SegmentDebugPath? activePath =
         _resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
+            double averageForGuidance = _avgCtrl.average;
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
     } else if (segEvent.endedSegment) {
-      final double avgForSegment = _avgCtrl.average;
+      final double avgForSegment = averageForGuidance;
       _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
       _avgCtrl.reset();
     }
@@ -322,7 +323,7 @@ final AudioPlayer player = AudioPlayer();
     final guidanceFuture = _segmentGuidanceController.handleUpdate(
       event: segEvent,
       activePath: activePath,
-      averageKph: _avgCtrl.average,
+      averageKph: averageForGuidance,
       speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
       now: timestamp,
       averageStartedAt: _avgCtrl.startedAt,

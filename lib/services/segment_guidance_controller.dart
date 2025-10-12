@@ -157,9 +157,9 @@ class SegmentGuidanceController {
 
     final String limitText =
         (limitKph != null && limitKph.isFinite)
-            ? 'Limit ${limitKph.toStringAsFixed(0)}.'
-            : 'Limit unknown.';
-    await _speak('Zone started. $limitText Tracking average speed.');
+            ? 'The Speed Limit is ${limitKph.toStringAsFixed(0)}.'
+            : 'The Speed Limit is unknown.';
+    await _speak('Zone started. $limitText Drive safely!');
   }
 
   Future<void> _handleSegmentExit({required double averageKph}) async {
@@ -171,7 +171,7 @@ class SegmentGuidanceController {
     final String averageText = hasAverage ? averageKph.toStringAsFixed(0) : 'unknown';
 
     await _speak(
-      'Zone complete. Allowed average $limitText. Your average $averageText.',
+      'Zone complete. Allowed speed was $limitText. Your average is $averageText.',
     );
   }
 
@@ -257,7 +257,7 @@ class SegmentGuidanceController {
           : '$rounded m';
       final String avgText = averageKph.toStringAsFixed(0);
       final String limitText = limit.toStringAsFixed(0);
-      await _speak('$distanceText to end. Avg $avgText, target ≤$limitText.');
+      await _speak('$distanceText to end. Avg $avgText, target is $limitText.');
     } else {
       await _playChime();
     }
@@ -312,7 +312,7 @@ class SegmentGuidanceController {
     );
 
     final String? line3 = safeSpeed != null
-        ? 'Est. safe speed now: ${safeSpeed.toStringAsFixed(0)} (computed to finish ≤ limit)'
+        ? 'Est. safe speed now: ${safeSpeed.toStringAsFixed(0)} computed to finish under the limit'
         : null;
 
     return SegmentGuidanceUiModel(line1: line1, line2: line2, line3: line3);
