@@ -5,33 +5,24 @@ const double _headingHistoryMinDistanceMeters = 5.0;
 const double _headingHistoryMinSpanMeters =
     _headingHistoryMinDistanceMeters * 2;
 const double _headingHistoryMaxGapMeters = 200.0;
-const double _headingBlendMinSpeedKmh = 2.0;
-const double _headingBlendMaxSpeedKmh = 12.0;
 const double _headingSmoothingFactor = 0.25;
 const double _headingSmoothingEpsilonDeg = 0.2;
 const double _headingLargeChangeThresholdDeg = 60.0;
 
 /// Heading related utilities for [SegmentTracker].
 extension _SegmentTrackerHeading on SegmentTracker {
-  /// Picks the best heading estimate for the tracker by fusing compass readings
-  /// with course-over-ground bearings derived from recent positions. Compass
-  /// data stabilises low-speed behaviour while the positional history keeps the
-  /// heading aligned with the vehicle path.
+  /// Picks the best heading estimate for the tracker using course-over-ground
+  /// bearings derived from recent positions. Positional history stabilises
+  /// low-speed behaviour while keeping the heading aligned with the vehicle
+  /// path.
   double? _resolveHeading(
     LatLng current,
     LatLng? previous,
     double? rawHeading,
     double? speedKmh,
-    double? compassHeading,
   ) {
-    final double speed =
-        speedKmh != null && speedKmh.isFinite ? speedKmh : 0.0;
-    final double? normalizedCompass = _normalizeHeading(compassHeading);
-    if (normalizedCompass != null) {
-      _lastCompassHeadingDeg = normalizedCompass;
-    }
-
-    final bool speedOk = speedKmh == null || speed >= directionMinSpeedKmh;
+    final bool speedOk = speedKmh == null ||
+        (speedKmh.isFinite && speedKmh >= directionMinSpeedKmh);
     final double? normalizedCourse =
         speedOk ? _normalizeHeading(rawHeading) : null;
 
@@ -69,54 +60,18 @@ extension _SegmentTrackerHeading on SegmentTracker {
       courseHeading = fallbackHeading;
     }
 
-    final double? compassForFusion =
-        normalizedCompass ?? _lastCompassHeadingDeg;
-
-    double? fusedHeading = _fuseCompassAndCourse(
-      compass: compassForFusion,
-      course: courseHeading,
-      speedKmh: speed,
-    );
-
-    fusedHeading ??= courseHeading ?? compassForFusion;
-
-    if (fusedHeading == null) {
-      return normalizedCompass ?? normalizedCourse ?? fallbackHeading;
+    double? resolvedHeading;
+    if (courseHeading != null) {
+      resolvedHeading = courseHeading;
+    } else {
+      resolvedHeading = fallbackHeading;
     }
 
-    return _smoothResolvedHeading(fusedHeading);
-  }
-
-  double? _fuseCompassAndCourse({
-    double? compass,
-    double? course,
-    required double speedKmh,
-  }) {
-    if (course == null) return compass;
-    if (compass == null) return course;
-
-    double weight = _courseBlendWeight(speedKmh);
-    if (weight <= 0.0) return compass;
-    if (weight >= 1.0) return course;
-
-    final double delta = _headingDelta(compass, course).abs();
-    if (delta > 90.0) {
-      final double severity = ((delta - 90.0).clamp(0.0, 90.0)) / 90.0;
-      weight *= 1 - 0.5 * severity;
+    if (resolvedHeading == null) {
+      return normalizedCourse ?? fallbackHeading;
     }
 
-    if (weight <= 0.0) return compass;
-    if (weight >= 1.0) return course;
-
-    return _interpolateHeadings(compass, course, weight);
-  }
-
-  double _courseBlendWeight(double speedKmh) {
-    if (!speedKmh.isFinite) return 0.0;
-    if (speedKmh <= _headingBlendMinSpeedKmh) return 0.0;
-    if (speedKmh >= _headingBlendMaxSpeedKmh) return 1.0;
-    return (speedKmh - _headingBlendMinSpeedKmh) /
-        (_headingBlendMaxSpeedKmh - _headingBlendMinSpeedKmh);
+    return _smoothResolvedHeading(resolvedHeading);
   }
 
   void _addHeadingSample(GeoPoint sample) {

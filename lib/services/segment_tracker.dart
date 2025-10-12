@@ -64,7 +64,6 @@ class SegmentTracker {
   final Set<String> _fetchFailures = <String>{};
   final Set<String> _fetching = <String>{};
   final List<GeoPoint> _headingHistory = <GeoPoint>[];
-  double? _lastCompassHeadingDeg;
   double? _smoothedHeadingDeg;
   final Set<String> _ignoredSegmentIds = <String>{};
 
@@ -110,7 +109,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     LatLng? previous,
     double? rawHeading,
     double? speedKmh,
-    double? compassHeading,
   }) {
     if (!_isReady) {
       return SegmentTrackerEvent(
@@ -128,7 +126,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       previous,
       rawHeading,
       speedKmh,
-      compassHeading,
     );
 
     final List<SegmentGeometry> candidates = _index.candidatesNearLatLng(
@@ -211,7 +208,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     _fetchFailures.clear();
     _fetching.clear();
     _headingHistory.clear();
-    _lastCompassHeadingDeg = null;
     _smoothedHeadingDeg = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }

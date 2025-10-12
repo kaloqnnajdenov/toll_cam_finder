@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -80,7 +79,6 @@ class _MapPageState extends State<MapPage>
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
-  StreamSubscription<CompassEvent>? _compassSub;
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
@@ -102,7 +100,6 @@ class _MapPageState extends State<MapPage>
   SegmentTrackerEvent? _lastSegmentEvent;
 
   double? _speedKmh;
-  double? _compassHeading;
   String? _segmentProgressLabel;
   SegmentGuidanceUiModel? _segmentGuidanceUi;
   bool _isSyncing = false;
@@ -135,10 +132,6 @@ class _MapPageState extends State<MapPage>
     unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
-    final compassStream = FlutterCompass.events;
-    if (compassStream != null) {
-      _compassSub = compassStream.listen(_handleCompassEvent);
-    }
     unawaited(_initLocation());
     unawaited(_initSegmentsIndex());
   }
@@ -147,7 +140,6 @@ class _MapPageState extends State<MapPage>
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
-    _compassSub?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
@@ -165,23 +157,6 @@ class _MapPageState extends State<MapPage>
         _didRequestNotificationPermission) {
       unawaited(_ensureNotificationPermission());
     }
-  }
-
-  void _handleCompassEvent(CompassEvent event) {
-    if (!mounted) return;
-
-    final double? heading = event.heading;
-    if (heading == null || !heading.isFinite) {
-      _compassHeading = null;
-      return;
-    }
-
-    double normalized = heading % 360;
-    if (normalized < 0) {
-      normalized += 360;
-    }
-
-    _compassHeading = normalized;
   }
 
   Future<void> _initLocation() async {
@@ -208,7 +183,6 @@ class _MapPageState extends State<MapPage>
       previous: null,
       rawHeading: pos.heading,
       speedKmh: _speedKmh,
-      compassHeading: _compassHeading,
     );
     _applySegmentEvent(segEvent);
     _nextCameraCheckAt =
@@ -302,7 +276,6 @@ class _MapPageState extends State<MapPage>
         previous: previous,
         rawHeading: position.heading,
         speedKmh: smoothedKmh,
-        compassHeading: _compassHeading,
       );
       _applySegmentEvent(segEvent, now: now);
       _nextCameraCheckAt =
@@ -550,7 +523,6 @@ class _MapPageState extends State<MapPage>
         previous: null,
         rawHeading: null,
         speedKmh: _speedKmh,
-        compassHeading: _compassHeading,
       );
       _applySegmentEvent(seedEvent);
       _nextCameraCheckAt =

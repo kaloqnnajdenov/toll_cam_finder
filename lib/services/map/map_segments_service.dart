@@ -137,7 +137,6 @@ class MapSegmentsService {
     required bool showMetadataErrors,
     required LatLng? userLatLng,
     required double? speedKmh,
-    required double? compassHeading,
   }) async {
     final metadataResult =
         await loadSegmentsMetadata(showErrors: showMetadataErrors);
@@ -160,7 +159,6 @@ class MapSegmentsService {
         previous: null,
         rawHeading: null,
         speedKmh: speedKmh,
-        compassHeading: compassHeading,
       );
     }
 
@@ -177,7 +175,6 @@ class MapSegmentsService {
     required Set<String> ignoredSegmentIds,
     required LatLng? userLatLng,
     required double? speedKmh,
-    required double? compassHeading,
   }) async {
     if (client == null) {
       return SegmentsSyncResult(
@@ -203,7 +200,6 @@ class MapSegmentsService {
           previous: null,
           rawHeading: null,
           speedKmh: speedKmh,
-          compassHeading: compassHeading,
         );
       }
 
