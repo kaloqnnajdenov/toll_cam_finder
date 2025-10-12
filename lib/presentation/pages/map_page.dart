@@ -58,6 +58,7 @@ final AudioPlayer player = AudioPlayer();
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
+  LatLng? _lastAvgSamplePosition;
   bool _mapReady = false;
   bool _followUser = false;
   double _currentZoom = AppConstants.initialZoom;
@@ -265,7 +266,27 @@ final AudioPlayer player = AudioPlayer();
     final shownKmh = _normalizeSpeed(position.speed);
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
-    _avgCtrl.addSample(shownKmh);
+    double? distanceMeters;
+    if (_avgCtrl.isRunning) {
+      final LatLng? last = _lastAvgSamplePosition;
+      if (last != null) {
+        distanceMeters = Geolocator.distanceBetween(
+          last.latitude,
+          last.longitude,
+          next.latitude,
+          next.longitude,
+        );
+        if (!distanceMeters.isFinite) {
+          distanceMeters = null;
+        }
+      }
+      _lastAvgSamplePosition = next;
+      _avgCtrl.addSample(
+        shownKmh,
+        timestamp: position.timestamp ?? DateTime.now(),
+        distanceMeters: distanceMeters,
+      );
+    }
     final previous = _userLatLng;
     _moveBlueDot(next);
     final now = DateTime.now();
@@ -301,10 +322,12 @@ final AudioPlayer player = AudioPlayer();
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
+      _lastAvgSamplePosition = _userLatLng;
     } else if (segEvent.endedSegment) {
       final double avgForSegment = _avgCtrl.average;
       _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
       _avgCtrl.reset();
+      _lastAvgSamplePosition = null;
     }
 
     if (segEvent.activeSegmentId == null) {
@@ -352,6 +375,7 @@ final AudioPlayer player = AudioPlayer();
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
+    _lastAvgSamplePosition = null;
     _segmentGuidanceUi = null;
     _nextCameraCheckAt = null;
     _resetUpcomingSegmentSoundCue();
