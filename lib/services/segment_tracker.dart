@@ -20,7 +20,6 @@ part 'segment_tracker/active_segment_state.dart';
 part 'segment_tracker/segment_transition.dart';
 part 'segment_tracker/debug_extensions.dart';
 part 'segment_tracker/geometry_extensions.dart';
-part 'segment_tracker/heading_extensions.dart';
 part 'segment_tracker/path_fetch_extensions.dart';
 
 class SegmentTracker {
@@ -32,9 +31,6 @@ class SegmentTracker {
     this.startGeofenceRadiusMeters =
         AppConstants.segmentStartGeofenceRadiusMeters,
     this.endGeofenceRadiusMeters = AppConstants.segmentEndGeofenceRadiusMeters,
-    this.directionToleranceDegrees =
-        AppConstants.segmentDirectionToleranceDegrees,
-    this.directionMinSpeedKmh = AppConstants.segmentDirectionMinSpeedKmh,
   }) : _index = indexService,
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
@@ -52,9 +48,6 @@ class SegmentTracker {
   final double onPathToleranceMeters;
   final double startGeofenceRadiusMeters;
   final double endGeofenceRadiusMeters;
-  final double directionToleranceDegrees;
-  final double directionMinSpeedKmh;
-
   bool _isReady = false;
   SegmentTrackerDebugData _latestDebugData =
       const SegmentTrackerDebugData.empty();
@@ -63,9 +56,6 @@ class SegmentTracker {
   final Map<String, List<GeoPoint>> _pathOverrides = <String, List<GeoPoint>>{};
   final Set<String> _fetchFailures = <String>{};
   final Set<String> _fetching = <String>{};
-  final List<GeoPoint> _headingHistory = <GeoPoint>[];
-  double? _lastCompassHeadingDeg;
-  double? _smoothedHeadingDeg;
   final Set<String> _ignoredSegmentIds = <String>{};
 
   bool get isReady => _isReady;
@@ -107,10 +97,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
 
   SegmentTrackerEvent handleLocationUpdate({
     required LatLng current,
-    LatLng? previous,
-    double? rawHeading,
-    double? speedKmh,
-    double? compassHeading,
   }) {
     if (!_isReady) {
       return SegmentTrackerEvent(
@@ -123,13 +109,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
 
     final GeoPoint userPoint = GeoPoint(current.latitude, current.longitude);
-    final double? heading = _resolveHeading(
-      current,
-      previous,
-      rawHeading,
-      speedKmh,
-      compassHeading,
-    );
 
     final List<SegmentGeometry> candidates = _index.candidatesNearLatLng(
       current,
@@ -155,13 +134,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       );
       final bool detailed = _isPathDetailed(geom, path);
 
-      double? headingDiff;
-      bool passesDirection = true;
-      if (heading != null && nearest.bearingDeg != null && detailed) {
-        headingDiff = _angularDifferenceDegrees(heading, nearest.bearingDeg!);
-        passesDirection = headingDiff <= directionToleranceDegrees;
-      }
-
       matches.add(
         SegmentMatch(
           geometry: geom,
@@ -171,11 +143,9 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
           startDistanceMeters: startDist,
           endDistanceMeters: endDist,
           remainingDistanceMeters: remainingDist,
-          headingDiffDeg: headingDiff,
           withinTolerance: nearest.distanceMeters <= onPathToleranceMeters,
           startHit: startDist <= startGeofenceRadiusMeters,
           endHit: endDist <= endGeofenceRadiusMeters,
-          passesDirection: passesDirection,
           isDetailed: detailed,
         ),
       );
@@ -210,9 +180,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     _pathOverrides.clear();
     _fetchFailures.clear();
     _fetching.clear();
-    _headingHistory.clear();
-    _lastCompassHeadingDeg = null;
-    _smoothedHeadingDeg = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
@@ -256,11 +223,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     final bool distanceOk = active.forceKeepUntilEnd
         ? current.distanceMeters <= looseExitDistance
         : current.withinTolerance;
-    final bool directionOk = active.enforceDirection
-        ? current.passesDirection
-        : true;
-
-    if (distanceOk && directionOk) {
+    if (distanceOk) {
       active.consecutiveMisses = 0;
       return const _SegmentTransition();
     }
@@ -281,19 +244,12 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     if (matches.isEmpty) return null;
 
     final startCandidates =
-        matches.where((m) => m.startHit && _entryDirectionAllowed(m)).toList()
+        matches.where((m) => m.startHit).toList()
           ..sort(
             (a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters),
           );
 
     return startCandidates.isNotEmpty ? startCandidates.first : null;
-  }
-
-  bool _entryDirectionAllowed(SegmentMatch match) {
-    if (!match.isDetailed) {
-      return true;
-    }
-    return match.passesDirection;
   }
 
   void _startSegment(SegmentMatch entry) {
@@ -302,7 +258,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       geometry: entry.geometry,
       path: entry.path,
       forceKeepUntilEnd: !entry.isDetailed,
-      enforceDirection: entry.isDetailed,
       enteredAt: DateTime.now(),
     )..lastMatch = entry;
 
@@ -313,9 +268,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
 
     if (!entry.isDetailed && fetchFailed) {
-      active
-        ..forceKeepUntilEnd = true
-        ..enforceDirection = false;
+      active.forceKeepUntilEnd = true;
     }
 
     if (kDebugMode) {

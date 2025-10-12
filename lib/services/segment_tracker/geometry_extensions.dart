@@ -27,27 +27,6 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     ];
   }
 
-  /// Returns the absolute angular difference between two headings in degrees
-  /// while accounting for wrap-around at 0/360.
-  double _angularDifferenceDegrees(double a, double b) {
-    double diff = (a - b).abs() % 360.0;
-    if (diff > 180.0) diff = 360.0 - diff;
-    return diff;
-  }
-
-  /// Computes the forward bearing from [from] to [to] in degrees.
-  double _bearingBetween(LatLng from, LatLng to) {
-    final double lat1 = from.latitude * math.pi / 180.0;
-    final double lat2 = to.latitude * math.pi / 180.0;
-    final double dLon = (to.longitude - from.longitude) * math.pi / 180.0;
-    final double y = math.sin(dLon) * math.cos(lat2);
-    final double x = math.cos(lat1) * math.sin(lat2) -
-        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    double bearing = math.atan2(y, x) * 180.0 / math.pi;
-    if (bearing < 0) bearing += 360.0;
-    return bearing;
-  }
-
   /// Computes the great-circle distance between [a] and [b] using the Haversine
   /// formula so that distances remain accurate regardless of position.
   double _distanceBetween(GeoPoint a, GeoPoint b) {
@@ -77,7 +56,6 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     double bestDistSq = double.infinity;
     double bestX = 0;
     double bestY = 0;
-    double? bestBearingDeg;
     int bestSegmentIndex = 0;
     double bestSegmentFraction = 0.0;
 
@@ -110,10 +88,6 @@ extension _SegmentTrackerGeometry on SegmentTracker {
         bestDistSq = distSq;
         bestX = projX;
         bestY = projY;
-        final double bearingRad = math.atan2(dx, dy);
-        double bearingDeg = bearingRad * 180.0 / math.pi;
-        if (bearingDeg < 0) bearingDeg += 360.0;
-        bestBearingDeg = bearingDeg;
         bestSegmentIndex = i;
         bestSegmentFraction = t;
       }
@@ -128,15 +102,6 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       bestDistSq = bestX * bestX + bestY * bestY;
       bestSegmentIndex = 0;
       bestSegmentFraction = 0.0;
-      if (offsets.length >= 2) {
-        final math.Point<double> next = offsets[1];
-        final double dx = next.x - first.x;
-        final double dy = next.y - first.y;
-        final double bearingRad = math.atan2(dx, dy);
-        double bearingDeg = bearingRad * 180.0 / math.pi;
-        if (bearingDeg < 0) bearingDeg += 360.0;
-        bestBearingDeg = bearingDeg;
-      }
     }
 
     final double nearestLat = refLat + (bestY / mPerDegLat);
@@ -146,7 +111,6 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     return _NearestPointResult(
       distanceMeters: distance,
       point: GeoPoint(nearestLat, nearestLon),
-      bearingDeg: bestBearingDeg,
       segmentIndex: bestSegmentIndex,
       segmentFraction: bestSegmentFraction,
     );
@@ -196,7 +160,6 @@ class _NearestPointResult {
   const _NearestPointResult({
     required this.distanceMeters,
     required this.point,
-    this.bearingDeg,
     required this.segmentIndex,
     required this.segmentFraction,
   });
@@ -206,9 +169,6 @@ class _NearestPointResult {
 
   /// The closest location on the path to the original point.
   final GeoPoint point;
-
-  /// Heading of the path at [point] when it could be derived.
-  final double? bearingDeg;
 
   /// Index of the segment containing the projected point.
   final int segmentIndex;

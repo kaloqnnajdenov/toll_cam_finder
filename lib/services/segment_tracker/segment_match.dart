@@ -12,11 +12,9 @@ class SegmentMatch {
     required this.startDistanceMeters,
     required this.endDistanceMeters,
     required this.remainingDistanceMeters,
-    required this.headingDiffDeg,
     required this.withinTolerance,
     required this.startHit,
     required this.endHit,
-    required this.passesDirection,
     required this.isDetailed,
   });
 
@@ -41,9 +39,6 @@ class SegmentMatch {
   /// Estimated distance remaining until the end of the segment along the path.
   final double remainingDistanceMeters;
 
-  /// Difference between the vehicle heading and the segment heading, if known.
-  final double? headingDiffDeg;
-
   /// Whether the match is within the configured spatial tolerance.
   final bool withinTolerance;
 
@@ -52,9 +47,6 @@ class SegmentMatch {
 
   /// Whether the vehicle is inside the segment's end geofence.
   final bool endHit;
-
-  /// Whether the heading and direction constraints are satisfied.
-  final bool passesDirection;
 
   /// Indicates if [path] contains detailed geometry rather than a fallback line.
   final bool isDetailed;

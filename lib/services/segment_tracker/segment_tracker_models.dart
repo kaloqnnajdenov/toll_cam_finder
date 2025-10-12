@@ -80,13 +80,11 @@ class SegmentDebugPath {
     required this.startDistanceMeters,
     required this.remainingDistanceMeters,
     required this.isWithinTolerance,
-    required this.passesDirection,
     required this.startHit,
     required this.endHit,
     required this.isActive,
     required this.isDetailed,
     this.nearestPoint,
-    this.headingDiffDeg,
   });
 
   /// Identifier of the underlying segment geometry.
@@ -107,9 +105,6 @@ class SegmentDebugPath {
   /// Whether the candidate fell within the acceptable distance threshold.
   final bool isWithinTolerance;
 
-  /// Whether the candidate satisfied the heading/direction requirements.
-  final bool passesDirection;
-
   /// Whether the vehicle is currently inside the start geofence.
   final bool startHit;
 
@@ -124,7 +119,4 @@ class SegmentDebugPath {
 
   /// Optional marker for the closest point on the path.
   final LatLng? nearestPoint;
-
-  /// Optional difference between the vehicle heading and the segment heading.
-  final double? headingDiffDeg;
 }
