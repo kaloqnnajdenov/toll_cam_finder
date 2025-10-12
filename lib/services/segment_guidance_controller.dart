@@ -70,7 +70,8 @@ class SegmentGuidanceController {
 
     if (event.endedSegment || event.activeSegmentId == null) {
       if (_hasActiveSegment) {
-        await reset();
+        await _handleSegmentExit(averageKph: averageKph);
+        await reset(stopTts: false);
         return SegmentGuidanceResult.clear();
       }
       return null;
@@ -121,7 +122,7 @@ class SegmentGuidanceController {
     return SegmentGuidanceResult.update(ui);
   }
 
-  Future<void> reset() async {
+  Future<void> reset({bool stopTts = true}) async {
     _hasActiveSegment = false;
     _currentLimitKph = null;
     _lastUiUpdateAt = null;
@@ -131,7 +132,9 @@ class SegmentGuidanceController {
     _aboveLimitAlerted = false;
     _wasOverLimit = false;
     _approachAnnounced = false;
-    await _tts.stop();
+    if (stopTts) {
+      await _tts.stop();
+    }
   }
 
   Future<void> dispose() async {
@@ -157,6 +160,19 @@ class SegmentGuidanceController {
             ? 'Limit ${limitKph.toStringAsFixed(0)}.'
             : 'Limit unknown.';
     await _speak('Zone started. $limitText Tracking average speed.');
+  }
+
+  Future<void> _handleSegmentExit({required double averageKph}) async {
+    final double? limit =
+        (_currentLimitKph != null && _currentLimitKph!.isFinite) ? _currentLimitKph : null;
+    final bool hasAverage = averageKph.isFinite;
+
+    final String limitText = limit != null ? limit.toStringAsFixed(0) : 'unknown';
+    final String averageText = hasAverage ? averageKph.toStringAsFixed(0) : 'unknown';
+
+    await _speak(
+      'Zone complete. Allowed average $limitText. Your average $averageText.',
+    );
   }
 
   Future<bool> _checkCloseToLimit({
