@@ -10,7 +10,6 @@ class _ActiveSegmentState {
     required this.geometry,
     required this.path,
     required this.forceKeepUntilEnd,
-    required this.enforceDirection,
     required this.enteredAt,
   });
 
@@ -24,10 +23,6 @@ class _ActiveSegmentState {
   /// When `true` the tracker keeps the segment active until it is explicitly
   /// exited, even if interim matches are weak.
   bool forceKeepUntilEnd;
-
-  /// When `true` heading alignment is enforced while matching against the
-  /// segment geometry.
-  bool enforceDirection;
 
   /// Timestamp at which the segment became active, used by timeout heuristics.
   final DateTime enteredAt;

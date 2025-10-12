@@ -161,8 +161,6 @@ extension _MapPageDrawer on _MapPageState {
     final result = await _segmentsService.refreshSegmentsData(
       showMetadataErrors: true,
       userLatLng: _userLatLng,
-      speedKmh: _speedKmh,
-      compassHeading: _compassHeading,
     );
 
     _segmentsMetadata = result.metadata;
@@ -204,8 +202,6 @@ extension _MapPageDrawer on _MapPageState {
         client: auth.client,
         ignoredSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
         userLatLng: _userLatLng,
-        speedKmh: _speedKmh,
-        compassHeading: _compassHeading,
       );
     } finally {
       if (mounted) {

@@ -140,11 +140,8 @@ class SegmentPolylineOverlay extends StatelessWidget {
     if (path.isActive) {
       return Colors.redAccent.withOpacity(0.9);
     }
-    if (path.isWithinTolerance && path.passesDirection) {
-      return Colors.greenAccent.withOpacity(0.75);
-    }
     if (path.isWithinTolerance) {
-      return Colors.yellowAccent.withOpacity(0.75);
+      return Colors.greenAccent.withOpacity(0.75);
     }
     return Colors.orangeAccent.withOpacity(0.65);
   }
@@ -152,9 +149,6 @@ class SegmentPolylineOverlay extends StatelessWidget {
   double _estimateMarkerHeight(SegmentDebugPath path) {
     var lineCount = 2; // id + distance
     if (path.remainingDistanceMeters.isFinite) {
-      lineCount += 1;
-    }
-    if (path.headingDiffDeg != null) {
       lineCount += 1;
     }
     // Tags are always present (at least approx/detailed), so count that line.
@@ -224,9 +218,6 @@ class _SegmentDebugMarker extends StatelessWidget {
       path.isDetailed
           ? localizations.translate('segmentDebugTagDetailed')
           : localizations.translate('segmentDebugTagApprox'),
-      path.passesDirection
-          ? localizations.translate('segmentDebugTagDirectionPass')
-          : localizations.translate('segmentDebugTagDirectionFail'),
       if (path.startHit)
         localizations.translate('segmentDebugTagStart'),
       if (path.endHit) localizations.translate('segmentDebugTagEnd'),
@@ -271,13 +262,6 @@ class _SegmentDebugMarker extends StatelessWidget {
                         'distance': (path.remainingDistanceMeters / 1000)
                             .toStringAsFixed(2),
                       },
-                    ),
-                  ),
-                if (path.headingDiffDeg != null)
-                  Text(
-                    localizations.translate(
-                      'segmentDebugHeadingDiff',
-                      {'angle': path.headingDiffDeg!.toStringAsFixed(0)},
                     ),
                   ),
                 if (tags.isNotEmpty) Text(tags.join(separator)),

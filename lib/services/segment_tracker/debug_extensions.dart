@@ -30,14 +30,12 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           distanceMeters: match.distanceMeters,
           startDistanceMeters: match.startDistanceMeters,
           isWithinTolerance: match.withinTolerance,
-          passesDirection: match.passesDirection,
           startHit: match.startHit,
           endHit: match.endHit,
           isActive: match.geometry.id == activeId,
           isDetailed: match.isDetailed,
           remainingDistanceMeters: match.remainingDistanceMeters,
           nearestPoint: LatLng(match.nearestPoint.lat, match.nearestPoint.lon),
-          headingDiffDeg: match.headingDiffDeg,
         ),
       );
     }
@@ -55,14 +53,12 @@ extension _SegmentTrackerDebugging on SegmentTracker {
           distanceMeters: match.distanceMeters,
           startDistanceMeters: match.startDistanceMeters,
           isWithinTolerance: match.withinTolerance,
-          passesDirection: match.passesDirection,
           startHit: match.startHit,
           endHit: match.endHit,
           isActive: true,
           isDetailed: match.isDetailed,
           remainingDistanceMeters: match.remainingDistanceMeters,
           nearestPoint: LatLng(match.nearestPoint.lat, match.nearestPoint.lon),
-          headingDiffDeg: match.headingDiffDeg,
         ),
       );
     }
