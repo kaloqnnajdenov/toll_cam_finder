@@ -6,10 +6,11 @@ import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/services/map/camera_polling_service.dart';
 import 'package:toll_cam_finder/services/map/map_sync_message_service.dart';
-import 'package:toll_cam_finder/services/map/toll_camera_controller.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
+
+import '../../presentation/pages/map/toll_camera_controller.dart';
 
 class SegmentsMetadataLoadResult {
   const SegmentsMetadataLoadResult({
