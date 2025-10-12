@@ -41,7 +41,8 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+class _MapPageState extends State<MapPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const double _speedDeadbandKmh = 1.0;
   // External services
@@ -87,10 +88,13 @@ final AudioPlayer player = AudioPlayer();
 
   String? _upcomingMetersCueSegmentId;
   bool _upcomingMetersCuePlayed = false;
+  bool _useForegroundLocationService = false;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
@@ -114,7 +118,15 @@ final AudioPlayer player = AudioPlayer();
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
     _segmentTracker.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final bool shouldEnableForeground = state != AppLifecycleState.resumed;
+    _setForegroundLocationMode(shouldEnableForeground);
   }
 
   void _handleCompassEvent(CompassEvent event) {
@@ -169,10 +181,27 @@ final AudioPlayer player = AudioPlayer();
       _currentZoom = AppConstants.zoomWhenFocused;
     }
 
-    _posSub?.cancel();
-    _posSub = _locationService.getPositionStream().listen(
-      _handlePositionUpdate,
-    );
+    await _subscribeToPositionStream();
+  }
+
+  Future<void> _subscribeToPositionStream() async {
+    await _posSub?.cancel();
+    _posSub = _locationService
+        .getPositionStream(
+          useForegroundNotification: _useForegroundLocationService,
+        )
+        .listen(_handlePositionUpdate);
+  }
+
+  void _setForegroundLocationMode(bool enable) {
+    if (_useForegroundLocationService == enable) {
+      return;
+    }
+
+    _useForegroundLocationService = enable;
+    if (_posSub != null) {
+      unawaited(_subscribeToPositionStream());
+    }
   }
 
   void _handlePositionUpdate(Position position) {
