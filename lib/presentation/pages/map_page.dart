@@ -67,7 +67,7 @@ final AudioPlayer player = AudioPlayer();
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
-  final AverageSpeedController _avgCtrl = AverageSpeedController();
+  late final AverageSpeedController _avgCtrl;
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
   final SegmentTracker _segmentTracker = SegmentTracker(
@@ -81,6 +81,7 @@ final AudioPlayer player = AudioPlayer();
 
   double? _lastSegmentAvgKmh;
   double? _activeSegmentSpeedLimitKph;
+  SegmentTrackerEvent? _lastSegmentEvent;
 
   double? _speedKmh;
   double? _compassHeading;
@@ -93,6 +94,7 @@ final AudioPlayer player = AudioPlayer();
   bool _upcomingMetersCuePlayed = false;
   bool _useForegroundLocationService = false;
   bool _didRequestNotificationPermission = false;
+  String? _lastNotificationStatus;
 
   @override
   void initState() {
@@ -100,6 +102,7 @@ final AudioPlayer player = AudioPlayer();
 
     WidgetsBinding.instance.addObserver(this);
 
+    _avgCtrl = context.read<AverageSpeedController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _metadataLoadFuture = _loadSegmentsMetadata();
@@ -120,7 +123,6 @@ final AudioPlayer player = AudioPlayer();
     _mapEvtSub?.cancel();
     _compassSub?.cancel();
     _blueDotAnimator.dispose();
-    _avgCtrl.dispose();
     _segmentTracker.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -208,6 +210,10 @@ final AudioPlayer player = AudioPlayer();
     }
 
     _useForegroundLocationService = enable;
+    _lastNotificationStatus = null;
+    if (enable && _lastSegmentEvent != null) {
+      unawaited(_updateForegroundNotification(_lastSegmentEvent!));
+    }
     if (_posSub != null) {
       unawaited(_subscribeToPositionStream());
     }
@@ -301,6 +307,8 @@ final AudioPlayer player = AudioPlayer();
 
     _segmentDebugData = segEvent.debugData;
     _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+    _lastSegmentEvent = segEvent;
+    unawaited(_updateForegroundNotification(segEvent));
   }
 
   void _resetSegmentState() {
@@ -311,6 +319,60 @@ final AudioPlayer player = AudioPlayer();
     _avgCtrl.reset();
     _nextCameraCheckAt = null;
     _resetUpcomingSegmentSoundCue();
+    _lastSegmentEvent = null;
+    _lastNotificationStatus = null;
+  }
+
+  Future<void> _updateForegroundNotification(SegmentTrackerEvent event) async {
+    if (!_useForegroundLocationService) {
+      return;
+    }
+
+    final String status = _buildForegroundNotificationStatus(event);
+    if (status == _lastNotificationStatus) {
+      return;
+    }
+
+    _lastNotificationStatus = status;
+    await _notificationPermissionService.updateForegroundNotification(
+      title: AppConstants.backgroundNotificationTitle,
+      text: status,
+      iconName: AppConstants.backgroundNotificationIconName,
+      iconType: AppConstants.backgroundNotificationIconType,
+    );
+  }
+
+  String _buildForegroundNotificationStatus(SegmentTrackerEvent event) {
+    final String? activeId = event.activeSegmentId;
+    if (activeId != null) {
+      final double? limit = event.activeSegmentSpeedLimitKph;
+      final double avg = _avgCtrl.average;
+      final String limitText =
+          (limit != null && limit.isFinite) ? '${limit.toStringAsFixed(0)} km/h' : '--';
+      final String avgText = avg.isFinite ? '${avg.toStringAsFixed(0)} km/h' : '--';
+      return 'Limit $limitText • Avg $avgText';
+    }
+
+    final double? distance =
+        _nearestUpcomingSegmentDistance(event.debugData.candidatePaths);
+    if (distance != null && distance <= 1500) {
+      final int meters = distance.round();
+      return '$meters m to segment start';
+    }
+
+    return 'no segment nearby';
+  }
+
+  double? _nearestUpcomingSegmentDistance(Iterable<SegmentDebugPath> paths) {
+    double? closest;
+    for (final path in paths) {
+      final double distance = path.startDistanceMeters;
+      if (!distance.isFinite || distance < 0) continue;
+      if (closest == null || distance < closest) {
+        closest = distance;
+      }
+    }
+    return closest;
   }
 
   bool _shouldProcessSegmentUpdate(DateTime now) {
@@ -464,7 +526,7 @@ final AudioPlayer player = AudioPlayer();
       _upcomingMetersCuePlayed = false;
     }
 
-    if (distance >= 1000) {
+    if (distance >= 500) {
       _upcomingMetersCuePlayed = false;
       return;
     }

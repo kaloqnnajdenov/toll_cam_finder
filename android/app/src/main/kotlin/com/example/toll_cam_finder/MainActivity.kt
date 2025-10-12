@@ -1,6 +1,7 @@
 package com.example.toll_cam_finder
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +9,7 @@ import android.os.Build
 import android.provider.Settings
 import android.net.Uri
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.NotificationCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -17,6 +19,8 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val NOTIFICATION_CHANNEL = "com.example.toll_cam_finder/notifications"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
+        private const val FOREGROUND_CHANNEL_ID = "geolocator_channel_01"
+        private const val FOREGROUND_NOTIFICATION_ID = 75415
     }
 
     private var pendingNotificationResult: MethodChannel.Result? = null
@@ -35,6 +39,15 @@ class MainActivity : FlutterActivity() {
             "requestPermission" -> requestNotificationPermission(result)
             "openNotificationSettings" -> {
                 openNotificationSettings()
+                result.success(null)
+            }
+            "updateForegroundNotification" -> {
+                updateForegroundNotification(
+                    title = call.argument("title"),
+                    text = call.argument("text"),
+                    iconName = call.argument("iconName"),
+                    iconType = call.argument("iconType"),
+                )
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -112,5 +125,50 @@ class MainActivity : FlutterActivity() {
             grantResults[0] == PackageManager.PERMISSION_GRANTED
 
         pendingResult.success(granted)
+    }
+
+    private fun updateForegroundNotification(
+        title: String?,
+        text: String?,
+        iconName: String?,
+        iconType: String?,
+    ) {
+        if (title.isNullOrBlank() || text.isNullOrBlank()) {
+            return
+        }
+
+        val resolvedIconName = iconName ?: "ic_launcher"
+        val resolvedIconType = iconType ?: "mipmap"
+        val iconId = resources.getIdentifier(resolvedIconName, resolvedIconType, packageName)
+        val smallIcon = if (iconId != 0) iconId else applicationInfo.icon
+
+        val builder = NotificationCompat.Builder(applicationContext, FOREGROUND_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(smallIcon)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+
+        createLaunchPendingIntent()?.let { builder.setContentIntent(it) }
+
+        NotificationManagerCompat.from(applicationContext).notify(
+            FOREGROUND_NOTIFICATION_ID,
+            builder.build(),
+        )
+    }
+
+    private fun createLaunchPendingIntent(): PendingIntent? {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return null
+        launchIntent.setPackage(null)
+        launchIntent.flags =
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+
+        var flags = PendingIntent.FLAG_UPDATE_CURRENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = flags or PendingIntent.FLAG_IMMUTABLE
+        }
+
+        return PendingIntent.getActivity(this, 0, launchIntent, flags)
     }
 }

@@ -54,4 +54,26 @@ class NotificationPermissionService {
       // Ignored: opening settings is a best-effort operation.
     }
   }
+
+  Future<void> updateForegroundNotification({
+    required String title,
+    required String text,
+    required String iconName,
+    required String iconType,
+  }) async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+
+    try {
+      await _channel.invokeMethod<void>('updateForegroundNotification', {
+        'title': title,
+        'text': text,
+        'iconName': iconName,
+        'iconType': iconType,
+      });
+    } on PlatformException {
+      // Ignore failures: the foreground notification is a best-effort status.
+    }
+  }
 }
