@@ -7,11 +7,14 @@ import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'app/app.dart';
 import 'services/auth_controller.dart';
 import 'services/language_controller.dart';
+import 'services/background_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SupabaseClient? supabaseClient;
+  final backgroundNotificationService = BackgroundNotificationService();
+  await backgroundNotificationService.initialize();
 
   if (SupabaseConfig.isConfigured) {
     final supabase = await Supabase.initialize(
@@ -36,6 +39,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => LanguageController(),
+        ),
+        Provider<BackgroundNotificationService>.value(
+          value: backgroundNotificationService,
         ),
       ],
       child: const TollCamApp(),

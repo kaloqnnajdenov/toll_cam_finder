@@ -6,6 +6,7 @@ import '../services/language_controller.dart';
 import 'app_routes.dart';
 import 'app_theme.dart';
 import 'localization/app_localizations.dart';
+import 'lifecycle_observer.dart';
 
 class TollCamApp extends StatelessWidget {
   const TollCamApp({super.key});
@@ -15,20 +16,22 @@ class TollCamApp extends StatelessWidget {
     return Consumer<LanguageController>(
       builder: (context, languageController, _) {
         final appLocalizations = AppLocalizations(languageController.locale);
-        return MaterialApp(
-          title: appLocalizations.appTitle,
-          theme: buildAppTheme(),
-          initialRoute: AppRoutes.map,
-          routes: AppRoutes.routes,
-          debugShowCheckedModeBanner: false,
-          locale: languageController.locale,
-          supportedLocales: languageController.supportedLocales,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-            AppLocalizationsDelegate(),
-          ],
+        return LifecycleObserver(
+          child: MaterialApp(
+            title: appLocalizations.appTitle,
+            theme: buildAppTheme(),
+            initialRoute: AppRoutes.map,
+            routes: AppRoutes.routes,
+            debugShowCheckedModeBanner: false,
+            locale: languageController.locale,
+            supportedLocales: languageController.supportedLocales,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              AppLocalizationsDelegate(),
+            ],
+          ),
         );
       },
     );

@@ -43,10 +43,12 @@
 		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true />
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true />
-		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>We use your location to show your current position on the map.</string>
+                <key>UIApplicationSupportsIndirectInputEvents</key>
+                <true />
+                <key>NSLocationWhenInUseUsageDescription</key>
+                <string>We use your location to show your current position on the map.</string>
+                <key>NSUserNotificationUsageDescription</key>
+                <string>We send notifications to remind you that the Toll App is active in the background.</string>
 
-	</dict>
+        </dict>
 </plist>
