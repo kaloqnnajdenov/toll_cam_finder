@@ -17,6 +17,7 @@ import 'package:toll_cam_finder/presentation/widgets/blue_dot_marker.dart';
 import 'package:toll_cam_finder/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/speed_smoother.dart';
+import 'package:toll_cam_finder/services/segment_guidance_controller.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 import 'package:toll_cam_finder/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/services/toll_segments_sync_service.dart';
@@ -73,6 +74,7 @@ final AudioPlayer player = AudioPlayer();
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  late final SegmentGuidanceController _segmentGuidanceController;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
 
@@ -86,6 +88,7 @@ final AudioPlayer player = AudioPlayer();
   double? _speedKmh;
   double? _compassHeading;
   String? _segmentProgressLabel;
+  SegmentGuidanceUiModel? _segmentGuidanceUi;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
@@ -104,6 +107,7 @@ final AudioPlayer player = AudioPlayer();
 
     _avgCtrl = context.read<AverageSpeedController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
+    _segmentGuidanceController = SegmentGuidanceController();
 
     _metadataLoadFuture = _loadSegmentsMetadata();
     unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
@@ -124,6 +128,7 @@ final AudioPlayer player = AudioPlayer();
     _compassSub?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
+    unawaited(_segmentGuidanceController.dispose());
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -272,7 +277,7 @@ final AudioPlayer player = AudioPlayer();
         speedKmh: smoothedKmh,
         compassHeading: _compassHeading,
       );
-      _applySegmentEvent(segEvent);
+      _applySegmentEvent(segEvent, now: now);
       _updateCameraPollingSchedule(next);
     }
 
@@ -289,7 +294,10 @@ final AudioPlayer player = AudioPlayer();
     _blueDotAnimator.animate(from: from, to: next);
   }
 
-  void _applySegmentEvent(SegmentTrackerEvent segEvent) {
+  void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
+    final DateTime timestamp = now ?? DateTime.now();
+    final SegmentDebugPath? activePath =
+        _resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
@@ -306,9 +314,36 @@ final AudioPlayer player = AudioPlayer();
     }
 
     _segmentDebugData = segEvent.debugData;
-    _segmentProgressLabel = _buildSegmentProgressLabel(segEvent);
+    _segmentProgressLabel =
+        _buildSegmentProgressLabel(segEvent, activePath: activePath);
     _lastSegmentEvent = segEvent;
     unawaited(_updateForegroundNotification(segEvent));
+
+    final guidanceFuture = _segmentGuidanceController.handleUpdate(
+      event: segEvent,
+      activePath: activePath,
+      averageKph: _avgCtrl.average,
+      speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
+      now: timestamp,
+      averageStartedAt: _avgCtrl.startedAt,
+    );
+
+    unawaited(guidanceFuture.then((result) {
+      if (!mounted || result == null) {
+        return;
+      }
+      if (result.shouldClear) {
+        setState(() {
+          _segmentGuidanceUi = null;
+        });
+        return;
+      }
+      if (result.ui != null) {
+        setState(() {
+          _segmentGuidanceUi = result.ui;
+        });
+      }
+    }));
   }
 
   void _resetSegmentState() {
@@ -317,10 +352,12 @@ final AudioPlayer player = AudioPlayer();
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
+    _segmentGuidanceUi = null;
     _nextCameraCheckAt = null;
     _resetUpcomingSegmentSoundCue();
     _lastSegmentEvent = null;
     _lastNotificationStatus = null;
+    unawaited(_segmentGuidanceController.reset());
   }
 
   Future<void> _updateForegroundNotification(SegmentTrackerEvent event) async {
@@ -446,7 +483,26 @@ final AudioPlayer player = AudioPlayer();
     _updateVisibleCameras();
   }
 
-  String? _buildSegmentProgressLabel(SegmentTrackerEvent event) {
+  SegmentDebugPath? _resolveActiveSegmentPath(
+    Iterable<SegmentDebugPath> paths,
+    SegmentTrackerEvent event,
+  ) {
+    final String? activeId = event.activeSegmentId;
+    if (activeId == null) {
+      return null;
+    }
+    return _firstPathMatching(
+          paths,
+          (p) => p.id == activeId && p.isActive,
+        ) ??
+        _firstPathMatching(paths, (p) => p.id == activeId) ??
+        _firstPathMatching(paths, (p) => p.isActive);
+  }
+
+  String? _buildSegmentProgressLabel(
+    SegmentTrackerEvent event, {
+    SegmentDebugPath? activePath,
+  }) {
     final paths = event.debugData.candidatePaths;
     if (paths.isEmpty) {
       _resetUpcomingSegmentSoundCue();
@@ -455,18 +511,15 @@ final AudioPlayer player = AudioPlayer();
 
     final localizations = AppLocalizations.of(context);
 
-    final String? activeId = event.activeSegmentId;
-    if (activeId != null) {
+    if (event.activeSegmentId != null) {
       _resetUpcomingSegmentSoundCue();
-      final activePath =
-          _firstPathMatching(paths, (p) => p.id == activeId && p.isActive) ??
-          _firstPathMatching(paths, (p) => p.id == activeId) ??
-          _firstPathMatching(paths, (p) => p.isActive);
+      final SegmentDebugPath? path =
+          activePath ?? _resolveActiveSegmentPath(paths, event);
 
-      if (activePath != null &&
-          activePath.remainingDistanceMeters.isFinite &&
-          activePath.remainingDistanceMeters >= 0) {
-        final remaining = activePath.remainingDistanceMeters;
+      if (path != null &&
+          path.remainingDistanceMeters.isFinite &&
+          path.remainingDistanceMeters >= 0) {
+        final remaining = path.remainingDistanceMeters;
         if (remaining >= 1000) {
           return localizations.translate(
             'segmentProgressEndKilometers',
@@ -764,6 +817,7 @@ final AudioPlayer player = AudioPlayer();
                 lastSegmentAvgKmh: _lastSegmentAvgKmh,
                 segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
                 segmentProgressLabel: _segmentProgressLabel,
+                segmentGuidance: _segmentGuidanceUi,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,
