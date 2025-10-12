@@ -7,6 +7,12 @@ class PermissionService {
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
     }
+    if (perm == LocationPermission.deniedForever) {
+      return false;
+    }
+    if (perm == LocationPermission.whileInUse) {
+      perm = await Geolocator.requestPermission();
+    }
     return perm == LocationPermission.always ||
         perm == LocationPermission.whileInUse;
   }

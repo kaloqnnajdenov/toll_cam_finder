@@ -145,6 +145,8 @@ class AppMessages {
       _l.translate('unableToLogOutTryAgain');
   static String get authenticationNotConfigured =>
       _l.translate('authenticationNotConfigured');
+  static String get backgroundTrackingNotificationRationale =>
+      _l.translate('backgroundTrackingNotificationRationale');
   static String get unexpectedErrorSigningIn =>
       _l.translate('unexpectedErrorSigningIn');
   static String get unexpectedErrorCreatingAccount =>
@@ -177,6 +179,8 @@ class AppMessages {
       _l.translate('createSegmentMapInstructionTitle');
   static String get createSegmentMapInstructionBody =>
       _l.translate('createSegmentMapInstructionBody');
+  static String get openNotificationSettingsAction =>
+      _l.translate('openNotificationSettingsAction');
   static String get createSegmentDetailsTitle =>
       _l.translate('createSegmentDetailsTitle');
   static String get createSegmentNameLabel =>

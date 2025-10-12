@@ -27,6 +27,7 @@ import '../../app/localization/app_localizations.dart';
 import '../../services/auth_controller.dart';
 import '../../services/language_controller.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_permission_service.dart';
 import '../../services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
@@ -41,13 +42,16 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+class _MapPageState extends State<MapPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const double _speedDeadbandKmh = 1.0;
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
+  final NotificationPermissionService _notificationPermissionService =
+      const NotificationPermissionService();
   final SegmentsMetadataService _metadataService = SegmentsMetadataService();
 final AudioPlayer player = AudioPlayer();
   // User + map state
@@ -87,10 +91,14 @@ final AudioPlayer player = AudioPlayer();
 
   String? _upcomingMetersCueSegmentId;
   bool _upcomingMetersCuePlayed = false;
+  bool _useForegroundLocationService = false;
+  bool _didRequestNotificationPermission = false;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
@@ -114,7 +122,19 @@ final AudioPlayer player = AudioPlayer();
     _blueDotAnimator.dispose();
     _avgCtrl.dispose();
     _segmentTracker.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final bool shouldEnableForeground = state != AppLifecycleState.resumed;
+    _setForegroundLocationMode(shouldEnableForeground);
+    if (state == AppLifecycleState.resumed &&
+        _didRequestNotificationPermission) {
+      unawaited(_ensureNotificationPermission());
+    }
   }
 
   void _handleCompassEvent(CompassEvent event) {
@@ -137,6 +157,7 @@ final AudioPlayer player = AudioPlayer();
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.ensureLocationPermission();
     if (!hasPermission) return;
+    await _ensureNotificationPermission();
     if (_metadataLoadFuture != null) {
       try {
         await _metadataLoadFuture;
@@ -169,9 +190,63 @@ final AudioPlayer player = AudioPlayer();
       _currentZoom = AppConstants.zoomWhenFocused;
     }
 
-    _posSub?.cancel();
-    _posSub = _locationService.getPositionStream().listen(
-      _handlePositionUpdate,
+    await _subscribeToPositionStream();
+  }
+
+  Future<void> _subscribeToPositionStream() async {
+    await _posSub?.cancel();
+    _posSub = _locationService
+        .getPositionStream(
+          useForegroundNotification: _useForegroundLocationService,
+        )
+        .listen(_handlePositionUpdate);
+  }
+
+  void _setForegroundLocationMode(bool enable) {
+    if (_useForegroundLocationService == enable) {
+      return;
+    }
+
+    _useForegroundLocationService = enable;
+    if (_posSub != null) {
+      unawaited(_subscribeToPositionStream());
+    }
+  }
+
+  Future<void> _ensureNotificationPermission() async {
+    if (_didRequestNotificationPermission) {
+      final bool enabled =
+          await _notificationPermissionService.areNotificationsEnabled();
+      if (enabled || !mounted) {
+        return;
+      }
+
+      _showNotificationSettingsPrompt();
+      return;
+    }
+
+    _didRequestNotificationPermission = true;
+    final bool granted =
+        await _notificationPermissionService.ensurePermissionGranted();
+    if (granted || !mounted) {
+      return;
+    }
+
+    _showNotificationSettingsPrompt();
+  }
+
+  void _showNotificationSettingsPrompt() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(AppMessages.backgroundTrackingNotificationRationale),
+        action: SnackBarAction(
+          label: AppMessages.openNotificationSettingsAction,
+          onPressed: () {
+            unawaited(_notificationPermissionService.openSettings());
+          },
+        ),
+      ),
     );
   }
 
