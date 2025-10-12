@@ -124,16 +124,19 @@ class AppConstants {
   /// preserving smoothing longer.
   static const double catchUpDistanceMeters = 20.0;
 
- /// Asset path for the toll-road segments dataset (CSV format).
+  /// Asset path for the toll-road segments dataset (CSV format).
   static const String pathToTollSegments = 'assets/data/toll_segments.csv';
 
-/// Asset path to the toll segments dataset. Camera markers are derived from
+  /// Asset path to the toll segments dataset. Camera markers are derived from
   /// the start and end points of each segment in this CSV file.
   static const String camerasAsset = pathToTollSegments;
   //TODO: mertge camera assets with pathtotollsegments????
 
+  /// Asset used for the upcoming-segment cue played shortly before entering a
+  /// monitored area.
+  static const String upcomingSegmentSoundAsset = 'data/ding_sound.mp3';
 
-
+  
   /// The animation controller starts with, and falls back to, a 500 ms duration for
   /// each interpolation run. Increasing that duration makes movements appear slower
   /// and smoother, while decreasing it yields snappier—but potentially choppier—updates
