@@ -34,6 +34,7 @@ import '../../services/map/map_sync_message_service.dart';
 import '../../services/map/segment_ui_service.dart';
 import '../../services/map/speed_service.dart';
 import '../../services/map/upcoming_segment_cue_service.dart';
+import '../../services/map/map_segments_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
@@ -67,6 +68,7 @@ class _MapPageState extends State<MapPage>
       const CameraPollingService();
   final MapSyncMessageService _syncMessageService =
       const MapSyncMessageService();
+  late final MapSegmentsService _segmentsService;
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
@@ -118,6 +120,14 @@ class _MapPageState extends State<MapPage>
     _avgCtrl = context.read<AverageSpeedController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
     _segmentGuidanceController = SegmentGuidanceController();
+    _segmentsService = MapSegmentsService(
+      metadataService: _metadataService,
+      segmentTracker: _segmentTracker,
+      cameraController: _cameraController,
+      cameraPollingService: _cameraPollingService,
+      syncService: _syncService,
+      syncMessageService: _syncMessageService,
+    );
 
     _metadataLoadFuture = _loadSegmentsMetadata();
     unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
@@ -199,7 +209,8 @@ class _MapPageState extends State<MapPage>
       compassHeading: _compassHeading,
     );
     _applySegmentEvent(segEvent);
-    _updateCameraPollingSchedule(firstFix);
+    _nextCameraCheckAt =
+        _segmentsService.calculateNextCameraCheck(position: firstFix);
 
     if (mounted) setState(() {});
 
@@ -280,7 +291,10 @@ class _MapPageState extends State<MapPage>
     final previous = _userLatLng;
     _moveBlueDot(next);
     final now = DateTime.now();
-    if (_shouldProcessSegmentUpdate(now)) {
+    if (_segmentsService.shouldProcessSegmentUpdate(
+      now: now,
+      nextCameraCheckAt: _nextCameraCheckAt,
+    )) {
       final segEvent = _segmentTracker.handleLocationUpdate(
         current: next,
         previous: previous,
@@ -289,7 +303,8 @@ class _MapPageState extends State<MapPage>
         compassHeading: _compassHeading,
       );
       _applySegmentEvent(segEvent, now: now);
-      _updateCameraPollingSchedule(next);
+      _nextCameraCheckAt =
+          _segmentsService.calculateNextCameraCheck(position: next);
     }
 
     if (!mounted) return;
@@ -399,34 +414,6 @@ class _MapPageState extends State<MapPage>
     );
   }
 
-  bool _shouldProcessSegmentUpdate(DateTime now) {
-    if (_segmentTracker.activeSegmentId != null) {
-      return true;
-    }
-    final DateTime? nextCheck = _nextCameraCheckAt;
-    if (nextCheck == null) {
-      return true;
-    }
-    return !now.isBefore(nextCheck);
-  }
-
-  void _updateCameraPollingSchedule(LatLng position) {
-    if (_segmentTracker.activeSegmentId != null) {
-      _nextCameraCheckAt = null;
-      return;
-    }
-
-    final double? distance =
-        _cameraController.nearestCameraDistanceMeters(position);
-    final Duration delay =
-        _cameraPollingService.delayForDistance(distance);
-    if (delay <= Duration.zero) {
-      _nextCameraCheckAt = null;
-    } else {
-      _nextCameraCheckAt = DateTime.now().add(delay);
-    }
-  }
-
   void _onMapEvent(MapEvent evt) {
     _currentZoom = evt.camera.zoom;
     final bool external = evt.source != MapEventSource.mapController;
@@ -498,32 +485,24 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _loadSegmentsMetadata({bool showErrors = false}) async {
-    try {
-      final metadata = await _metadataService.load();
-      _segmentsMetadata = metadata;
-      _segmentTracker.updateIgnoredSegments(metadata.deactivatedSegmentIds);
-    } on SegmentsMetadataException catch (error) {
-      _segmentsMetadata = const SegmentsMetadata();
-      _segmentTracker.updateIgnoredSegments(const <String>{});
-      if (showErrors && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppMessages.failedToLoadSegmentPreferences(error.message),
-            ),
-          ),
-        );
-      } else {
-        debugPrint(
-          'MapPage: failed to load segments metadata (${error.message}).',
-        );
-      }
+    final result =
+        await _segmentsService.loadSegmentsMetadata(showErrors: showErrors);
+    _segmentsMetadata = result.metadata;
+    if (!mounted) {
+      return;
     }
+    if (showErrors && result.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.errorMessage!),
+        ),
+      );
+    }
+    setState(() {});
   }
 
   Future<void> _loadCameras() async {
-    await _cameraController.loadFromAsset(
-      AppConstants.camerasAsset,
+    await _segmentsService.loadCameras(
       excludedSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
     );
     if (!mounted) return;
@@ -572,7 +551,8 @@ class _MapPageState extends State<MapPage>
         compassHeading: _compassHeading,
       );
       _applySegmentEvent(seedEvent);
-      _updateCameraPollingSchedule(_userLatLng!);
+      _nextCameraCheckAt =
+          _segmentsService.calculateNextCameraCheck(position: _userLatLng!);
     }
 
     setState(() {});
@@ -583,23 +563,13 @@ class _MapPageState extends State<MapPage>
       return;
     }
 
-    final auth = context.read<AuthController>();
-    final client = auth.client;
-    if (client == null) {
-      debugPrint('MapPage: skipping startup sync (no Supabase client).');
-      return;
-    }
-
     setState(() {
       _isSyncing = true;
     });
 
+    final client = context.read<AuthController>().client;
     try {
-      await _syncService.sync(client: client);
-    } on TollSegmentsSyncException catch (error) {
-      debugPrint('MapPage: startup sync failed (${error.message}).');
-    } catch (error, stackTrace) {
-      debugPrint('MapPage: unexpected startup sync error: $error\n$stackTrace');
+      await _segmentsService.runStartupSync(client);
     } finally {
       if (mounted) {
         setState(() {
@@ -851,101 +821,84 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _refreshSegmentsData() async {
-    _metadataLoadFuture = _loadSegmentsMetadata(showErrors: true);
-    if (_metadataLoadFuture != null) {
-      try {
-        await _metadataLoadFuture;
-      } catch (_) {
-        // Errors are surfaced inside _loadSegmentsMetadata.
-      }
+    final result = await _segmentsService.refreshSegmentsData(
+      showMetadataErrors: true,
+      userLatLng: _userLatLng,
+      speedKmh: _speedKmh,
+      compassHeading: _compassHeading,
+    );
+
+    _segmentsMetadata = result.metadata;
+    if (!mounted) {
+      return;
     }
-    final reloaded = await _segmentTracker.reload(
-      assetPath: AppConstants.pathToTollSegments,
-    );
 
-    _segmentTracker.updateIgnoredSegments(
-      _segmentsMetadata.deactivatedSegmentIds,
-    );
-
-    await _loadCameras();
-    if (!mounted) return;
+    if (result.metadataError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.metadataError!),
+        ),
+      );
+    }
 
     _resetSegmentState();
-    if (reloaded && _userLatLng != null) {
-      final segEvent = _segmentTracker.handleLocationUpdate(
-        current: _userLatLng!,
-        previous: null,
-        rawHeading: null,
-        speedKmh: _speedKmh,
-        compassHeading: _compassHeading,
-      );
-      _applySegmentEvent(segEvent);
+    if (result.seedEvent != null) {
+      _applySegmentEvent(result.seedEvent!);
     }
 
-    if (mounted) {
-      setState(() {});
-    }
+    _nextCameraCheckAt = null;
+    _updateVisibleCameras();
+    setState(() {});
   }
 
   Future<void> _performSync() async {
     if (_isSyncing) return;
 
-    final auth = context.read<AuthController>();
-    final client = auth.client;
     final messenger = ScaffoldMessenger.of(context);
-
-    if (client == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppMessages.supabaseNotConfiguredForSync),
-        ),
-      );
-      return;
-    }
 
     setState(() {
       _isSyncing = true;
     });
 
+    final auth = context.read<AuthController>();
+    SegmentsSyncResult? result;
     try {
-      final result = await _syncService.sync(client: client);
-      final reloaded = await _segmentTracker.reload(
-        assetPath: AppConstants.pathToTollSegments,
-      );
-      await _loadCameras();
-      if (!mounted) {
-        return;
-      }
-      _resetSegmentState();
-      if (reloaded && _userLatLng != null) {
-        final segEvent = _segmentTracker.handleLocationUpdate(
-          current: _userLatLng!,
-          previous: null,
-          rawHeading: null,
-          speedKmh: _speedKmh,
-          compassHeading: _compassHeading,
-        );
-        _applySegmentEvent(segEvent);
-      }
-      final message = _syncMessageService.buildSuccessMessage(result);
-      messenger.showSnackBar(SnackBar(content: Text(message)));
-    } on TollSegmentsSyncException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (error, stackTrace) {
-      debugPrint('Failed to sync toll segments: $error\n$stackTrace');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppMessages.unexpectedSyncError),
-        ),
+      result = await _segmentsService.performSync(
+        client: auth.client,
+        ignoredSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
+        userLatLng: _userLatLng,
+        speedKmh: _speedKmh,
+        compassHeading: _compassHeading,
       );
     } finally {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      } else {
         _isSyncing = false;
-      });
+      }
     }
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (result.message != null) {
+      messenger.showSnackBar(SnackBar(content: Text(result.message!)));
+    }
+
+    if (!result.isSuccess) {
+      return;
+    }
+
+    _resetSegmentState();
+    if (result.seedEvent != null) {
+      _applySegmentEvent(result.seedEvent!);
+    }
+
+    _nextCameraCheckAt = null;
+    _updateVisibleCameras();
   }
 
 }
