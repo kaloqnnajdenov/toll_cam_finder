@@ -14,6 +14,8 @@ class AppLocalizations {
       'appTitle': 'TollCam',
       'authenticationNotConfigured':
           'Authentication is not configured. Please add Supabase credentials.',
+      'backgroundTrackingNotificationRationale':
+          'Allow notifications so Toll Cam Finder can stay active in the background.',
       'averageSpeedResetTooltip': 'Reset Avg',
       'averageSpeedStartTooltip': 'Start Avg',
       'cancelAction': 'Cancel',
@@ -139,6 +141,7 @@ class AppLocalizations {
       'onlyLocalSegmentsCanBeDeleted': 'Only local segments can be deleted.',
       'onlySegmentsSavedLocallyCanBeShared':
           'Only segments saved locally can be shared publicly.',
+      'openNotificationSettingsAction': 'Open settings',
       'openMenu': 'Open menu',
       'osmCopyrightLaunchFailed':
           'Could not open the OpenStreetMap copyright page.',
@@ -285,6 +288,8 @@ class AppLocalizations {
     },
     'bg': {
 'appTitle': 'TollCam',
+'backgroundTrackingNotificationRationale':
+'Позволете известията, за да може Toll Cam Finder да остане активен във фонов режим.',
 'chooseSegmentVisibilityQuestion':
 'Искаш ли сегментът да бъде видим публично?',
 'averageSpeedResetTooltip': 'Нулирай средната скорост',
@@ -345,6 +350,7 @@ class AppLocalizations {
 'noLocalSegments': 'Все още няма запазени локални сегменти.',
 'noSegmentsAvailable': 'Няма налични сегменти.',
 'openMenu': 'Отвори менюто',
+'openNotificationSettingsAction': 'Отвори настройките',
 'passwordLabel': 'Парола',
 'profile': 'Профил',
 'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',

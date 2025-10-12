@@ -1,7 +1,9 @@
 // location_service.dart
 import 'dart:io' show Platform;
+
 import 'package:geolocator/geolocator.dart';
 import 'package:toll_cam_finder/core/constants.dart';
+
 import 'speed_estimator.dart';
 
 class LocationService {
@@ -16,7 +18,9 @@ class LocationService {
   }
 
   /// Stream aiming for ~1 Hz updates (best-effort on iOS).
-  Stream<Position> getPositionStream() {
+  Stream<Position> getPositionStream({
+    bool useForegroundNotification = false,
+  }) {
     LocationSettings settings;
 
     if (Platform.isAndroid) {
@@ -24,6 +28,20 @@ class LocationService {
         accuracy: LocationAccuracy.high,
         distanceFilter: AppConstants.gpsDistanceFilterMeters,
         intervalDuration: Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
+        foregroundNotificationConfig: useForegroundNotification
+            ? const ForegroundNotificationConfig(
+                notificationTitle: AppConstants.backgroundNotificationTitle,
+                notificationText: AppConstants.backgroundNotificationText,
+                notificationChannelName:
+                    AppConstants.backgroundNotificationChannelName,
+                notificationIcon: const AndroidResource(
+                  name: AppConstants.backgroundNotificationIconName,
+                  defType: AppConstants.backgroundNotificationIconType,
+                ),
+                enableWakeLock: true,
+                setOngoing: true,
+              )
+            : null,
       );
     } else if (Platform.isIOS || Platform.isMacOS) {
       settings = AppleSettings(

@@ -154,6 +154,27 @@ class AppConstants {
   /// user is stationary, which wastes battery and heats devices unnecessarily.
   static const int gpsDistanceFilterMeters = 5;
 
+  /// Title displayed in the persistent notification that keeps location
+  /// tracking alive while the app runs in the background.
+  static const String backgroundNotificationTitle =
+      'Toll Cam Finder is active';
+
+  /// Message shown in the background tracking notification so users understand
+  /// why the app remains alive while hidden.
+  static const String backgroundNotificationText =
+      'Monitoring nearby toll segments in the background.';
+
+  /// User-visible channel name for the background tracking notification.
+  static const String backgroundNotificationChannelName =
+      'Toll Cam Finder tracking';
+
+  /// Drawable resource name used as the notification icon for the background
+  /// tracking foreground service.
+  static const String backgroundNotificationIconName = 'ic_launcher';
+
+  /// Resource type of the notification icon so Android can resolve it.
+  static const String backgroundNotificationIconType = 'mipmap';
+
   /// HTTP user-agent package identifier sent to the tile server; replace with a
   /// real app id to stay within OpenStreetMap usage policy.
   static const String userAgentPackageName = 'com.example.toll_cam';
