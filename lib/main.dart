@@ -5,6 +5,7 @@ import 'package:toll_cam_finder/core/supabase_config.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
 import 'app/app.dart';
+import 'app/navigation/app_navigator.dart';
 import 'services/auth_controller.dart';
 import 'services/language_controller.dart';
 import 'services/background_notification_service.dart';
@@ -14,7 +15,9 @@ void main() async {
 
   SupabaseClient? supabaseClient;
   final backgroundNotificationService = BackgroundNotificationService();
-  await backgroundNotificationService.initialize();
+  await backgroundNotificationService.initialize(
+    onNotificationTap: AppNavigator.bringToForeground,
+  );
 
   if (SupabaseConfig.isConfigured) {
     final supabase = await Supabase.initialize(

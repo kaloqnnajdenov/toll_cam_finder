@@ -6,6 +6,7 @@ import '../services/language_controller.dart';
 import 'app_routes.dart';
 import 'app_theme.dart';
 import 'localization/app_localizations.dart';
+import 'navigation/app_navigator.dart';
 import 'lifecycle_observer.dart';
 
 class TollCamApp extends StatelessWidget {
@@ -22,6 +23,7 @@ class TollCamApp extends StatelessWidget {
             theme: buildAppTheme(),
             initialRoute: AppRoutes.map,
             routes: AppRoutes.routes,
+            navigatorKey: AppNavigator.navigatorKey,
             debugShowCheckedModeBanner: false,
             locale: languageController.locale,
             supportedLocales: languageController.supportedLocales,

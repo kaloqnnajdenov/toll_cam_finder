@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class BackgroundNotificationService {
@@ -8,16 +9,30 @@ class BackgroundNotificationService {
   static const int _notificationId = 1001;
   static const String _channelId = 'toll_app_background_channel';
   static const String _channelName = 'Toll App Background Activity';
+  static const String _defaultPayload = 'resume-app';
 
-  Future<void> initialize() async {
+  VoidCallback? _onNotificationTap;
+
+  Future<void> initialize({VoidCallback? onNotificationTap}) async {
+    _onNotificationTap = onNotificationTap;
     const initializationSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(),
     );
 
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: _handleNotificationResponse,
+    );
 
     await _requestPermissions();
+  }
+
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (response.id != _notificationId) return;
+
+    cancelActiveNotification();
+    _onNotificationTap?.call();
   }
 
   Future<void> _requestPermissions() async {
@@ -63,6 +78,7 @@ class BackgroundNotificationService {
       'Toll Cam Finder',
       'The Toll App is active',
       notificationDetails,
+      payload: _defaultPayload,
     );
   }
 
