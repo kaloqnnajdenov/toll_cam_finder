@@ -28,7 +28,7 @@ class BackgroundNotificationService {
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            DarwinFlutterLocalNotificationsPlugin>()
+            IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(
           alert: true,
           badge: true,

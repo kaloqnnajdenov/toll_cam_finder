@@ -5,7 +5,7 @@ import 'package:toll_cam_finder/presentation/pages/create_segment/widgets/segmen
 
 void main() {
   group('SegmentLabeledTextField allowedCharactersPattern', () {
-    const formatter = FilteringTextInputFormatter.allow(
+    final formatter = FilteringTextInputFormatter.allow(
       SegmentLabeledTextField.allowedCharactersPattern,
     );
 
