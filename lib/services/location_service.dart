@@ -23,7 +23,15 @@ class LocationService {
       settings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: AppConstants.gpsDistanceFilterMeters,
-        intervalDuration: Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
+        intervalDuration:
+            Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'Toll Cam Finder is active',
+          notificationText:
+              'Monitoring toll segments while the app is in the background.',
+          enableWakeLock: true,
+          setOngoing: true,
+        ),
       );
     } else if (Platform.isIOS || Platform.isMacOS) {
       settings = AppleSettings(
