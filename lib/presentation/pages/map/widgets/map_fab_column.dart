@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
-import 'package:toll_cam_finder/presentation/widgets/avg_speed_button.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 
 class MapFabColumn extends StatelessWidget {
@@ -31,7 +30,6 @@ class MapFabColumn extends StatelessWidget {
           label: Text(AppLocalizations.of(context).recenter),
         ),
         const SizedBox(height: 12),
-        AverageSpeedButton(controller: avgController),
       ],
     );
   }
