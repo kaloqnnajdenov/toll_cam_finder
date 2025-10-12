@@ -1,7 +1,11 @@
 // location_service.dart
 import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+
 import 'package:toll_cam_finder/core/constants.dart';
+
 import 'speed_estimator.dart';
 
 class LocationService {
@@ -23,7 +27,18 @@ class LocationService {
       settings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: AppConstants.gpsDistanceFilterMeters,
-        intervalDuration: Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
+        intervalDuration:
+            Duration(milliseconds: AppConstants.gpsSampleIntervalMs),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          channelId: AppConstants.backgroundTrackingNotificationChannelId,
+          channelName: AppConstants.backgroundTrackingNotificationChannelName,
+          notificationTitle:
+              AppConstants.backgroundTrackingNotificationTitle,
+          notificationText:
+              AppConstants.backgroundTrackingNotificationText,
+          enableWakeLock: true,
+          setOngoing: true,
+        ),
       );
     } else if (Platform.isIOS || Platform.isMacOS) {
       settings = AppleSettings(
@@ -42,5 +57,17 @@ class LocationService {
     // No pre-smoothing here. Estimator owns all smoothing/logic.
     return Geolocator.getPositionStream(locationSettings: settings)
         .map(_speedEstimator.fuse);
+  }
+
+  Future<void> setBackgroundMode({required bool enable}) async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+
+    try {
+      await GeolocatorPlatform.instance.enableBackgroundMode(enable: enable);
+    } on Exception catch (error) {
+      debugPrint('LocationService: failed to toggle background mode: $error');
+    }
   }
 }

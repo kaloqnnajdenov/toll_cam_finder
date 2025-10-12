@@ -41,7 +41,8 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+class _MapPageState extends State<MapPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const double _speedDeadbandKmh = 1.0;
   // External services
@@ -49,7 +50,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final PermissionService _permissionService = PermissionService();
   final LocationService _locationService = LocationService();
   final SegmentsMetadataService _metadataService = SegmentsMetadataService();
-final AudioPlayer player = AudioPlayer();
+  final AudioPlayer player = AudioPlayer();
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
@@ -63,7 +64,7 @@ final AudioPlayer player = AudioPlayer();
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
-  final AverageSpeedController _avgCtrl = AverageSpeedController();
+  late final AverageSpeedController _avgCtrl;
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final TollCameraController _cameraController = TollCameraController();
   final SegmentTracker _segmentTracker = SegmentTracker(
@@ -92,6 +93,11 @@ final AudioPlayer player = AudioPlayer();
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
+    _avgCtrl = context.read<AverageSpeedController>();
+    _avgCtrl.reset();
+    unawaited(_locationService.setBackgroundMode(enable: false));
+
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
 
     _metadataLoadFuture = _loadSegmentsMetadata();
@@ -108,13 +114,29 @@ final AudioPlayer player = AudioPlayer();
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _posSub?.cancel();
     _mapEvtSub?.cancel();
     _compassSub?.cancel();
     _blueDotAnimator.dispose();
-    _avgCtrl.dispose();
     _segmentTracker.dispose();
+    unawaited(_locationService.setBackgroundMode(enable: false));
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        unawaited(_locationService.setBackgroundMode(enable: false));
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        unawaited(_locationService.setBackgroundMode(enable: true));
+        break;
+      case AppLifecycleState.detached:
+        break;
+    }
   }
 
   void _handleCompassEvent(CompassEvent event) {

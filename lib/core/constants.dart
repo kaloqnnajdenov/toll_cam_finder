@@ -163,6 +163,27 @@ class AppConstants {
   static const String mapURL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 
+  /// Notification channel id used for the persistent background tracking
+  /// notification on Android.
+  static const String backgroundTrackingNotificationChannelId =
+      'toll_cam_tracking';
+
+  /// Human readable channel name for the persistent background tracking
+  /// notification on Android.
+  static const String backgroundTrackingNotificationChannelName =
+      'Toll Cam Finder tracking';
+
+  /// Title shown on the persistent background tracking notification while the
+  /// app is running in the background.
+  static const String backgroundTrackingNotificationTitle =
+      'Toll Cam Finder is active';
+
+  /// Body text shown on the persistent background tracking notification while
+  /// the app is running in the background.
+  static const String backgroundTrackingNotificationText =
+      'Monitoring your route to upcoming segments.';
+
+
   /// Maximum distance (meters) between the user and a candidate polyline for
   /// it to be considered a viable match. Values around 30–50 m work well; we
   /// bias slightly higher to accommodate GPS noise on fast roads.
