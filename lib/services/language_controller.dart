@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/localization/app_localizations.dart';
 import '../core/app_messages.dart';
@@ -28,7 +31,10 @@ class LanguageOption {
 class LanguageController extends ChangeNotifier {
   LanguageController() {
     AppMessages.updateLocale(_locale);
+    unawaited(_loadSavedLocale());
   }
+
+  static const String _languagePreferenceKey = 'preferred_language_code';
 
   static const List<LanguageOption> _languageOptions = [
     LanguageOption(
@@ -56,6 +62,25 @@ class LanguageController extends ChangeNotifier {
         orElse: () => _languageOptions.first,
       );
 
+  Future<void> _loadSavedLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCode = prefs.getString(_languagePreferenceKey);
+    if (savedCode == null) {
+      return;
+    }
+
+    for (final option in _languageOptions) {
+      if (option.available && option.languageCode == savedCode) {
+        if (_locale != option.locale) {
+          _locale = option.locale;
+          AppMessages.updateLocale(_locale);
+          notifyListeners();
+        }
+        break;
+      }
+    }
+  }
+
   void setLocale(Locale locale) {
     if (_locale == locale) {
       return;
@@ -70,5 +95,11 @@ class LanguageController extends ChangeNotifier {
     _locale = locale;
     AppMessages.updateLocale(_locale);
     notifyListeners();
+    unawaited(_persistLocale());
+  }
+
+  Future<void> _persistLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_languagePreferenceKey, _locale.languageCode);
   }
 }
