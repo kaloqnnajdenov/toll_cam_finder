@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -164,11 +163,7 @@ class _MapPageState extends State<MapPage>
     if (!hasPermission) return;
     await _ensureNotificationPermission();
     if (_metadataLoadFuture != null) {
-      try {
-        await _metadataLoadFuture;
-      } catch (_) {
-        // Metadata failures are reported separately.
-      }
+      await _metadataLoadFuture;
     }
     _speedSmoother.reset();
     final pos = await _locationService.getCurrentPosition();
@@ -178,12 +173,11 @@ class _MapPageState extends State<MapPage>
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
-    final segEvent = _segmentTracker.handleLocationUpdate(
-      current: firstFix,
-    );
+    final segEvent = _segmentTracker.handleLocationUpdate(current: firstFix);
     _applySegmentEvent(segEvent);
-    _nextCameraCheckAt =
-        _segmentsService.calculateNextCameraCheck(position: firstFix);
+    _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
+      position: firstFix,
+    );
 
     if (mounted) setState(() {});
 
@@ -221,8 +215,8 @@ class _MapPageState extends State<MapPage>
 
   Future<void> _ensureNotificationPermission() async {
     if (_didRequestNotificationPermission) {
-      final bool enabled =
-          await _notificationPermissionService.areNotificationsEnabled();
+      final bool enabled = await _notificationPermissionService
+          .areNotificationsEnabled();
       if (enabled || !mounted) {
         return;
       }
@@ -232,8 +226,8 @@ class _MapPageState extends State<MapPage>
     }
 
     _didRequestNotificationPermission = true;
-    final bool granted =
-        await _notificationPermissionService.ensurePermissionGranted();
+    final bool granted = await _notificationPermissionService
+        .ensurePermissionGranted();
     if (granted || !mounted) {
       return;
     }
@@ -261,19 +255,17 @@ class _MapPageState extends State<MapPage>
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
     _avgCtrl.addSample(shownKmh);
-    final previous = _userLatLng;
     _moveBlueDot(next);
     final now = DateTime.now();
     if (_segmentsService.shouldProcessSegmentUpdate(
       now: now,
       nextCameraCheckAt: _nextCameraCheckAt,
     )) {
-      final segEvent = _segmentTracker.handleLocationUpdate(
-        current: next,
-      );
+      final segEvent = _segmentTracker.handleLocationUpdate(current: next);
       _applySegmentEvent(segEvent, now: now);
-      _nextCameraCheckAt =
-          _segmentsService.calculateNextCameraCheck(position: next);
+      _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
+        position: next,
+      );
     }
 
     if (!mounted) return;
@@ -291,10 +283,8 @@ class _MapPageState extends State<MapPage>
 
   void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
     final DateTime timestamp = now ?? DateTime.now();
-    final SegmentDebugPath? activePath = _segmentUiService.resolveActiveSegmentPath(
-      segEvent.debugData.candidatePaths,
-      segEvent,
-    );
+    final SegmentDebugPath? activePath = _segmentUiService
+        .resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
       _avgCtrl.start();
@@ -329,22 +319,24 @@ class _MapPageState extends State<MapPage>
       averageStartedAt: _avgCtrl.startedAt,
     );
 
-    unawaited(guidanceFuture.then((result) {
-      if (!mounted || result == null) {
-        return;
-      }
-      if (result.shouldClear) {
-        setState(() {
-          _segmentGuidanceUi = null;
-        });
-        return;
-      }
-      if (result.ui != null) {
-        setState(() {
-          _segmentGuidanceUi = result.ui;
-        });
-      }
-    }));
+    unawaited(
+      guidanceFuture.then((result) {
+        if (!mounted || result == null) {
+          return;
+        }
+        if (result.shouldClear) {
+          setState(() {
+            _segmentGuidanceUi = null;
+          });
+          return;
+        }
+        if (result.ui != null) {
+          setState(() {
+            _segmentGuidanceUi = result.ui;
+          });
+        }
+      }),
+    );
   }
 
   void _resetSegmentState() {
@@ -454,18 +446,17 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _loadSegmentsMetadata({bool showErrors = false}) async {
-    final result =
-        await _segmentsService.loadSegmentsMetadata(showErrors: showErrors);
+    final result = await _segmentsService.loadSegmentsMetadata(
+      showErrors: showErrors,
+    );
     _segmentsMetadata = result.metadata;
     if (!mounted) {
       return;
     }
     if (showErrors && result.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.errorMessage!),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.errorMessage!)));
     }
     setState(() {});
   }
@@ -516,8 +507,9 @@ class _MapPageState extends State<MapPage>
         current: _userLatLng!,
       );
       _applySegmentEvent(seedEvent);
-      _nextCameraCheckAt =
-          _segmentsService.calculateNextCameraCheck(position: _userLatLng!);
+      _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
+        position: _userLatLng!,
+      );
     }
 
     setState(() {});
