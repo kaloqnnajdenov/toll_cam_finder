@@ -83,6 +83,7 @@ class _MapPageState extends State<MapPage>
   late final BlueDotAnimator _blueDotAnimator;
   late final AverageSpeedController _avgCtrl;
   final SpeedSmoother _speedSmoother = SpeedSmoother();
+  final Distance _distanceCalculator = const Distance();
   final TollCameraController _cameraController = TollCameraController();
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
@@ -97,6 +98,8 @@ class _MapPageState extends State<MapPage>
   double? _lastSegmentAvgKmh;
   double? _activeSegmentSpeedLimitKph;
   SegmentTrackerEvent? _lastSegmentEvent;
+  LatLng? _avgLastLatLng;
+  DateTime? _avgLastSampleAt;
 
   double? _speedKmh;
   String? _segmentProgressLabel;
@@ -251,12 +254,14 @@ class _MapPageState extends State<MapPage>
   }
 
   void _handlePositionUpdate(Position position) {
+    final DateTime now = DateTime.now();
     final shownKmh = _speedService.normalizeSpeed(position.speed);
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
-    _avgCtrl.addSample(shownKmh);
+    if (_avgCtrl.isRunning) {
+      _recordAverageProgress(position: next, timestamp: now);
+    }
     _moveBlueDot(next);
-    final now = DateTime.now();
     if (_segmentsService.shouldProcessSegmentUpdate(
       now: now,
       nextCameraCheckAt: _nextCameraCheckAt,
@@ -281,17 +286,65 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator.animate(from: from, to: next);
   }
 
+  void _recordAverageProgress({
+    required LatLng position,
+    required DateTime timestamp,
+  }) {
+    final LatLng? previousPosition = _avgLastLatLng;
+
+    if (previousPosition == null || _avgLastSampleAt == null) {
+      _avgLastLatLng = position;
+      _avgLastSampleAt = timestamp;
+      return;
+    }
+
+    final double distanceMeters = _distanceCalculator.as(
+      LengthUnit.Meter,
+      previousPosition,
+      position,
+    );
+
+    final double sanitizedDistance =
+        (distanceMeters.isFinite && distanceMeters > 0) ? distanceMeters : 0.0;
+
+    _avgCtrl.recordProgress(
+      distanceDeltaMeters: sanitizedDistance,
+      timestamp: timestamp,
+    );
+
+    _avgLastLatLng = position;
+    _avgLastSampleAt = timestamp;
+  }
+
   void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
     final DateTime timestamp = now ?? DateTime.now();
     final SegmentDebugPath? activePath = _segmentUiService
         .resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
+
+    double? exitAverage;
+
+    if (segEvent.endedSegment || segEvent.completedSegmentLengthMeters != null) {
+      final double? segmentLength = segEvent.completedSegmentLengthMeters;
+      final Duration? elapsed = _avgCtrl.elapsed;
+      final double computedAverage = (segmentLength != null && elapsed != null)
+          ? _avgCtrl.avgSpeedDone(
+              segmentLengthMeters: segmentLength,
+              segmentDuration: elapsed,
+            )
+          : _avgCtrl.average;
+
+      exitAverage = computedAverage;
+      _lastSegmentAvgKmh = computedAverage.isFinite ? computedAverage : null;
+      _avgCtrl.reset();
+      _avgLastLatLng = null;
+      _avgLastSampleAt = null;
+    }
+
     if (segEvent.startedSegment) {
       _lastSegmentAvgKmh = null;
-      _avgCtrl.start();
-    } else if (segEvent.endedSegment) {
-      final double avgForSegment = _avgCtrl.average;
-      _lastSegmentAvgKmh = avgForSegment.isFinite ? avgForSegment : null;
-      _avgCtrl.reset();
+      _avgCtrl.start(startedAt: timestamp);
+      _avgLastLatLng = _userLatLng;
+      _avgLastSampleAt = timestamp;
     }
 
     if (segEvent.activeSegmentId == null) {
@@ -313,7 +366,7 @@ class _MapPageState extends State<MapPage>
     final guidanceFuture = _segmentGuidanceController.handleUpdate(
       event: segEvent,
       activePath: activePath,
-      averageKph: _avgCtrl.average,
+      averageKph: exitAverage ?? _avgCtrl.average,
       speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
       now: timestamp,
       averageStartedAt: _avgCtrl.startedAt,
@@ -345,6 +398,8 @@ class _MapPageState extends State<MapPage>
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
     _avgCtrl.reset();
+    _avgLastLatLng = null;
+    _avgLastSampleAt = null;
     _segmentGuidanceUi = null;
     _nextCameraCheckAt = null;
     _upcomingSegmentCueService.reset();
