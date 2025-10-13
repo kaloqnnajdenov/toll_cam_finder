@@ -333,6 +333,7 @@ class AppConstants {
   /// Maximum speed (m/s) permitted by the speed Kalman filter, preventing
   /// unrealistic spikes.
   static const double speedEstimatorMaxSpeed = 80.0;
+  static const double speedEstimatorEmaHalfLifeSeconds = 1.2;
 
   /// Horizontal accuracy (meters) above which derived-speed measurements are
   /// ignored due to poor quality.
