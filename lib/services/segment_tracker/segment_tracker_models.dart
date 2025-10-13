@@ -9,6 +9,8 @@ class SegmentTrackerEvent {
     required this.endedSegment,
     required this.activeSegmentId,
     required this.activeSegmentSpeedLimitKph,
+    required this.activeSegmentLengthMeters,
+    required this.completedSegmentLengthMeters,
     required this.debugData,
   });
 
@@ -23,6 +25,12 @@ class SegmentTrackerEvent {
 
   /// Maximum allowed average speed (km/h) for the active segment, if known.
   final double? activeSegmentSpeedLimitKph;
+
+  /// Length of the currently active segment in meters, if known.
+  final double? activeSegmentLengthMeters;
+
+  /// Length of the segment that just completed in meters, if known.
+  final double? completedSegmentLengthMeters;
 
   /// Snapshot of the debug data associated with the update.
   final SegmentTrackerDebugData debugData;

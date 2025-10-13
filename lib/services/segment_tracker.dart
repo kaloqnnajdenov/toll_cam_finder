@@ -57,6 +57,7 @@ class SegmentTracker {
   final Set<String> _fetchFailures = <String>{};
   final Set<String> _fetching = <String>{};
   final Set<String> _ignoredSegmentIds = <String>{};
+  SegmentGeometry? _lastExitedGeometry;
 
   bool get isReady => _isReady;
   SegmentTrackerDebugData get debugData => _latestDebugData;
@@ -98,12 +99,17 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
   SegmentTrackerEvent handleLocationUpdate({
     required LatLng current,
   }) {
+    final SegmentGeometry? exitedGeometry = _lastExitedGeometry;
+    _lastExitedGeometry = null;
+
     if (!_isReady) {
       return SegmentTrackerEvent(
         startedSegment: false,
         endedSegment: false,
         activeSegmentId: _active?.geometry.id,
         activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
+        activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+        completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
         debugData: _latestDebugData,
       );
     }
@@ -162,6 +168,8 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       endedSegment: transition.ended,
       activeSegmentId: _active?.geometry.id,
       activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
+      activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+      completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
       debugData: _latestDebugData,
     );
   }
@@ -180,6 +188,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     _pathOverrides.clear();
     _fetchFailures.clear();
     _fetching.clear();
+    _lastExitedGeometry = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
@@ -282,6 +291,9 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
   void _clearActiveSegment({required String reason}) {
     if (kDebugMode && _active != null) {
       debugPrint('[SEG] exit segment ${_active!.geometry.id} ($reason)');
+    }
+    if (_active != null) {
+      _lastExitedGeometry = _active!.geometry;
     }
     _active = null;
   }
