@@ -7,6 +7,7 @@ import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'app/app.dart';
 import 'services/auth_controller.dart';
 import 'services/language_controller.dart';
+import 'services/guidance_audio_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => LanguageController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => GuidanceAudioController(),
         ),
       ],
       child: const TollCamApp(),

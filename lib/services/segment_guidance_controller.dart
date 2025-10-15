@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:toll_cam_finder/services/segment_tracker.dart';
+import 'package:toll_cam_finder/services/guidance_audio_controller.dart';
 
 class SegmentGuidanceUiModel {
   const SegmentGuidanceUiModel({
@@ -48,6 +49,11 @@ class SegmentGuidanceController {
 
   final FlutterTts _tts;
   final AudioPlayer _tonePlayer;
+  GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
+    allowSpeech: true,
+    allowAlertTones: true,
+    allowBoundaryTones: true,
+  );
 
   bool _hasActiveSegment = false;
   double? _currentLimitKph;
@@ -58,6 +64,25 @@ class SegmentGuidanceController {
   bool _aboveLimitAlerted = false;
   bool _wasOverLimit = false;
   bool _approachAnnounced = false;
+
+  void updateAudioPolicy(GuidanceAudioPolicy policy) {
+    if (_audioPolicy == policy) {
+      return;
+    }
+
+    final bool hadSpeech = _audioPolicy.allowSpeech;
+    final bool hadAlerts = _audioPolicy.allowAlertTones;
+    final bool hadBoundary = _audioPolicy.allowBoundaryTones;
+    _audioPolicy = policy;
+
+    if (!policy.allowSpeech && hadSpeech) {
+      unawaited(_tts.stop());
+    }
+    if ((!policy.allowAlertTones && hadAlerts) ||
+        (!policy.allowBoundaryTones && hadBoundary)) {
+      unawaited(_tonePlayer.stop());
+    }
+  }
 
   Future<SegmentGuidanceResult?> handleUpdate({
     required SegmentTrackerEvent event,
@@ -114,7 +139,8 @@ class SegmentGuidanceController {
 
     bool forceUi = event.startedSegment;
     bool triggered = false;
-    final bool allowSpeech = !_suppressGuidanceAudio;
+    final bool allowSpeech =
+        !_suppressGuidanceAudio && _audioPolicy.allowSpeech;
 
     if (_currentLimitKph != null && _currentLimitKph!.isFinite) {
       triggered |= await _checkCloseToLimit(
@@ -191,7 +217,7 @@ class SegmentGuidanceController {
     _suppressGuidanceAudio = true;
     _furthestDistanceFromStart = null;
 
-    await _playChime(times: 2);
+    await _playChime(times: 2, isBoundary: true);
 
     final String limitText = (limitKph != null && limitKph.isFinite)
         ? 'Limit ${limitKph.toStringAsFixed(0)}.'
@@ -205,6 +231,8 @@ class SegmentGuidanceController {
         ? _currentLimitKph
         : null;
     final bool hasAverage = averageKph.isFinite;
+
+    await _playChime(isBoundary: true);
 
     final String limitText = limit != null
         ? limit.toStringAsFixed(0)
@@ -444,7 +472,11 @@ class SegmentGuidanceController {
   Future<void> _playChime({
     int times = 1,
     Duration spacing = const Duration(milliseconds: 250),
+    bool isBoundary = false,
   }) async {
+    if (!_audioPolicy.canPlayTone(isBoundary: isBoundary)) {
+      return;
+    }
     for (int i = 0; i < times; i++) {
       await _tonePlayer.stop();
       await _tonePlayer.play(AssetSource(_toneAsset));
@@ -457,6 +489,9 @@ class SegmentGuidanceController {
 
   Future<void> _speak(String message) async {
     await _tts.stop();
+    if (!_audioPolicy.allowSpeech) {
+      return;
+    }
     await _tts.speak(message);
   }
 }

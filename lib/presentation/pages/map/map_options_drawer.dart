@@ -4,6 +4,7 @@ extension _MapPageDrawer on _MapPageState {
   Drawer _buildOptionsDrawer() {
     final localizations = AppLocalizations.of(context);
     final languageController = context.watch<LanguageController>();
+    final audioController = context.watch<GuidanceAudioController>();
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -28,6 +29,14 @@ extension _MapPageDrawer on _MapPageState {
               onTap: _onSegmentsSelected,
             ),
             ListTile(
+              leading: const Icon(Icons.volume_up_outlined),
+              title: Text(localizations.audioModeTitle),
+              subtitle: Text(
+                _audioModeLabel(audioController.mode, localizations),
+              ),
+              onTap: _onAudioModeSelected,
+            ),
+            ListTile(
               leading: const Icon(Icons.language),
               title: Text(localizations.languageButton),
               subtitle: Text(languageController.currentOption.label),
@@ -48,6 +57,60 @@ extension _MapPageDrawer on _MapPageState {
         ),
       ),
     );
+  }
+
+  String _audioModeLabel(
+    GuidanceAudioMode mode,
+    AppLocalizations localizations,
+  ) {
+    switch (mode) {
+      case GuidanceAudioMode.muteForeground:
+        return localizations.audioModeForegroundMuted;
+      case GuidanceAudioMode.muteBackground:
+        return localizations.audioModeBackgroundMuted;
+      case GuidanceAudioMode.absoluteMute:
+        return localizations.audioModeAbsoluteMute;
+    }
+  }
+
+  void _onAudioModeSelected() {
+    final localizations = AppLocalizations.of(context);
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Consumer<GuidanceAudioController>(
+              builder: (context, controller, _) {
+                return ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: Text(localizations.audioModeTitle),
+                    ),
+                    for (final mode in GuidanceAudioMode.values)
+                      RadioListTile<GuidanceAudioMode>(
+                        title: Text(_audioModeLabel(mode, localizations)),
+                        value: mode,
+                        groupValue: controller.mode,
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          controller.setMode(value);
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    });
   }
 
   void _onLanguageSelected() {

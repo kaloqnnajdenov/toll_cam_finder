@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:toll_cam_finder/core/constants.dart';
+import 'package:toll_cam_finder/services/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
 class UpcomingSegmentCueService {
@@ -11,6 +12,22 @@ class UpcomingSegmentCueService {
   final AudioPlayer _player;
   String? _segmentId;
   bool _hasPlayed = false;
+  GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
+    allowSpeech: true,
+    allowAlertTones: true,
+    allowBoundaryTones: true,
+  );
+
+  void updateAudioPolicy(GuidanceAudioPolicy policy) {
+    if (_audioPolicy == policy) {
+      return;
+    }
+    final bool hadAlertAccess = _audioPolicy.allowAlertTones;
+    _audioPolicy = policy;
+    if (!policy.allowAlertTones && hadAlertAccess) {
+      unawaited(_player.stop());
+    }
+  }
 
   void updateCue(SegmentDebugPath upcoming) {
     final String segmentId = upcoming.id;
@@ -26,7 +43,7 @@ class UpcomingSegmentCueService {
       return;
     }
 
-    if (distance >= 1 && !_hasPlayed) {
+    if (distance >= 1 && !_hasPlayed && _audioPolicy.allowAlertTones) {
       _hasPlayed = true;
       unawaited(
         _player.play(AssetSource(AppConstants.upcomingSegmentSoundAsset)),
