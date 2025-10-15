@@ -103,8 +103,7 @@ class _MapPageState extends State<MapPage>
 
   double? _speedKmh;
   String? _segmentProgressLabel;
-  SegmentGuidanceUiModel? _segmentGuidanceUi;
-  int _guidanceUpdateToken = 0;
+  SegmentDebugPath? _activeSegmentDebugPath;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
@@ -355,6 +354,7 @@ class _MapPageState extends State<MapPage>
     }
 
     _segmentDebugData = segEvent.debugData;
+    _activeSegmentDebugPath = activePath;
     _segmentProgressLabel = _segmentUiService.buildSegmentProgressLabel(
       event: segEvent,
       activePath: activePath,
@@ -364,33 +364,15 @@ class _MapPageState extends State<MapPage>
     _lastSegmentEvent = segEvent;
     unawaited(_updateForegroundNotification(segEvent));
 
-    final int guidanceToken = ++_guidanceUpdateToken;
-    final guidanceFuture = _segmentGuidanceController.handleUpdate(
-      event: segEvent,
-      activePath: activePath,
-      averageKph: exitAverage ?? _avgCtrl.average,
-      speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
-      now: timestamp,
-      averageStartedAt: _avgCtrl.startedAt,
-    );
-
     unawaited(
-      guidanceFuture.then((result) {
-        if (!mounted || result == null || guidanceToken != _guidanceUpdateToken) {
-          return;
-        }
-        if (result.shouldClear) {
-          setState(() {
-            _segmentGuidanceUi = null;
-          });
-          return;
-        }
-        if (result.ui != null) {
-          setState(() {
-            _segmentGuidanceUi = result.ui;
-          });
-        }
-      }),
+      _segmentGuidanceController.handleUpdate(
+        event: segEvent,
+        activePath: activePath,
+        averageKph: exitAverage ?? _avgCtrl.average,
+        speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
+        now: timestamp,
+        averageStartedAt: _avgCtrl.startedAt,
+      ),
     );
   }
 
@@ -402,8 +384,7 @@ class _MapPageState extends State<MapPage>
     _avgCtrl.reset();
     _avgLastLatLng = null;
     _avgLastSampleAt = null;
-    _segmentGuidanceUi = null;
-    _guidanceUpdateToken++;
+    _activeSegmentDebugPath = null;
     _nextCameraCheckAt = null;
     _upcomingSegmentCueService.reset();
     _lastSegmentEvent = null;
@@ -640,7 +621,7 @@ class _MapPageState extends State<MapPage>
                 lastSegmentAvgKmh: _lastSegmentAvgKmh,
                 segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
                 segmentProgressLabel: _segmentProgressLabel,
-                segmentGuidance: _segmentGuidanceUi,
+                segmentDebugPath: _activeSegmentDebugPath,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,
