@@ -113,6 +113,12 @@ class AppLocalizations {
       'languageLabelEnglish': 'English',
       'languageLabelBulgarian': 'Bulgarian',
       'languageButton': 'Change language',
+      'audioModeTitle': 'Guidance audio mode',
+      'audioModeForegroundMuted':
+          'Mute in app (background guidance, start/end dings only)',
+      'audioModeBackgroundMuted':
+          'Mute in background (in-app guidance, start/end dings only)',
+      'audioModeAbsoluteMute': 'Absolute mute (no sounds)',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
       'logOut': 'Log out',
@@ -412,7 +418,13 @@ class AppLocalizations {
 'syncRemovedMany': '{count} сегмента изтрити',
 'syncRemovedOne': '{count} сегмент изтрит',
 'syncTotalSegmentsSummary': 'Общо налични сегменти: {count}.',
-'sync': 'Синхронизирай',
+      'sync': 'Синхронизирай',
+      'audioModeTitle': 'Режим на аудио насоките',
+      'audioModeForegroundMuted':
+          'Заглушено в приложението (активно на заден план, само сигнал при старт/край)',
+      'audioModeBackgroundMuted':
+          'Заглушено на заден план (активно в приложението, само сигнал при старт/край)',
+      'audioModeAbsoluteMute': 'Пълно заглушаване (без звук)',
 'savingLocalSegmentsNotSupportedOnWeb':
 'Запазването на локални сегменти не се поддържа в уеб версията.',
 'loadingLocalSegmentsNotSupportedOnWeb':
@@ -477,6 +489,12 @@ class AppLocalizations {
   String get noLocalSegments => _value('noLocalSegments');
   String get recenter => _value('recenter');
   String get languageButton => _value('languageButton');
+  String get audioModeTitle => _value('audioModeTitle');
+  String get audioModeForegroundMuted =>
+      _value('audioModeForegroundMuted');
+  String get audioModeBackgroundMuted =>
+      _value('audioModeBackgroundMuted');
+  String get audioModeAbsoluteMute => _value('audioModeAbsoluteMute');
   String get welcomeTitle => _value('welcomeTitle');
   String get joinTollCam => _value('joinTollCam');
   String get emailLabel => _value('emailLabel');

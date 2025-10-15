@@ -26,6 +26,7 @@ import '../../services/language_controller.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_permission_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/guidance_audio_controller.dart';
 import '../../services/map/camera_polling_service.dart';
 import '../../services/map/foreground_notification_service.dart';
 import '../../services/map/map_sync_message_service.dart';
@@ -69,6 +70,13 @@ class _MapPageState extends State<MapPage>
   final MapSyncMessageService _syncMessageService =
       const MapSyncMessageService();
   late final MapSegmentsService _segmentsService;
+  late final GuidanceAudioController _audioController;
+  AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
+  GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
+    allowSpeech: true,
+    allowAlertTones: true,
+    allowBoundaryTones: true,
+  );
   // User + map state
   LatLng _center = AppConstants.initialCenter;
   LatLng? _userLatLng;
@@ -119,9 +127,14 @@ class _MapPageState extends State<MapPage>
 
     WidgetsBinding.instance.addObserver(this);
 
+    _appLifecycleState =
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+
     _avgCtrl = context.read<AverageSpeedController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
     _segmentGuidanceController = SegmentGuidanceController();
+    _audioController = context.read<GuidanceAudioController>();
+    _audioController.addListener(_updateAudioPolicy);
     _segmentsService = MapSegmentsService(
       metadataService: _metadataService,
       segmentTracker: _segmentTracker,
@@ -137,6 +150,7 @@ class _MapPageState extends State<MapPage>
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     unawaited(_initLocation());
     unawaited(_initSegmentsIndex());
+    _updateAudioPolicy();
   }
 
   @override
@@ -147,6 +161,7 @@ class _MapPageState extends State<MapPage>
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
     unawaited(_upcomingSegmentCueService.dispose());
+    _audioController.removeListener(_updateAudioPolicy);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -154,12 +169,14 @@ class _MapPageState extends State<MapPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    _appLifecycleState = state;
     final bool shouldEnableForeground = state != AppLifecycleState.resumed;
     _setForegroundLocationMode(shouldEnableForeground);
     if (state == AppLifecycleState.resumed &&
         _didRequestNotificationPermission) {
       unawaited(_ensureNotificationPermission());
     }
+    _updateAudioPolicy();
   }
 
   Future<void> _initLocation() async {
@@ -200,6 +217,17 @@ class _MapPageState extends State<MapPage>
           useForegroundNotification: _useForegroundLocationService,
         )
         .listen(_handlePositionUpdate);
+  }
+
+  void _updateAudioPolicy() {
+    final GuidanceAudioPolicy newPolicy =
+        _audioController.policyFor(_appLifecycleState);
+    if (newPolicy == _audioPolicy) {
+      return;
+    }
+    _audioPolicy = newPolicy;
+    _segmentGuidanceController.updateAudioPolicy(newPolicy);
+    _upcomingSegmentCueService.updateAudioPolicy(newPolicy);
   }
 
   void _setForegroundLocationMode(bool enable) {
