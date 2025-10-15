@@ -6,7 +6,7 @@ import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/presentation/widgets/avg_speed_dial.dart';
 import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
-import 'package:toll_cam_finder/services/segment_guidance_controller.dart';
+import 'package:toll_cam_finder/services/segment_tracker.dart';
 
 import 'segment_guidance_banner.dart';
 
@@ -19,7 +19,7 @@ class MapControlsPanel extends StatelessWidget {
     this.lastSegmentAvgKmh,
     this.segmentSpeedLimitKph,
     this.segmentProgressLabel,
-    this.segmentGuidance,
+    this.segmentDebugPath,
     required this.showDebugBadge,
     required this.segmentCount,
     required this.segmentRadiusMeters,
@@ -31,7 +31,7 @@ class MapControlsPanel extends StatelessWidget {
   final double? lastSegmentAvgKmh;
   final double? segmentSpeedLimitKph;
   final String? segmentProgressLabel;
-  final SegmentGuidanceUiModel? segmentGuidance;
+  final SegmentDebugPath? segmentDebugPath;
   final bool showDebugBadge;
   final int segmentCount;
   final double segmentRadiusMeters;
@@ -57,8 +57,8 @@ class MapControlsPanel extends StatelessWidget {
           speedLimitKph:
               hasActiveSegment ? segmentSpeedLimitKph : null,
         ),
-        if (segmentGuidance != null)
-          SegmentGuidanceBanner(guidance: segmentGuidance!),
+        if (segmentDebugPath != null)
+          SegmentGuidanceBanner(path: segmentDebugPath!),
         if (segmentProgressLabel != null)
           Container(
             margin: const EdgeInsets.only(top: 8),
