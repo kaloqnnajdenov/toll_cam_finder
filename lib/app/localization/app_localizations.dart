@@ -187,6 +187,20 @@ class AppLocalizations {
       'segmentProgressStartKilometers': '{distance} km to segment start',
       'segmentProgressStartMeters': '{distance} m to segment start',
       'segmentProgressStartNearby': 'Segment start nearby',
+      'segmentGuidanceZoneStarted':
+          'Zone started. {limitSentence} Tracking average speed.',
+      'segmentGuidanceLimitKnown': 'Limit {limit}.',
+      'segmentGuidanceLimitUnknown': 'Limit unknown.',
+      'segmentGuidanceZoneComplete':
+          'Zone complete. Allowed average {allowedAverage}. Your average {yourAverage}.',
+      'segmentGuidanceCloseToLimit': 'Close to limit.',
+      'segmentGuidanceAboveLimitReduceSpeed':
+          'Average above limit. Reduce speed.',
+      'segmentGuidanceAverageBackWithinLimit':
+          'Average back within limit.',
+      'segmentGuidanceApproachingEnd':
+          '{distance} to end. Avg {average}, target ≤{limit}.',
+      'segmentGuidanceUnknownValue': 'unknown',
       'segmentSavedLocally': 'Segment saved locally.',
       'segmentDefaultStartName': '{name} start',
       'segmentDefaultEndName': '{name} end',
@@ -375,6 +389,20 @@ class AppLocalizations {
 '{distance} км до началото на сегмента',
 'segmentProgressStartMeters': '{distance} м до началото на сегмента',
 'segmentProgressStartNearby': 'Началото на сегмента е близо',
+'segmentGuidanceZoneStarted':
+'Зоната започна. {limitSentence} Следим средната скорост.',
+'segmentGuidanceLimitKnown': 'Лимит {limit}.',
+'segmentGuidanceLimitUnknown': 'Лимит неизвестен.',
+'segmentGuidanceZoneComplete':
+'Зоната приключи. Позволена средна {allowedAverage}. Твоята средна {yourAverage}.',
+'segmentGuidanceCloseToLimit': 'Близо си до лимита.',
+'segmentGuidanceAboveLimitReduceSpeed':
+'Средната скорост е над лимита. Намали скоростта.',
+'segmentGuidanceAverageBackWithinLimit':
+'Средната скорост отново е в лимита.',
+'segmentGuidanceApproachingEnd':
+'{distance} до края. Средна {average}, цел ≤{limit}.',
+'segmentGuidanceUnknownValue': 'неизвестна',
 'segments': 'Сегменти',
 'selectLanguage': 'Избери език',
 'signInToSharePubliclyBody':

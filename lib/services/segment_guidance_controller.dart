@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
 class SegmentGuidanceUiModel {
@@ -155,11 +156,11 @@ class SegmentGuidanceController {
 
     await _playChime(times: 2);
 
-    final String limitText =
+    final String limitSentence =
         (limitKph != null && limitKph.isFinite)
-            ? 'Limit ${limitKph.toStringAsFixed(0)}.'
-            : 'Limit unknown.';
-    await _speak('Zone started. $limitText Tracking average speed.');
+            ? AppMessages.segmentGuidanceLimitKnown(limitKph.toStringAsFixed(0))
+            : AppMessages.segmentGuidanceLimitUnknown;
+    await _speak(AppMessages.segmentGuidanceZoneStarted(limitSentence));
   }
 
   Future<void> _handleSegmentExit({required double averageKph}) async {
@@ -167,11 +168,17 @@ class SegmentGuidanceController {
         (_currentLimitKph != null && _currentLimitKph!.isFinite) ? _currentLimitKph : null;
     final bool hasAverage = averageKph.isFinite;
 
-    final String limitText = limit != null ? limit.toStringAsFixed(0) : 'unknown';
-    final String averageText = hasAverage ? averageKph.toStringAsFixed(0) : 'unknown';
+    final String allowedAverageText =
+        limit != null ? limit.toStringAsFixed(0) : AppMessages.segmentGuidanceUnknownValue;
+    final String yourAverageText = hasAverage
+        ? averageKph.toStringAsFixed(0)
+        : AppMessages.segmentGuidanceUnknownValue;
 
     await _speak(
-      'Zone complete. Allowed average $limitText. Your average $averageText.',
+      AppMessages.segmentGuidanceZoneComplete(
+        allowedAverage: allowedAverageText,
+        yourAverage: yourAverageText,
+      ),
     );
   }
 
@@ -183,7 +190,7 @@ class SegmentGuidanceController {
     if (!_closeToLimitNotified && averageKph >= threshold && averageKph < limit) {
       _closeToLimitNotified = true;
       await _playChime();
-      await _speak('Close to limit.');
+      await _speak(AppMessages.segmentGuidanceCloseToLimit);
       return true;
     }
 
@@ -207,7 +214,7 @@ class SegmentGuidanceController {
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
-        await _speak('Average above limit. Reduce speed.');
+        await _speak(AppMessages.segmentGuidanceAboveLimitReduceSpeed);
         return true;
       }
       return false;
@@ -218,7 +225,7 @@ class SegmentGuidanceController {
       _wasOverLimit = false;
       _aboveLimitAlerted = false;
       await _playChime();
-      await _speak('Average back within limit.');
+      await _speak(AppMessages.segmentGuidanceAverageBackWithinLimit);
       return true;
     }
 
@@ -257,7 +264,13 @@ class SegmentGuidanceController {
           : '$rounded m';
       final String avgText = averageKph.toStringAsFixed(0);
       final String limitText = limit.toStringAsFixed(0);
-      await _speak('$distanceText to end. Avg $avgText, target ≤$limitText.');
+      await _speak(
+        AppMessages.segmentGuidanceApproachingEnd(
+          distance: distanceText,
+          average: avgText,
+          limit: limitText,
+        ),
+      );
     } else {
       await _playChime();
     }

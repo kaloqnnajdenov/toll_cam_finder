@@ -49,6 +49,38 @@ class AppMessages {
       _l.translate('segmentMissingCoordinates');
   static String get segmentNotFoundLocally =>
       _l.translate('segmentNotFoundLocally');
+  static String segmentGuidanceZoneStarted(String limitSentence) =>
+      _l.translate('segmentGuidanceZoneStarted', {'limitSentence': limitSentence});
+  static String segmentGuidanceLimitKnown(String limit) =>
+      _l.translate('segmentGuidanceLimitKnown', {'limit': limit});
+  static String get segmentGuidanceLimitUnknown =>
+      _l.translate('segmentGuidanceLimitUnknown');
+  static String segmentGuidanceZoneComplete({
+    required String allowedAverage,
+    required String yourAverage,
+  }) =>
+      _l.translate('segmentGuidanceZoneComplete', {
+        'allowedAverage': allowedAverage,
+        'yourAverage': yourAverage,
+      });
+  static String get segmentGuidanceCloseToLimit =>
+      _l.translate('segmentGuidanceCloseToLimit');
+  static String get segmentGuidanceAboveLimitReduceSpeed =>
+      _l.translate('segmentGuidanceAboveLimitReduceSpeed');
+  static String get segmentGuidanceAverageBackWithinLimit =>
+      _l.translate('segmentGuidanceAverageBackWithinLimit');
+  static String segmentGuidanceApproachingEnd({
+    required String distance,
+    required String average,
+    required String limit,
+  }) =>
+      _l.translate('segmentGuidanceApproachingEnd', {
+        'distance': distance,
+        'average': average,
+        'limit': limit,
+      });
+  static String get segmentGuidanceUnknownValue =>
+      _l.translate('segmentGuidanceUnknownValue');
   static String get coordinatesMustBeProvided =>
       _l.translate('coordinatesMustBeProvided');
   static String get coordinatesMustBeDecimalNumbers =>
