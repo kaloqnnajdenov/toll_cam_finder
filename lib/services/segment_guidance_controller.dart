@@ -335,7 +335,7 @@ class SegmentGuidanceController {
           : '$rounded m';
       final String avgText = averageKph.toStringAsFixed(0);
       final String limitText = limit.toStringAsFixed(0);
-      await _speak('$distanceText to end. Avg $avgText, target ≤$limitText.');
+      await _speak('$distanceText to end. Average speed is $avgText, speed limit is $limitText.');
     } else {
       await _playChime();
     }
