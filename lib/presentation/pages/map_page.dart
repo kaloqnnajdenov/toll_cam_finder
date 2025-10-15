@@ -104,6 +104,7 @@ class _MapPageState extends State<MapPage>
   double? _speedKmh;
   String? _segmentProgressLabel;
   SegmentGuidanceUiModel? _segmentGuidanceUi;
+  int _guidanceUpdateToken = 0;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
@@ -363,6 +364,7 @@ class _MapPageState extends State<MapPage>
     _lastSegmentEvent = segEvent;
     unawaited(_updateForegroundNotification(segEvent));
 
+    final int guidanceToken = ++_guidanceUpdateToken;
     final guidanceFuture = _segmentGuidanceController.handleUpdate(
       event: segEvent,
       activePath: activePath,
@@ -374,7 +376,7 @@ class _MapPageState extends State<MapPage>
 
     unawaited(
       guidanceFuture.then((result) {
-        if (!mounted || result == null) {
+        if (!mounted || result == null || guidanceToken != _guidanceUpdateToken) {
           return;
         }
         if (result.shouldClear) {
@@ -401,6 +403,7 @@ class _MapPageState extends State<MapPage>
     _avgLastLatLng = null;
     _avgLastSampleAt = null;
     _segmentGuidanceUi = null;
+    _guidanceUpdateToken++;
     _nextCameraCheckAt = null;
     _upcomingSegmentCueService.reset();
     _lastSegmentEvent = null;

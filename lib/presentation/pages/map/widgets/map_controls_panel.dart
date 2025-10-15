@@ -8,6 +8,8 @@ import 'package:toll_cam_finder/presentation/widgets/curretn_speed_dial.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/segment_guidance_controller.dart';
 
+import 'segment_guidance_banner.dart';
+
 class MapControlsPanel extends StatelessWidget {
   const MapControlsPanel({
     super.key,
@@ -56,52 +58,7 @@ class MapControlsPanel extends StatelessWidget {
               hasActiveSegment ? segmentSpeedLimitKph : null,
         ),
         if (segmentGuidance != null)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.speedDialBannerHorizontalPadding,
-              vertical: AppConstants.speedDialBannerVerticalPadding,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius:
-                  BorderRadius.circular(AppConstants.speedDialBannerRadius),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  segmentGuidance!.line1,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  segmentGuidance!.line2,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (segmentGuidance!.line3 != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    segmentGuidance!.line3!,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          SegmentGuidanceBanner(guidance: segmentGuidance!),
         if (segmentProgressLabel != null)
           Container(
             margin: const EdgeInsets.only(top: 8),
