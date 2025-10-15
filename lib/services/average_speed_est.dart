@@ -1,11 +1,17 @@
 import 'package:flutter/foundation.dart';
+import 'package:toll_cam_finder/services/average_speed_calculator.dart';
 
 /// Tracks average speed (same unit as fed samples).
 class AverageSpeedController extends ChangeNotifier {
+  AverageSpeedController({AverageSpeedCalculator? calculator})
+      : _calculator = calculator ?? const AverageSpeedCalculator();
+
   bool _isRunning = false;
   double _distanceMeters = 0.0;
   DateTime? _startedAt;
   DateTime? _lastSampleAt;
+
+  final AverageSpeedCalculator _calculator;
 
   bool get isRunning => _isRunning;
   DateTime? get startedAt => _startedAt;
@@ -28,16 +34,13 @@ class AverageSpeedController extends ChangeNotifier {
       return 0.0;
     }
     final Duration? elapsedDuration = elapsed;
-    if (elapsedDuration == null || elapsedDuration <= Duration.zero) {
+    if (elapsedDuration == null) {
       return 0.0;
     }
-    final double elapsedHours =
-        elapsedDuration.inMilliseconds / Duration.millisecondsPerSecond / Duration.secondsPerHour;
-    if (elapsedHours <= 0) {
-      return 0.0;
-    }
-    final double distanceKm = _distanceMeters / 1000.0;
-    return distanceKm / elapsedHours;
+    return _calculator.calculateKph(
+      distanceMeters: _distanceMeters,
+      elapsed: elapsedDuration,
+    );
   }
 
   void start({DateTime? startedAt}) {
@@ -89,23 +92,14 @@ class AverageSpeedController extends ChangeNotifier {
     required double segmentLengthMeters,
     Duration? segmentDuration,
   }) {
-    if (!segmentLengthMeters.isFinite || segmentLengthMeters <= 0) {
-      return 0.0;
-    }
-
     final Duration? duration = segmentDuration ?? elapsed;
-    if (duration == null || duration <= Duration.zero) {
+    if (duration == null) {
       return 0.0;
     }
-
-    final double elapsedHours =
-        duration.inMilliseconds / Duration.millisecondsPerSecond / Duration.secondsPerHour;
-    if (elapsedHours <= 0) {
-      return 0.0;
-    }
-
-    final double distanceKm = segmentLengthMeters / 1000.0;
-    return distanceKm / elapsedHours;
+    return _calculator.calculateKph(
+      distanceMeters: segmentLengthMeters,
+      elapsed: duration,
+    );
   }
 
   double avg_speed_done({
