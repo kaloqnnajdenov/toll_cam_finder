@@ -105,6 +105,7 @@ class _MapPageState extends State<MapPage>
 
   double? _lastSegmentAvgKmh;
   double? _activeSegmentSpeedLimitKph;
+  double? _nearestSegmentStartMeters;
   SegmentTrackerEvent? _lastSegmentEvent;
   LatLng? _avgLastLatLng;
   DateTime? _avgLastSampleAt;
@@ -383,6 +384,11 @@ class _MapPageState extends State<MapPage>
 
     _segmentDebugData = segEvent.debugData;
     _activeSegmentDebugPath = activePath;
+    _nearestSegmentStartMeters = segEvent.activeSegmentId != null
+        ? 0
+        : _segmentUiService.nearestUpcomingSegmentDistance(
+            segEvent.debugData.candidatePaths,
+          );
     _segmentProgressLabel = _segmentUiService.buildSegmentProgressLabel(
       event: segEvent,
       activePath: activePath,
@@ -409,6 +415,7 @@ class _MapPageState extends State<MapPage>
     _segmentProgressLabel = null;
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
+    _nearestSegmentStartMeters = null;
     _avgCtrl.reset();
     _avgLastLatLng = null;
     _avgLastSampleAt = null;
@@ -650,6 +657,7 @@ class _MapPageState extends State<MapPage>
                 segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
                 segmentProgressLabel: _segmentProgressLabel,
                 segmentDebugPath: _activeSegmentDebugPath,
+                distanceToSegmentStartMeters: _nearestSegmentStartMeters,
                 showDebugBadge: _segmentTracker.isReady,
                 segmentCount: _segmentDebugData.candidateCount,
                 segmentRadiusMeters: AppConstants.candidateRadiusMeters,
