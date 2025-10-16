@@ -36,18 +36,18 @@ class MapControlsPanel extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.16),
-              blurRadius: 32,
-              offset: const Offset(0, -12),
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 28,
+              offset: const Offset(0, -8),
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
         child: _SegmentMetricsCard(
           currentSpeedKmh: speedKmh,
           avgController: avgController,
@@ -167,18 +167,18 @@ class _SegmentMetricsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.route_outlined,
-                    size: 24,
+                    size: 20,
                     color: colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +191,7 @@ class _SegmentMetricsCard extends StatelessWidget {
                           letterSpacing: 0.2,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         statusText,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -217,19 +217,19 @@ class _SegmentMetricsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 header,
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: highlight),
-                      const SizedBox(width: 28),
+                      const SizedBox(width: 18),
                       Expanded(child: metricsWrap),
                     ],
                   )
                 else ...[
                   highlight,
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   metricsWrap,
                 ],
               ],
@@ -359,7 +359,7 @@ class _SpeedHighlight extends StatelessWidget {
     final Color endColor = colorScheme.secondary;
 
     return Container(
-      padding: const EdgeInsets.all(26),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -369,12 +369,12 @@ class _SpeedHighlight extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: startColor.withOpacity(0.25),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
+            color: startColor.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -389,7 +389,7 @@ class _SpeedHighlight extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 360),
             transitionBuilder: (child, animation) => FadeTransition(
@@ -428,7 +428,7 @@ class _SpeedHighlight extends StatelessWidget {
                     ),
                   ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: Text(
@@ -460,8 +460,8 @@ class _MetricsWrap extends StatelessWidget {
         }
 
         final double maxWidth = constraints.maxWidth;
-        const double spacing = 18;
-        final bool useTwoColumns = maxWidth >= 420 && metrics.length > 1;
+        const double spacing = 14;
+        final bool useTwoColumns = maxWidth >= 380 && metrics.length > 1;
         final double tileWidth = useTwoColumns
             ? (maxWidth - spacing) / 2
             : maxWidth;
@@ -505,14 +505,14 @@ class _MetricTile extends StatelessWidget {
     final bool isPlaceholder = data.value.trim() == '-';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(
-          theme.brightness == Brightness.dark ? 0.28 : 0.42,
+          theme.brightness == Brightness.dark ? 0.24 : 0.36,
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.08),
+          color: colorScheme.outline.withOpacity(0.06),
         ),
       ),
       child: Column(
@@ -521,30 +521,30 @@ class _MetricTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withOpacity(0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   data.icon,
-                  size: 20,
+                  size: 18,
                   color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   data.label,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: colorScheme.onSurface.withOpacity(0.7),
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             data.value,
             style: theme.textTheme.titleLarge?.copyWith(
