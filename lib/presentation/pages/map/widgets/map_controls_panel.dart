@@ -29,36 +29,87 @@ class MapControlsPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.16),
-              blurRadius: 32,
-              offset: const Offset(0, -12),
+    final mediaQuery = MediaQuery.of(context);
+    final double screenHeight = mediaQuery.size.height;
+    final double heightFactor = _panelHeightFactor(screenHeight);
+    final double panelHeight = screenHeight.isFinite && screenHeight > 0
+        ? screenHeight * heightFactor
+        : 0;
+
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Material(
+        color: Colors.transparent,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              mediaQuery.padding.bottom + 12,
             ),
-          ],
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-        child: _SegmentMetricsCard(
-          currentSpeedKmh: speedKmh,
-          avgController: avgController,
-          hasActiveSegment: hasActiveSegment,
-          speedLimitKph: segmentSpeedLimitKph,
-          distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-          distanceToSegmentEndMeters: segmentDebugPath?.remainingDistanceMeters,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double fallbackHeight = constraints.maxHeight.isFinite &&
+                        constraints.maxHeight > 0
+                    ? constraints.maxHeight * heightFactor
+                    : 0;
+                final double effectiveHeight =
+                    panelHeight > 0 ? panelHeight : fallbackHeight;
+
+                return SizedBox(
+                  width: double.infinity,
+                  height: effectiveHeight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 20,
+                          offset: const Offset(0, -6),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                    child: _SegmentMetricsCard(
+                      currentSpeedKmh: speedKmh,
+                      avgController: avgController,
+                      hasActiveSegment: hasActiveSegment,
+                      speedLimitKph: segmentSpeedLimitKph,
+                      distanceToSegmentStartMeters:
+                          distanceToSegmentStartMeters,
+                      distanceToSegmentEndMeters:
+                          segmentDebugPath?.remainingDistanceMeters,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+double _panelHeightFactor(double screenHeight) {
+  if (!screenHeight.isFinite || screenHeight <= 0) {
+    return 0.25;
+  }
+  if (screenHeight >= 900) {
+    return 0.22;
+  }
+  if (screenHeight >= 720) {
+    return 0.25;
+  }
+  if (screenHeight >= 600) {
+    return 0.3;
+  }
+  return 0.36;
 }
 
 class _SegmentMetricsCard extends StatelessWidget {
@@ -162,23 +213,35 @@ class _SegmentMetricsCard extends StatelessWidget {
         return LayoutBuilder(
           builder: (context, constraints) {
             final bool isWide = constraints.maxWidth >= 640;
+            final bool isCompactHeight = constraints.maxHeight <= 260;
+            final bool isUltraCompact = constraints.maxHeight <= 210;
+            final double headerSpacing = isUltraCompact
+                ? 8
+                : isCompactHeight
+                    ? 12
+                    : 16;
+            final double bodySpacing = isUltraCompact
+                ? 8
+                : isCompactHeight
+                    ? 12
+                    : 16;
 
             final header = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(isUltraCompact ? 4 : 6),
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.route_outlined,
-                    size: 24,
+                    size: isUltraCompact ? 16 : 18,
                     color: colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: isUltraCompact ? 6 : 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,10 +251,10 @@ class _SegmentMetricsCard extends StatelessWidget {
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: colorScheme.onSurface,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.1,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: isUltraCompact ? 2 : 4),
                       Text(
                         statusText,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -209,29 +272,44 @@ class _SegmentMetricsCard extends StatelessWidget {
               label: localizations.translate('segmentMetricsCurrentSpeed'),
               speed: currentSpeed,
               subtitle: statusText,
+              compact: isCompactHeight,
+              ultraCompact: isUltraCompact,
             );
 
-            final metricsWrap = _MetricsWrap(metrics: metrics);
+            final metricsWrap = _MetricsWrap(
+              metrics: metrics,
+              compact: isCompactHeight,
+            );
+
+            final metricsSection = Align(
+              alignment: Alignment.topLeft,
+              child: metricsWrap,
+            );
+
+            final Widget body = isWide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: highlight),
+                      SizedBox(width: bodySpacing),
+                      Expanded(child: metricsSection),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(child: highlight),
+                      SizedBox(height: bodySpacing),
+                      Expanded(child: metricsSection),
+                    ],
+                  );
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 header,
-                const SizedBox(height: 28),
-                if (isWide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: highlight),
-                      const SizedBox(width: 28),
-                      Expanded(child: metricsWrap),
-                    ],
-                  )
-                else ...[
-                  highlight,
-                  const SizedBox(height: 24),
-                  metricsWrap,
-                ],
+                SizedBox(height: headerSpacing),
+                Expanded(child: body),
               ],
             );
           },
@@ -344,22 +422,103 @@ class _SpeedHighlight extends StatelessWidget {
     required this.label,
     required this.speed,
     required this.subtitle,
+    required this.compact,
+    required this.ultraCompact,
   });
 
   final String label;
   final _FormattedSpeed speed;
   final String subtitle;
+  final bool compact;
+  final bool ultraCompact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final double paddingValue = ultraCompact
+        ? 12
+        : compact
+            ? 14
+            : 16;
+    final double labelSpacing = ultraCompact
+        ? 8
+        : compact
+            ? 10
+            : 12;
+    final double subtitleSpacing = ultraCompact
+        ? 6
+        : compact
+            ? 8
+            : 10;
+    final double borderRadius = ultraCompact ? 16 : 20;
+    final double blurRadius = ultraCompact ? 10 : 14;
+    final double shadowOffsetY = ultraCompact ? 6 : 8;
+
     final Color startColor = colorScheme.primary;
     final Color endColor = colorScheme.secondary;
 
+    TextStyle _scaleStyle(TextStyle? base, double scale, Color color,
+        {FontWeight fontWeight = FontWeight.w700, double? height}) {
+      final double fontSize = (base?.fontSize ?? 40) * scale;
+      return (base ?? const TextStyle()).copyWith(
+        fontSize: fontSize,
+        color: color,
+        fontWeight: fontWeight,
+        height: height,
+      );
+    }
+
+    final TextStyle baseValueStyle = theme.textTheme.displaySmall ??
+        theme.textTheme.headlineLarge ??
+        const TextStyle(fontSize: 40);
+    final double valueScale = ultraCompact
+        ? 0.68
+        : compact
+            ? 0.82
+            : 1.0;
+    final TextStyle valueStyle = _scaleStyle(
+      baseValueStyle,
+      valueScale,
+      Colors.white,
+      height: 0.9,
+    );
+
+    final TextStyle unitBaseStyle = theme.textTheme.titleLarge ??
+        theme.textTheme.titleMedium ??
+        const TextStyle(fontSize: 22);
+    final double unitScale = ultraCompact
+        ? 0.78
+        : compact
+            ? 0.88
+            : 1.0;
+    final TextStyle unitStyle = _scaleStyle(
+      unitBaseStyle,
+      unitScale,
+      Colors.white.withOpacity(0.85),
+      fontWeight: FontWeight.w500,
+    );
+
+    final TextStyle labelStyle = (theme.textTheme.labelLarge ??
+            theme.textTheme.labelMedium ??
+            const TextStyle(fontSize: 14))
+        .copyWith(
+      color: Colors.white.withOpacity(0.75),
+      letterSpacing: 1.05,
+      fontWeight: FontWeight.w600,
+    );
+
+    final TextStyle subtitleStyle = (theme.textTheme.bodyMedium ??
+            theme.textTheme.bodySmall ??
+            const TextStyle(fontSize: 14))
+        .copyWith(
+      color: Colors.white.withOpacity(0.85),
+      letterSpacing: 0.2,
+    );
+
     return Container(
-      padding: const EdgeInsets.all(26),
+      padding: EdgeInsets.all(paddingValue),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -369,12 +528,12 @@ class _SpeedHighlight extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: startColor.withOpacity(0.25),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
+            color: startColor.withOpacity(0.2),
+            blurRadius: blurRadius,
+            offset: Offset(0, shadowOffsetY),
           ),
         ],
       ),
@@ -383,13 +542,9 @@ class _SpeedHighlight extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white.withOpacity(0.75),
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.w600,
-            ),
+            style: labelStyle,
           ),
-          const SizedBox(height: 22),
+          SizedBox(height: labelSpacing),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 360),
             transitionBuilder: (child, animation) => FadeTransition(
@@ -403,18 +558,11 @@ class _SpeedHighlight extends StatelessWidget {
                       children: [
                         TextSpan(
                           text: speed.value,
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            height: 0.9,
-                          ),
+                          style: valueStyle,
                         ),
                         TextSpan(
                           text: ' ${speed.unit}',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white.withOpacity(0.85),
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: unitStyle,
                         ),
                       ],
                     ),
@@ -422,22 +570,19 @@ class _SpeedHighlight extends StatelessWidget {
                 : Text(
                     speed.value,
                     key: ValueKey(speed.value),
-                    style: theme.textTheme.displaySmall?.copyWith(
+                    style: valueStyle.copyWith(
                       color: Colors.white.withOpacity(0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: subtitleSpacing),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: Text(
               subtitle,
               key: ValueKey(subtitle),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withOpacity(0.85),
-                letterSpacing: 0.2,
-              ),
+              style: subtitleStyle,
             ),
           ),
         ],
@@ -447,9 +592,13 @@ class _SpeedHighlight extends StatelessWidget {
 }
 
 class _MetricsWrap extends StatelessWidget {
-  const _MetricsWrap({required this.metrics});
+  const _MetricsWrap({
+    required this.metrics,
+    required this.compact,
+  });
 
   final List<_MetricData> metrics;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -460,8 +609,9 @@ class _MetricsWrap extends StatelessWidget {
         }
 
         final double maxWidth = constraints.maxWidth;
-        const double spacing = 18;
-        final bool useTwoColumns = maxWidth >= 420 && metrics.length > 1;
+        final double spacing = compact ? 10 : 12;
+        final bool useTwoColumns =
+            maxWidth >= (compact ? 340 : 380) && metrics.length > 1;
         final double tileWidth = useTwoColumns
             ? (maxWidth - spacing) / 2
             : maxWidth;
@@ -483,7 +633,10 @@ class _MetricsWrap extends StatelessWidget {
               .map(
                 (metric) => SizedBox(
                   width: computeWidth(tileWidth),
-                  child: _MetricTile(data: metric),
+                  child: _MetricTile(
+                    data: metric,
+                    compact: compact,
+                  ),
                 ),
               )
               .toList(),
@@ -494,9 +647,13 @@ class _MetricsWrap extends StatelessWidget {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.data});
+  const _MetricTile({
+    required this.data,
+    required this.compact,
+  });
 
   final _MetricData data;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -504,15 +661,44 @@ class _MetricTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final bool isPlaceholder = data.value.trim() == '-';
 
+    final double horizontalPadding = compact ? 12 : 14;
+    final double verticalPadding = compact ? 10 : 12;
+    final double radius = compact ? 16 : 18;
+    final double iconPadding = compact ? 4.5 : 5;
+    final double iconSize = compact ? 15 : 16;
+    final double labelSpacing = compact ? 6 : 8;
+    final double valueSpacing = compact ? 8 : 10;
+
+    final TextStyle labelStyle = (theme.textTheme.labelLarge ??
+            theme.textTheme.labelMedium ??
+            const TextStyle(fontSize: 14))
+        .copyWith(
+      color: colorScheme.onSurface.withOpacity(0.7),
+      letterSpacing: 0.1,
+    );
+
+    final TextStyle valueStyle = (theme.textTheme.titleLarge ??
+            theme.textTheme.titleMedium ??
+            const TextStyle(fontSize: 20))
+        .copyWith(
+      fontWeight: FontWeight.w600,
+      color: isPlaceholder
+          ? colorScheme.onSurface.withOpacity(0.45)
+          : colorScheme.onSurface,
+    );
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(
-          theme.brightness == Brightness.dark ? 0.28 : 0.42,
+          theme.brightness == Brightness.dark ? 0.24 : 0.36,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.08),
+          color: colorScheme.outline.withOpacity(0.06),
         ),
       ),
       child: Column(
@@ -521,38 +707,30 @@ class _MetricTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(iconPadding),
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   data.icon,
-                  size: 20,
+                  size: iconSize,
                   color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: labelSpacing),
               Expanded(
                 child: Text(
                   data.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.7),
-                    letterSpacing: 0.2,
-                  ),
+                  style: labelStyle,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: valueSpacing),
           Text(
             data.value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: isPlaceholder
-                  ? colorScheme.onSurface.withOpacity(0.45)
-                  : colorScheme.onSurface,
-            ),
+            style: valueStyle,
           ),
         ],
       ),
