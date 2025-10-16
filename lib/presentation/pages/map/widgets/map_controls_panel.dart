@@ -29,33 +29,66 @@ class MapControlsPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final mediaQuery = MediaQuery.of(context);
+    final double screenHeight = mediaQuery.size.height;
+
     return Material(
       color: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.16),
-              blurRadius: 32,
-              offset: const Offset(0, -12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double computedMaxHeight = screenHeight.isFinite && screenHeight > 0
+              ? screenHeight * 0.25
+              : (constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                  ? constraints.maxHeight
+                  : double.infinity);
+
+          final double minWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+              ? constraints.maxWidth
+              : mediaQuery.size.width;
+
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: computedMaxHeight,
+                minWidth: minWidth,
+              ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.zero,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: minWidth),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 18,
+                          offset: const Offset(0, -4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                    child: _SegmentMetricsCard(
+                      currentSpeedKmh: speedKmh,
+                      avgController: avgController,
+                      hasActiveSegment: hasActiveSegment,
+                      speedLimitKph: segmentSpeedLimitKph,
+                      distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+                      distanceToSegmentEndMeters:
+                          segmentDebugPath?.remainingDistanceMeters,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-        child: _SegmentMetricsCard(
-          currentSpeedKmh: speedKmh,
-          avgController: avgController,
-          hasActiveSegment: hasActiveSegment,
-          speedLimitKph: segmentSpeedLimitKph,
-          distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-          distanceToSegmentEndMeters: segmentDebugPath?.remainingDistanceMeters,
-        ),
+          );
+        },
       ),
     );
   }
@@ -167,18 +200,18 @@ class _SegmentMetricsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.route_outlined,
-                    size: 24,
+                    size: 18,
                     color: colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +224,7 @@ class _SegmentMetricsCard extends StatelessWidget {
                           letterSpacing: 0.2,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         statusText,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -217,19 +250,19 @@ class _SegmentMetricsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 header,
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: highlight),
-                      const SizedBox(width: 28),
+                      const SizedBox(width: 16),
                       Expanded(child: metricsWrap),
                     ],
                   )
                 else ...[
                   highlight,
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
                   metricsWrap,
                 ],
               ],
@@ -359,7 +392,7 @@ class _SpeedHighlight extends StatelessWidget {
     final Color endColor = colorScheme.secondary;
 
     return Container(
-      padding: const EdgeInsets.all(26),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -369,12 +402,12 @@ class _SpeedHighlight extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: startColor.withOpacity(0.25),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
+            color: startColor.withOpacity(0.2),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -389,7 +422,7 @@ class _SpeedHighlight extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 12),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 360),
             transitionBuilder: (child, animation) => FadeTransition(
@@ -428,7 +461,7 @@ class _SpeedHighlight extends StatelessWidget {
                     ),
                   ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: Text(
@@ -460,8 +493,8 @@ class _MetricsWrap extends StatelessWidget {
         }
 
         final double maxWidth = constraints.maxWidth;
-        const double spacing = 18;
-        final bool useTwoColumns = maxWidth >= 420 && metrics.length > 1;
+        const double spacing = 12;
+        final bool useTwoColumns = maxWidth >= 380 && metrics.length > 1;
         final double tileWidth = useTwoColumns
             ? (maxWidth - spacing) / 2
             : maxWidth;
@@ -505,14 +538,14 @@ class _MetricTile extends StatelessWidget {
     final bool isPlaceholder = data.value.trim() == '-';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(
-          theme.brightness == Brightness.dark ? 0.28 : 0.42,
+          theme.brightness == Brightness.dark ? 0.24 : 0.36,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.08),
+          color: colorScheme.outline.withOpacity(0.06),
         ),
       ),
       child: Column(
@@ -521,30 +554,30 @@ class _MetricTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   data.icon,
-                  size: 20,
+                  size: 16,
                   color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   data.label,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: colorScheme.onSurface.withOpacity(0.7),
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             data.value,
             style: theme.textTheme.titleLarge?.copyWith(
