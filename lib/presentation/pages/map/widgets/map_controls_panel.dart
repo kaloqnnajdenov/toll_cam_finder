@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
@@ -13,27 +12,17 @@ class MapControlsPanel extends StatelessWidget {
     required this.speedKmh,
     required this.avgController,
     required this.hasActiveSegment,
-    this.lastSegmentAvgKmh,
     this.segmentSpeedLimitKph,
-    this.segmentProgressLabel,
     this.segmentDebugPath,
     this.distanceToSegmentStartMeters,
-    required this.showDebugBadge,
-    required this.segmentCount,
-    required this.segmentRadiusMeters,
   });
 
   final double? speedKmh;
   final AverageSpeedController avgController;
   final bool hasActiveSegment;
-  final double? lastSegmentAvgKmh;
   final double? segmentSpeedLimitKph;
-  final String? segmentProgressLabel;
   final SegmentDebugPath? segmentDebugPath;
   final double? distanceToSegmentStartMeters;
-  final bool showDebugBadge;
-  final int segmentCount;
-  final double segmentRadiusMeters;
 
   @override
   Widget build(BuildContext context) {
@@ -51,40 +40,6 @@ class MapControlsPanel extends StatelessWidget {
           distanceToSegmentEndMeters:
               segmentDebugPath?.remainingDistanceMeters,
         ),
-        if (segmentProgressLabel != null) ...[
-          const SizedBox(height: 12),
-          _InfoChip(
-            text: segmentProgressLabel!,
-            icon: Icons.near_me,
-          ),
-        ],
-        if (lastSegmentAvgKmh != null) ...[
-          const SizedBox(height: 12),
-          _InfoChip(
-            text: localizations.translate(
-              'speedDialLastSegmentAverage',
-              {
-                'value': lastSegmentAvgKmh!.toStringAsFixed(1),
-                'unit': localizations.speedDialUnitKmh,
-              },
-            ),
-            icon: Icons.history,
-          ),
-        ],
-        if (showDebugBadge && kDebugMode) ...[
-          const SizedBox(height: 12),
-          _InfoChip(
-            text: localizations.translate(
-              'speedDialDebugSummary',
-              {
-                'count': '$segmentCount',
-                'radius': '${segmentRadiusMeters.toInt()}',
-                'unit': localizations.translate('unitMetersShort'),
-              },
-            ),
-            icon: Icons.bug_report_outlined,
-          ),
-        ],
       ],
     );
   }
@@ -120,9 +75,6 @@ class _SegmentMetricsCard extends StatelessWidget {
         final DateTime now = DateTime.now();
         final bool averagingActive =
             hasActiveSegment && avgController.isRunning;
-        final double? activeAverage = averagingActive
-            ? avgController.average
-            : null;
 
         final double? sanitizedStart =
             _sanitizeDistance(distanceToSegmentStartMeters);
@@ -139,34 +91,30 @@ class _SegmentMetricsCard extends StatelessWidget {
               )
             : null;
 
-        final List<_MetricData> metrics = [
-          _MetricData(
-            label: localizations.translate('segmentMetricsCurrentSpeed'),
-            value: _formatSpeed(currentSpeedKmh, speedUnit),
-          ),
-          _MetricData(
-            label: localizations.translate('segmentMetricsAverageSpeed'),
-            value: averagingActive
-                ? _formatSpeed(activeAverage, speedUnit)
-                : '-',
-          ),
-          _MetricData(
-            label: localizations.translate('segmentMetricsDistanceToStart'),
-            value: _formatDistance(localizations, sanitizedStart),
-          ),
-          _MetricData(
-            label: localizations.translate('segmentMetricsDistanceToEnd'),
-            value: averagingActive
-                ? _formatDistance(localizations, sanitizedEnd)
-                : '-',
-          ),
-          _MetricData(
-            label: localizations.translate('segmentMetricsSafeSpeed'),
-            value: averagingActive && safeSpeed != null
-                ? _formatSpeed(safeSpeed, speedUnit)
-                : '-',
-          ),
-        ];
+        final _MetricData currentSpeedMetric = _MetricData(
+          label: localizations.translate('segmentMetricsCurrentSpeed'),
+          value: _formatSpeed(currentSpeedKmh, speedUnit),
+        );
+
+        final bool onSegment = hasActiveSegment;
+        final String distanceLabelKey = onSegment
+            ? 'segmentMetricsDistanceToEnd'
+            : 'segmentMetricsDistanceToStart';
+        final double? distanceMeters = onSegment
+            ? sanitizedEnd ?? sanitizedStart
+            : sanitizedStart;
+
+        final _MetricData distanceMetric = _MetricData(
+          label: localizations.translate(distanceLabelKey),
+          value: _formatDistance(localizations, distanceMeters),
+        );
+
+        final _MetricData safeSpeedMetric = _MetricData(
+          label: localizations.translate('segmentMetricsSafeSpeed'),
+          value: averagingActive && safeSpeed != null
+              ? _formatSpeed(safeSpeed, speedUnit)
+              : '-',
+        );
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -185,23 +133,29 @@ class _SegmentMetricsCard extends StatelessWidget {
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 localizations.translate('segmentMetricsHeading'),
+                textAlign: TextAlign.center,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface.withOpacity(0.8),
                   letterSpacing: 0.4,
                 ),
               ),
+              const SizedBox(height: 16),
+              _MetricRow(
+                leading: currentSpeedMetric,
+                trailing: distanceMetric,
+              ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 18,
-                runSpacing: 12,
-                children: metrics
-                    .map((metric) => _MetricTile(data: metric))
-                    .toList(),
+              _MetricRow(
+                leading: _MetricData(
+                  label: currentSpeedMetric.label,
+                  value: currentSpeedMetric.value,
+                ),
+                trailing: safeSpeedMetric,
               ),
             ],
           ),
@@ -291,6 +245,24 @@ class _MetricData {
   final String value;
 }
 
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({required this.leading, required this.trailing});
+
+  final _MetricData leading;
+  final _MetricData trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _MetricTile(data: leading)),
+        const SizedBox(width: 18),
+        Expanded(child: _MetricTile(data: trailing)),
+      ],
+    );
+  }
+}
+
 class _MetricTile extends StatelessWidget {
   const _MetricTile({required this.data});
 
@@ -304,10 +276,11 @@ class _MetricTile extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 120),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             data.label,
+            textAlign: TextAlign.center,
             style: theme.textTheme.labelLarge?.copyWith(
               color: colorScheme.onSurface.withOpacity(0.6),
               letterSpacing: 0.2,
@@ -316,47 +289,10 @@ class _MetricTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             data.value,
+            textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.text, this.icon});
-
-  final String text;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.12)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 16, color: colorScheme.primary),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],
