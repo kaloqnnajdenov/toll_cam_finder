@@ -152,23 +152,14 @@ class _SegmentMetricsCard extends StatelessWidget {
         final String distanceValue =
             _formatDistance(localizations, distanceMeters);
 
-        final String statusText = hasActiveSegment
-            ? localizations.translate('segmentMetricsStatusTracking')
-            : localizations.speedDialNoActiveSegment;
-
         final String distanceLabel =
             localizations.translate(distanceLabelKey);
         final String distanceDisplay = distanceValue;
 
-        final TextStyle? statusStyle =
-            theme.textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-          letterSpacing: 0.3,
-        );
-
         final _MetricAccessory? primaryAccessory = showSafeSpeed
             ? _MetricAccessory(
                 label: localizations.translate('segmentMetricsSafeSpeed'),
+                labelAbove: true,
                 child:
                     _MetricSpeedValue(speed: safeSpeedFormatted, alignRight: true),
               )
@@ -226,10 +217,6 @@ class _SegmentMetricsCard extends StatelessWidget {
               _MetricLabel(text: distanceLabel),
               const SizedBox(height: 6),
               _DistanceValue(distanceText: distanceDisplay),
-            ],
-            if (statusText.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(statusText, style: statusStyle),
             ],
           ],
         );
@@ -429,27 +416,39 @@ class _MetricValueRow extends StatelessWidget {
 }
 
 class _MetricAccessory extends StatelessWidget {
-  const _MetricAccessory({required this.label, required this.child});
+  const _MetricAccessory({
+    required this.label,
+    required this.child,
+    this.labelAbove = false,
+  });
 
   final String label;
   final Widget child;
+  final bool labelAbove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final labelWidget = Text(
+      label.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        letterSpacing: 0.8,
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        child,
-        const SizedBox(height: 6),
-        Text(
-          label.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 0.8,
-          ),
-        ),
-      ],
+      children: labelAbove
+          ? [
+              labelWidget,
+              const SizedBox(height: 6),
+              child,
+            ]
+          : [
+              child,
+              const SizedBox(height: 6),
+              labelWidget,
+            ],
     );
   }
 }
