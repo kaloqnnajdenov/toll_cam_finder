@@ -97,9 +97,7 @@ class MapControlsPanel extends StatelessWidget {
     required bool stackMetricsVertically,
     required bool forceSingleRow,
   }) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: ClipRRect(
+    final Widget content = ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
@@ -131,6 +129,13 @@ class MapControlsPanel extends StatelessWidget {
         ),
       ),
     );
+
+    final Widget constrainedContent = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: forceSingleRow ? IntrinsicWidth(child: content) : content,
+    );
+
+    return constrainedContent;
   }
 }
 
@@ -275,12 +280,10 @@ class _SegmentMetricsCard extends StatelessWidget {
             if (forceSingleRow) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (int i = 0; i < metrics.length; i++) ...[
-                     SizedBox(
-                      width: double.infinity,
-                      child: _MetricTile(data: metrics[i]),
-                    ),
+                    _MetricTile(data: metrics[i]),
                     if (i + 1 < metrics.length)
                       const SizedBox(height: spacing),
                   ],
