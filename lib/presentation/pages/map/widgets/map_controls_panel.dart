@@ -7,10 +7,7 @@ import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
-enum MapControlsPlacement {
-  bottom,
-  left,
-}
+enum MapControlsPlacement { bottom, left }
 
 class MapControlsPanel extends StatelessWidget {
   const MapControlsPanel({
@@ -45,6 +42,7 @@ class MapControlsPanel extends StatelessWidget {
     final Widget panelCard = _buildPanelCard(
       colorScheme: colorScheme,
       maxWidth: panelMaxWidth,
+      stackMetricsVertically: placeLeft,
     );
 
     if (placeLeft) {
@@ -90,6 +88,7 @@ class MapControlsPanel extends StatelessWidget {
   Widget _buildPanelCard({
     required ColorScheme colorScheme,
     required double maxWidth,
+    required bool stackMetricsVertically,
   }) {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -109,10 +108,7 @@ class MapControlsPanel extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 18,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
             child: _SegmentMetricsCard(
               currentSpeedKmh: speedKmh,
               avgController: avgController,
@@ -121,6 +117,7 @@ class MapControlsPanel extends StatelessWidget {
               distanceToSegmentStartMeters: distanceToSegmentStartMeters,
               distanceToSegmentEndMeters:
                   segmentDebugPath?.remainingDistanceMeters,
+              stackMetricsVertically: stackMetricsVertically,
             ),
           ),
         ),
@@ -137,6 +134,7 @@ class _SegmentMetricsCard extends StatelessWidget {
     required this.speedLimitKph,
     required this.distanceToSegmentStartMeters,
     required this.distanceToSegmentEndMeters,
+    required this.stackMetricsVertically,
   });
 
   final double? currentSpeedKmh;
@@ -145,6 +143,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   final double? speedLimitKph;
   final double? distanceToSegmentStartMeters;
   final double? distanceToSegmentEndMeters;
+  final bool stackMetricsVertically;
 
   @override
   Widget build(BuildContext context) {
@@ -156,11 +155,15 @@ class _SegmentMetricsCard extends StatelessWidget {
         final localizations = AppLocalizations.of(context);
         final String speedUnit = localizations.speedDialUnitKmh;
         final DateTime now = DateTime.now();
-        final bool averagingActive = hasActiveSegment && avgController.isRunning;
+        final bool averagingActive =
+            hasActiveSegment && avgController.isRunning;
 
-        final double? sanitizedStart =
-            _sanitizeDistance(distanceToSegmentStartMeters);
-        final double? sanitizedEnd = _sanitizeDistance(distanceToSegmentEndMeters);
+        final double? sanitizedStart = _sanitizeDistance(
+          distanceToSegmentStartMeters,
+        );
+        final double? sanitizedEnd = _sanitizeDistance(
+          distanceToSegmentEndMeters,
+        );
 
         final double? safeSpeed = averagingActive
             ? _estimateSafeSpeed(
@@ -172,13 +175,17 @@ class _SegmentMetricsCard extends StatelessWidget {
               )
             : null;
 
-        final _FormattedSpeed currentSpeed =
-            _formatSpeed(currentSpeedKmh, speedUnit);
+        final _FormattedSpeed currentSpeed = _formatSpeed(
+          currentSpeedKmh,
+          speedUnit,
+        );
         final _FormattedSpeed averageSpeed = averagingActive
             ? _formatSpeed(avgController.average, speedUnit)
             : const _FormattedSpeed(value: '-', unit: null);
-        final _FormattedSpeed limitSpeed =
-            _formatSpeed(speedLimitKph, speedUnit);
+        final _FormattedSpeed limitSpeed = _formatSpeed(
+          speedLimitKph,
+          speedUnit,
+        );
         final _FormattedSpeed safeSpeedFormatted = safeSpeed != null
             ? _formatSpeed(safeSpeed, speedUnit)
             : const _FormattedSpeed(value: '-', unit: null);
@@ -193,30 +200,29 @@ class _SegmentMetricsCard extends StatelessWidget {
         final double? distanceMeters = hasActiveSegment
             ? sanitizedEnd ?? sanitizedStart
             : sanitizedStart;
-        final String distanceValue =
-            _formatDistance(localizations, distanceMeters);
+        final String distanceValue = _formatDistance(
+          localizations,
+          distanceMeters,
+        );
 
-        final String distanceLabel =
-            localizations.translate(distanceLabelKey);
+        final String distanceLabel = localizations.translate(distanceLabelKey);
         final String distanceDisplay = distanceValue;
 
         final _MetricAccessory? primaryAccessory = showSafeSpeed
             ? _MetricAccessory(
                 label: localizations.translate('segmentMetricsSafeSpeed'),
                 labelAbove: true,
-                child:
-                    _MetricSpeedValue(speed: safeSpeedFormatted, alignRight: true),
+                child: _MetricSpeedValue(
+                  speed: safeSpeedFormatted,
+                  alignRight: true,
+                ),
               )
             : showLimit
-                ? _MetricAccessory(
-                    label: localizations
-                        .translate('segmentMetricsSpeedLimit'),
-                    child: _MetricSpeedValue(
-                      speed: limitSpeed,
-                      alignRight: true,
-                    ),
-                  )
-                : null;
+            ? _MetricAccessory(
+                label: localizations.translate('segmentMetricsSpeedLimit'),
+                child: _MetricSpeedValue(speed: limitSpeed, alignRight: true),
+              )
+            : null;
 
         final _MetricAccessory distanceAccessory = _MetricAccessory(
           label: distanceLabel,
@@ -228,38 +234,37 @@ class _SegmentMetricsCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _MetricLabel(
-              text:
-                  localizations.translate('segmentMetricsCurrentSpeed'),
+              text: localizations.translate('segmentMetricsCurrentSpeed'),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             _MetricValueRow(
               value: _MetricSpeedValue(speed: currentSpeed),
               accessory: primaryAccessory,
+              stackVertically: stackMetricsVertically,
             ),
             const _MetricDivider(),
             if (averagingActive) ...[
               _MetricLabel(
-                text:
-                    localizations.translate('segmentMetricsAverageSpeed'),
+                text: localizations.translate('segmentMetricsAverageSpeed'),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               _MetricValueRow(
                 value: _MetricSpeedValue(speed: averageSpeed),
                 accessory: distanceAccessory,
+                stackVertically: stackMetricsVertically,
               ),
               const _MetricDivider(),
             ] else if (showLimit && primaryAccessory == null) ...[
               _MetricLabel(
-                text:
-                    localizations.translate('segmentMetricsSpeedLimit'),
+                text: localizations.translate('segmentMetricsSpeedLimit'),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               _MetricSpeedValue(speed: limitSpeed),
               const _MetricDivider(),
             ],
             if (!averagingActive) ...[
               _MetricLabel(text: distanceLabel),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               _DistanceValue(distanceText: distanceDisplay),
             ],
           ],
@@ -320,11 +325,9 @@ class _SegmentMetricsCard extends StatelessWidget {
     if (speedKph == null || !speedKph.isFinite) {
       return const _FormattedSpeed(value: '-', unit: null);
     }
-    final double clamped =
-        speedKph.clamp(0, double.infinity).toDouble();
+    final double clamped = speedKph.clamp(0, double.infinity).toDouble();
     final bool useDecimals = clamped < 10;
-    final String formatted =
-        clamped.toStringAsFixed(useDecimals ? 1 : 0);
+    final String formatted = clamped.toStringAsFixed(useDecimals ? 1 : 0);
     return _FormattedSpeed(value: formatted, unit: unit);
   }
 
@@ -335,8 +338,9 @@ class _SegmentMetricsCard extends StatelessWidget {
     if (meters >= 1000) {
       final double km = meters / 1000.0;
       final String unit = localizations.translate('unitKilometersShort');
-      final String formatted =
-          km >= 10 ? km.toStringAsFixed(0) : km.toStringAsFixed(1);
+      final String formatted = km >= 10
+          ? km.toStringAsFixed(0)
+          : km.toStringAsFixed(1);
       return '$formatted $unit';
     }
     final String unit = localizations.translate('unitMetersShort');
@@ -380,10 +384,7 @@ class _MetricDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context)
-        .colorScheme
-        .onSurface
-        .withOpacity(0.08);
+    final color = Theme.of(context).colorScheme.onSurface.withOpacity(0.08);
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(vertical: 14),
@@ -402,7 +403,8 @@ class _MetricSpeedValue extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final alignment = alignRight ? Alignment.centerRight : Alignment.centerLeft;
-    final TextStyle baseValueStyle = (speed.unit != null
+    final TextStyle baseValueStyle =
+        (speed.unit != null
             ? theme.textTheme.displaySmall
             : theme.textTheme.headlineMedium) ??
         theme.textTheme.displaySmall ??
@@ -412,7 +414,8 @@ class _MetricSpeedValue extends StatelessWidget {
       fontWeight: FontWeight.w800,
       color: theme.colorScheme.onSurface,
     );
-    final TextStyle baseUnitStyle = theme.textTheme.titleMedium ??
+    final TextStyle baseUnitStyle =
+        theme.textTheme.titleMedium ??
         theme.textTheme.titleSmall ??
         const TextStyle(fontSize: 18, fontWeight: FontWeight.w600);
     final unitStyle = baseUnitStyle.copyWith(
@@ -439,21 +442,32 @@ class _MetricSpeedValue extends StatelessWidget {
 }
 
 class _MetricValueRow extends StatelessWidget {
-  const _MetricValueRow({required this.value, this.accessory});
-
+  const _MetricValueRow({
+    required this.value,
+    this.accessory,
+    this.stackVertically = false,
+  });
   final Widget value;
   final _MetricAccessory? accessory;
-
+  final bool stackVertically;
   @override
   Widget build(BuildContext context) {
+    if (stackVertically && accessory != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: double.infinity, child: value),
+          const SizedBox(height: 12),
+          accessory!,
+        ],
+      );
+    }  
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: value),
-        if (accessory != null) ...[
-          const SizedBox(width: 16),
-          accessory!,
-        ],
+        if (accessory != null) ...[const SizedBox(width: 16), accessory!],
       ],
     );
   }
@@ -483,16 +497,8 @@ class _MetricAccessory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: labelAbove
-          ? [
-              labelWidget,
-              const SizedBox(height: 6),
-              child,
-            ]
-          : [
-              child,
-              const SizedBox(height: 6),
-              labelWidget,
-            ],
+          ? [labelWidget, const SizedBox(height: 6), child]
+          : [child, const SizedBox(height: 6), labelWidget],
     );
   }
 }
