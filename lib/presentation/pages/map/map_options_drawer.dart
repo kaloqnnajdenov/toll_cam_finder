@@ -64,6 +64,8 @@ extension _MapPageDrawer on _MapPageState {
     AppLocalizations localizations,
   ) {
     switch (mode) {
+      case GuidanceAudioMode.fullGuidance:
+        return localizations.audioModeFullGuidance;
       case GuidanceAudioMode.muteForeground:
         return localizations.audioModeForegroundMuted;
       case GuidanceAudioMode.muteBackground:
