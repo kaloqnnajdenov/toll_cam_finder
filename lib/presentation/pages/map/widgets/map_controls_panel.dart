@@ -47,7 +47,8 @@ class MapControlsPanel extends StatelessWidget {
     final Widget panelCard = _buildPanelCard(
       colorScheme: colorScheme,
       maxWidth: panelMaxWidth,
-      stackMetricsVertically: placeLeft,
+      stackMetricsVertically: !placeLeft,
+      forceSingleRow: placeLeft,
     );
 
     if (placeLeft) {
@@ -94,6 +95,7 @@ class MapControlsPanel extends StatelessWidget {
     required ColorScheme colorScheme,
     required double maxWidth,
     required bool stackMetricsVertically,
+    required bool forceSingleRow,
   }) {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -123,6 +125,7 @@ class MapControlsPanel extends StatelessWidget {
               distanceToSegmentEndMeters:
                   segmentDebugPath?.remainingDistanceMeters,
               stackMetricsVertically: stackMetricsVertically,
+              forceSingleRow: forceSingleRow,
             ),
           ),
         ),
@@ -140,6 +143,7 @@ class _SegmentMetricsCard extends StatelessWidget {
     required this.distanceToSegmentStartMeters,
     required this.distanceToSegmentEndMeters,
     required this.stackMetricsVertically,
+    required this.forceSingleRow,
   });
 
   final double? currentSpeedKmh;
@@ -149,6 +153,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   final double? distanceToSegmentStartMeters;
   final double? distanceToSegmentEndMeters;
   final bool stackMetricsVertically;
+  final bool forceSingleRow;
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +267,20 @@ class _SegmentMetricsCard extends StatelessWidget {
                     ),
                     if (row + 2 < orderedMetrics.length)
                       const SizedBox(height: spacing),
+                  ],
+                ],
+              );
+            }
+
+            if (forceSingleRow) {
+              return Row(
+                children: [
+                  for (int i = 0; i < metrics.length; i++) ...[
+                    Expanded(
+                      child: _MetricTile(data: metrics[i]),
+                    ),
+                    if (i + 1 < metrics.length)
+                      const SizedBox(width: spacing),
                   ],
                 ],
               );
