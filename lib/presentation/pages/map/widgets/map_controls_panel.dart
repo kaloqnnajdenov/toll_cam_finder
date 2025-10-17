@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -44,35 +45,37 @@ class MapControlsPanel extends StatelessWidget {
               16,
               mediaQuery.padding.bottom + 12,
             ),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 520),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: colorScheme.outlineVariant.withOpacity(0.25),
-                  width: 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-              child: _SegmentMetricsCard(
-                currentSpeedKmh: speedKmh,
-                avgController: avgController,
-                hasActiveSegment: hasActiveSegment,
-                speedLimitKph: segmentSpeedLimitKph,
-                distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-                distanceToSegmentEndMeters:
-                    segmentDebugPath?.remainingDistanceMeters,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 18,
+                  ),
+                  child: _SegmentMetricsCard(
+                    currentSpeedKmh: speedKmh,
+                    avgController: avgController,
+                    hasActiveSegment: hasActiveSegment,
+                    speedLimitKph: segmentSpeedLimitKph,
+                    distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+                    distanceToSegmentEndMeters:
+                        segmentDebugPath?.remainingDistanceMeters,
+                  ),
+                ),
               ),
             ),
           ),
@@ -153,61 +156,78 @@ class _SegmentMetricsCard extends StatelessWidget {
             ? localizations.translate('segmentMetricsStatusTracking')
             : localizations.speedDialNoActiveSegment;
 
-        final entries = <_SummaryEntryData>[
-          _SummaryEntryData(
-            label: localizations.translate('segmentMetricsCurrentSpeed'),
-            value: currentSpeed.value,
-            unit: currentSpeed.unit,
-          ),
-          _SummaryEntryData(
-            label: localizations.translate(distanceLabelKey),
-            value: distanceValue,
-          ),
-        ];
+        final String distanceLabel =
+            localizations.translate(distanceLabelKey);
+        final String distanceDisplay = distanceValue;
 
-        if (averagingActive) {
-          entries.add(
-            _SummaryEntryData(
-              label: localizations.translate('segmentMetricsAverageSpeed'),
-              value: averageSpeed.value,
-              unit: averageSpeed.unit,
-              helper: showSafeSpeed
-                  ? '${localizations.translate('segmentMetricsSafeSpeed')}: ${safeSpeedFormatted.label}'
-                  : null,
-            ),
-          );
-        } else if (showLimit) {
-          entries.add(
-            _SummaryEntryData(
-              label: localizations.translate('segmentMetricsSpeedLimit'),
-              value: limitSpeed.value,
-              unit: limitSpeed.unit,
-            ),
-          );
-        }
+        final _MetricSpeedInfo trailingSpeed = averagingActive && showSafeSpeed
+            ? _MetricSpeedInfo(
+                label: localizations.translate('segmentMetricsSafeSpeed'),
+                speed: safeSpeedFormatted,
+              )
+            : showLimit
+                ? _MetricSpeedInfo(
+                    label:
+                        localizations.translate('segmentMetricsSpeedLimit'),
+                    speed: limitSpeed,
+                  )
+                : const _MetricSpeedInfo.none();
+
+        final TextStyle? statusStyle =
+            theme.textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+          letterSpacing: 0.3,
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              localizations.translate('segmentMetricsHeading'),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-                letterSpacing: 0.2,
-              ),
+            const _MetricAccent(),
+            _MetricLabel(
+              text:
+                  localizations.translate('segmentMetricsCurrentSpeed'),
             ),
-            const SizedBox(height: 4),
-            Text(
-              statusText,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                letterSpacing: 0.2,
+            const SizedBox(height: 6),
+            _MetricSpeedValue(speed: currentSpeed),
+            const _MetricDivider(),
+            if (averagingActive) ...[
+              _MetricLabel(
+                text:
+                    localizations.translate('segmentMetricsAverageSpeed'),
               ),
+              const SizedBox(height: 6),
+              _MetricSpeedValue(speed: averageSpeed),
+              if (showSafeSpeed) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '${localizations.translate('segmentMetricsSafeSpeed')}: ${safeSpeedFormatted.label}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.85),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+              const _MetricDivider(),
+            ] else if (showLimit) ...[
+              _MetricLabel(
+                text:
+                    localizations.translate('segmentMetricsSpeedLimit'),
+              ),
+              const SizedBox(height: 6),
+              _MetricSpeedValue(speed: limitSpeed),
+              const _MetricDivider(),
+            ],
+            _MetricLabel(text: distanceLabel),
+            const SizedBox(height: 10),
+            _DistanceAndTrailingSpeedRow(
+              distanceText: distanceDisplay,
+              trailing: trailingSpeed,
             ),
-            const SizedBox(height: 16),
-            _SummaryEntriesRow(entries: entries),
+            if (statusText.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(statusText, style: statusStyle),
+            ],
           ],
         );
       },
@@ -301,180 +321,161 @@ class _FormattedSpeed {
   String get label => hasValue ? '$value $unit' : value;
 }
 
-class _SummaryEntryData {
-  const _SummaryEntryData({
-    required this.label,
-    required this.value,
-    this.unit,
-    this.helper,
-  });
+class _MetricSpeedInfo {
+  const _MetricSpeedInfo({required this.label, required this.speed})
+      : hasValue = true;
 
-  final String label;
-  final String value;
-  final String? unit;
-  final String? helper;
+  const _MetricSpeedInfo.none()
+      : label = null,
+        speed = const _FormattedSpeed(value: '-'),
+        hasValue = false;
+
+  final String? label;
+  final _FormattedSpeed speed;
+  final bool hasValue;
 }
 
-class _SummaryEntriesRow extends StatelessWidget {
-  const _SummaryEntriesRow({
-    required this.entries,
-  });
-
-  final List<_SummaryEntryData> entries;
+class _MetricAccent extends StatelessWidget {
+  const _MetricAccent();
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 6,
+        height: 12,
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFD400),
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ),
+    );
+  }
+}
 
+class _MetricLabel extends StatelessWidget {
+  const _MetricLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+    return Text(
+      text.toUpperCase(),
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.0,
+      ),
+    );
+  }
+}
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool shouldWrap = constraints.maxWidth < 360 && entries.length > 2;
-        if (!shouldWrap) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _buildRowChildren(entries, theme),
-            ),
-          );
-        }
+class _MetricDivider extends StatelessWidget {
+  const _MetricDivider();
 
-        final firstRow = entries.take(2).toList();
-        final secondRow = entries.skip(2).toList();
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context)
+        .colorScheme
+        .onSurface
+        .withOpacity(0.08);
+    return Container(
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 14),
+      color: color,
+    );
+  }
+}
 
-        return Column(
-          children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _buildRowChildren(firstRow, theme),
-              ),
-            ),
-            if (secondRow.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: _buildRowChildren(secondRow, theme),
+class _MetricSpeedValue extends StatelessWidget {
+  const _MetricSpeedValue({required this.speed, this.alignRight = false});
+
+  final _FormattedSpeed speed;
+  final bool alignRight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final alignment = alignRight ? Alignment.centerRight : Alignment.centerLeft;
+    final TextStyle baseValueStyle = (speed.unit != null
+            ? theme.textTheme.displaySmall
+            : theme.textTheme.headlineMedium) ??
+        theme.textTheme.displaySmall ??
+        const TextStyle(fontSize: 36, fontWeight: FontWeight.w700);
+    final valueStyle = baseValueStyle.copyWith(
+      height: 1.0,
+      fontWeight: FontWeight.w800,
+      color: theme.colorScheme.onSurface,
+    );
+    final TextStyle baseUnitStyle = theme.textTheme.titleMedium ??
+        theme.textTheme.titleSmall ??
+        const TextStyle(fontSize: 18, fontWeight: FontWeight.w600);
+    final unitStyle = baseUnitStyle.copyWith(
+      fontWeight: FontWeight.w600,
+      color: theme.colorScheme.onSurface,
+    );
+
+    return Align(
+      alignment: alignment,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(speed.value, style: valueStyle),
+          if (speed.unit != null) ...[
+            const SizedBox(width: 6),
+            Text(speed.unit!, style: unitStyle),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DistanceAndTrailingSpeedRow extends StatelessWidget {
+  const _DistanceAndTrailingSpeedRow({
+    required this.distanceText,
+    required this.trailing,
+  });
+
+  final String distanceText;
+  final _MetricSpeedInfo trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+      color: theme.colorScheme.onSurface,
+    );
+    final iconColor = theme.colorScheme.onSurface;
+
+    return Row(
+      children: [
+        Icon(Icons.chevron_right, size: 20, color: iconColor),
+        const SizedBox(width: 6),
+        Text(distanceText, style: textStyle),
+        if (trailing.hasValue) ...[
+          const Spacer(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _MetricSpeedValue(speed: trailing.speed, alignRight: true),
+              const SizedBox(height: 6),
+              Text(
+                trailing.label!.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.8,
                 ),
               ),
             ],
-          ],
-        );
-      },
-    );
-  }
-
-  List<Widget> _buildRowChildren(
-    List<_SummaryEntryData> data,
-    ThemeData theme,
-  ) {
-    final children = <Widget>[];
-    for (var i = 0; i < data.length; i++) {
-      children.add(
-        Expanded(
-          child: _SummaryEntry(data: data[i]),
-        ),
-      );
-      if (i != data.length - 1) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SizedBox(
-              height: 60,
-              child: VerticalDivider(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.4),
-                thickness: 1,
-                width: 1,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return children;
-  }
-}
-
-class _SummaryEntry extends StatelessWidget {
-  const _SummaryEntry({
-    required this.data,
-  });
-
-  final _SummaryEntryData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final TextStyle valueStyle = (theme.textTheme.displaySmall ??
-            theme.textTheme.headlineLarge ??
-            const TextStyle(fontSize: 36))
-        .copyWith(
-      fontWeight: FontWeight.w600,
-      color: colorScheme.onSurface,
-      letterSpacing: -0.4,
-      height: 0.95,
-    );
-
-    final TextStyle unitStyle = (theme.textTheme.titleMedium ??
-            theme.textTheme.titleSmall ??
-            const TextStyle(fontSize: 18))
-        .copyWith(
-      color: colorScheme.onSurfaceVariant,
-      letterSpacing: 0.3,
-    );
-
-    final TextStyle labelStyle = (theme.textTheme.labelLarge ??
-            theme.textTheme.bodyMedium ??
-            const TextStyle(fontSize: 14))
-        .copyWith(
-      color: colorScheme.onSurfaceVariant,
-      letterSpacing: 0.4,
-    );
-
-    final TextStyle helperStyle = (theme.textTheme.bodySmall ??
-            const TextStyle(fontSize: 12))
-        .copyWith(
-      color: colorScheme.onSurfaceVariant.withOpacity(0.8),
-      letterSpacing: 0.2,
-    );
-
-    final spans = <InlineSpan>[
-      TextSpan(
-        text: data.value,
-        style: valueStyle,
-      ),
-    ];
-    if (data.unit != null) {
-      spans.add(
-        TextSpan(
-          text: ' ${data.unit}',
-          style: unitStyle,
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(children: spans),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          data.label.toUpperCase(),
-          style: labelStyle,
-        ),
-        if (data.helper != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            data.helper!,
-            style: helperStyle,
           ),
         ],
       ],
