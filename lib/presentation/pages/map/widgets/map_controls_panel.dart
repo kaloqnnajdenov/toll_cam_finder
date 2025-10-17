@@ -160,36 +160,47 @@ class _SegmentMetricsCard extends StatelessWidget {
             localizations.translate(distanceLabelKey);
         final String distanceDisplay = distanceValue;
 
-        final _MetricSpeedInfo trailingSpeed = averagingActive && showSafeSpeed
-            ? _MetricSpeedInfo(
-                label: localizations.translate('segmentMetricsSafeSpeed'),
-                speed: safeSpeedFormatted,
-              )
-            : showLimit
-                ? _MetricSpeedInfo(
-                    label:
-                        localizations.translate('segmentMetricsSpeedLimit'),
-                    speed: limitSpeed,
-                  )
-                : const _MetricSpeedInfo.none();
-
         final TextStyle? statusStyle =
             theme.textTheme.bodySmall?.copyWith(
           color: colorScheme.onSurfaceVariant,
           letterSpacing: 0.3,
         );
 
+        final _MetricAccessory? primaryAccessory = showSafeSpeed
+            ? _MetricAccessory(
+                label: localizations.translate('segmentMetricsSafeSpeed'),
+                child:
+                    _MetricSpeedValue(speed: safeSpeedFormatted, alignRight: true),
+              )
+            : showLimit
+                ? _MetricAccessory(
+                    label: localizations
+                        .translate('segmentMetricsSpeedLimit'),
+                    child: _MetricSpeedValue(
+                      speed: limitSpeed,
+                      alignRight: true,
+                    ),
+                  )
+                : null;
+
+        final _MetricAccessory distanceAccessory = _MetricAccessory(
+          label: distanceLabel,
+          child: _DistanceValue(distanceText: distanceDisplay),
+        );
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const _MetricAccent(),
             _MetricLabel(
               text:
                   localizations.translate('segmentMetricsCurrentSpeed'),
             ),
             const SizedBox(height: 6),
-            _MetricSpeedValue(speed: currentSpeed),
+            _MetricValueRow(
+              value: _MetricSpeedValue(speed: currentSpeed),
+              accessory: primaryAccessory,
+            ),
             const _MetricDivider(),
             if (averagingActive) ...[
               _MetricLabel(
@@ -197,19 +208,12 @@ class _SegmentMetricsCard extends StatelessWidget {
                     localizations.translate('segmentMetricsAverageSpeed'),
               ),
               const SizedBox(height: 6),
-              _MetricSpeedValue(speed: averageSpeed),
-              if (showSafeSpeed) ...[
-                const SizedBox(height: 6),
-                Text(
-                  '${localizations.translate('segmentMetricsSafeSpeed')}: ${safeSpeedFormatted.label}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.85),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
+              _MetricValueRow(
+                value: _MetricSpeedValue(speed: averageSpeed),
+                accessory: distanceAccessory,
+              ),
               const _MetricDivider(),
-            ] else if (showLimit) ...[
+            ] else if (showLimit && primaryAccessory == null) ...[
               _MetricLabel(
                 text:
                     localizations.translate('segmentMetricsSpeedLimit'),
@@ -218,12 +222,11 @@ class _SegmentMetricsCard extends StatelessWidget {
               _MetricSpeedValue(speed: limitSpeed),
               const _MetricDivider(),
             ],
-            _MetricLabel(text: distanceLabel),
-            const SizedBox(height: 10),
-            _DistanceAndTrailingSpeedRow(
-              distanceText: distanceDisplay,
-              trailing: trailingSpeed,
-            ),
+            if (!averagingActive) ...[
+              _MetricLabel(text: distanceLabel),
+              const SizedBox(height: 6),
+              _DistanceValue(distanceText: distanceDisplay),
+            ],
             if (statusText.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(statusText, style: statusStyle),
@@ -321,40 +324,6 @@ class _FormattedSpeed {
   String get label => hasValue ? '$value $unit' : value;
 }
 
-class _MetricSpeedInfo {
-  const _MetricSpeedInfo({required this.label, required this.speed})
-      : hasValue = true;
-
-  const _MetricSpeedInfo.none()
-      : label = null,
-        speed = const _FormattedSpeed(value: '-'),
-        hasValue = false;
-
-  final String? label;
-  final _FormattedSpeed speed;
-  final bool hasValue;
-}
-
-class _MetricAccent extends StatelessWidget {
-  const _MetricAccent();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        width: 6,
-        height: 12,
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFD400),
-          borderRadius: BorderRadius.circular(3),
-        ),
-      ),
-    );
-  }
-}
-
 class _MetricLabel extends StatelessWidget {
   const _MetricLabel({required this.text});
 
@@ -438,14 +407,57 @@ class _MetricSpeedValue extends StatelessWidget {
   }
 }
 
-class _DistanceAndTrailingSpeedRow extends StatelessWidget {
-  const _DistanceAndTrailingSpeedRow({
-    required this.distanceText,
-    required this.trailing,
-  });
+class _MetricValueRow extends StatelessWidget {
+  const _MetricValueRow({required this.value, this.accessory});
+
+  final Widget value;
+  final _MetricAccessory? accessory;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: value),
+        if (accessory != null) ...[
+          const SizedBox(width: 16),
+          accessory!,
+        ],
+      ],
+    );
+  }
+}
+
+class _MetricAccessory extends StatelessWidget {
+  const _MetricAccessory({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        child,
+        const SizedBox(height: 6),
+        Text(
+          label.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DistanceValue extends StatelessWidget {
+  const _DistanceValue({required this.distanceText});
 
   final String distanceText;
-  final _MetricSpeedInfo trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -457,27 +469,11 @@ class _DistanceAndTrailingSpeedRow extends StatelessWidget {
     final iconColor = theme.colorScheme.onSurface;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.chevron_right, size: 20, color: iconColor),
         const SizedBox(width: 6),
         Text(distanceText, style: textStyle),
-        if (trailing.hasValue) ...[
-          const Spacer(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MetricSpeedValue(speed: trailing.speed, alignRight: true),
-              const SizedBox(height: 6),
-              Text(
-                trailing.label!.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
-        ],
       ],
     );
   }
