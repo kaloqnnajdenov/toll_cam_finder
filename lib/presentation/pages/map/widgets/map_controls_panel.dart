@@ -273,14 +273,16 @@ class _SegmentMetricsCard extends StatelessWidget {
             }
 
             if (forceSingleRow) {
-              return Row(
+              return Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   for (int i = 0; i < metrics.length; i++) ...[
-                    Expanded(
+                     SizedBox(
+                      width: double.infinity,
                       child: _MetricTile(data: metrics[i]),
                     ),
                     if (i + 1 < metrics.length)
-                      const SizedBox(width: spacing),
+                      const SizedBox(height: spacing),
                   ],
                 ],
               );
