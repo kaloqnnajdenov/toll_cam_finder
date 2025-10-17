@@ -235,16 +235,45 @@ class _SegmentMetricsCard extends StatelessWidget {
             final double width = constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : MediaQuery.of(context).size.width;
-            final double spacing = 12;
-            final bool useTwoColumns =
-                !stackMetricsVertically && width >= 360;
-            final double tileWidth = useTwoColumns
-                ? math.max((width - spacing) / 2, 0)
-                : width;
+            const double spacing = 12;
+
+            if (stackMetricsVertically) {
+              final List<_MetricTileData> orderedMetrics = [
+                metrics[0],
+                metrics[2],
+                metrics[1],
+                metrics[3],
+              ];
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (int row = 0; row < orderedMetrics.length; row += 2) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MetricTile(data: orderedMetrics[row]),
+                        ),
+                        const SizedBox(width: spacing),
+                        Expanded(
+                          child: _MetricTile(data: orderedMetrics[row + 1]),
+                        ),
+                      ],
+                    ),
+                    if (row + 2 < orderedMetrics.length)
+                      const SizedBox(height: spacing),
+                  ],
+                ],
+              );
+            }
+
+            final bool useTwoColumns = width >= 360;
+            final double tileWidth =
+                useTwoColumns ? math.max((width - spacing) / 2, 0) : width;
 
             return Wrap(
               spacing: spacing,
-              runSpacing: 12,
+              runSpacing: spacing,
               children: metrics
                   .map(
                     (metric) => SizedBox(
