@@ -614,85 +614,93 @@ class _MapPageState extends State<MapPage>
   Widget build(BuildContext context) {
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
+    final mediaQuery = MediaQuery.of(context);
+    final bool isLandscape =
+        mediaQuery.orientation == Orientation.landscape;
+
+    final Widget mapContent = Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: _center,
+            initialZoom: _currentZoom,
+            onMapReady: _onMapReady,
+          ),
+          children: [
+            const BaseTileLayer(),
+
+            BlueDotMarker(point: markerPoint),
+
+            if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
+              QuerySquareOverlay(points: _segmentDebugData.querySquare),
+            if (kDebugMode &&
+                _segmentDebugData.boundingCandidates.isNotEmpty)
+              CandidateBoundsOverlay(
+                candidates: _segmentDebugData.boundingCandidates,
+              ),
+            if (kDebugMode &&
+                _segmentDebugData.candidatePaths.isNotEmpty)
+              SegmentPolylineOverlay(
+                paths: _segmentDebugData.candidatePaths,
+                startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
+                endGeofenceRadius: _segmentDebugData.endGeofenceRadius,
+              ),
+            TollCamerasOverlay(cameras: cameraState),
+          ],
+        ),
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, right: 16),
+              child: Builder(
+                builder: (context) {
+                  return Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      onPressed: () =>
+                          Scaffold.of(context).openEndDrawer(),
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      tooltip: AppLocalizations.of(context).openMenu,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final Widget controlsPanel = MapControlsPanel(
+      placement:
+          isLandscape ? MapControlsPlacement.left : MapControlsPlacement.bottom,
+      speedKmh: _speedKmh,
+      avgController: _avgCtrl,
+      hasActiveSegment: _segmentTracker.activeSegmentId != null,
+      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
+      segmentDebugPath: _activeSegmentDebugPath,
+      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+    );
 
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
+      body: isLandscape
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _center,
-                    initialZoom: _currentZoom,
-                    onMapReady: _onMapReady,
-                  ),
-                  children: [
-                    const BaseTileLayer(),
-
-                    BlueDotMarker(point: markerPoint),
-
-                    if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
-                      QuerySquareOverlay(points: _segmentDebugData.querySquare),
-                    if (kDebugMode &&
-                        _segmentDebugData.boundingCandidates.isNotEmpty)
-                      CandidateBoundsOverlay(
-                        candidates: _segmentDebugData.boundingCandidates,
-                      ),
-                    if (kDebugMode &&
-                        _segmentDebugData.candidatePaths.isNotEmpty)
-                      SegmentPolylineOverlay(
-                        paths: _segmentDebugData.candidatePaths,
-                        startGeofenceRadius:
-                            _segmentDebugData.startGeofenceRadius,
-                        endGeofenceRadius:
-                            _segmentDebugData.endGeofenceRadius,
-                      ),
-                    TollCamerasOverlay(cameras: cameraState),
-                  ],
-                ),
-                SafeArea(
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16, right: 16),
-                      child: Builder(
-                        builder: (context) {
-                          return Material(
-                            color: Colors.black54,
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              onPressed: () =>
-                                  Scaffold.of(context).openEndDrawer(),
-                              icon:
-                                  const Icon(Icons.menu, color: Colors.white),
-                              tooltip:
-                                  AppLocalizations.of(context).openMenu,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                controlsPanel,
+                Expanded(child: mapContent),
+              ],
+            )
+          : Column(
+              children: [
+                Expanded(child: mapContent),
+                controlsPanel,
               ],
             ),
-          ),
-          SafeArea(
-            top: false,
-            child: MapControlsPanel(
-              speedKmh: _speedKmh,
-              avgController: _avgCtrl,
-              hasActiveSegment: _segmentTracker.activeSegmentId != null,
-              segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
-              segmentDebugPath: _activeSegmentDebugPath,
-              distanceToSegmentStartMeters: _nearestSegmentStartMeters,
-            ),
-          ),
-        ],
-      ),
       floatingActionButton: MapFabColumn(
         followUser: _followUser,
         onResetView: _onResetView,

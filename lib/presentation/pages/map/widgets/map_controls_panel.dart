@@ -7,6 +7,11 @@ import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/services/average_speed_est.dart';
 import 'package:toll_cam_finder/services/segment_tracker.dart';
 
+enum MapControlsPlacement {
+  bottom,
+  left,
+}
+
 class MapControlsPanel extends StatelessWidget {
   const MapControlsPanel({
     super.key,
@@ -16,6 +21,7 @@ class MapControlsPanel extends StatelessWidget {
     this.segmentSpeedLimitKph,
     this.segmentDebugPath,
     this.distanceToSegmentStartMeters,
+    this.placement = MapControlsPlacement.bottom,
   });
 
   final double? speedKmh;
@@ -24,12 +30,41 @@ class MapControlsPanel extends StatelessWidget {
   final double? segmentSpeedLimitKph;
   final SegmentDebugPath? segmentDebugPath;
   final double? distanceToSegmentStartMeters;
+  final MapControlsPlacement placement;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final mediaQuery = MediaQuery.of(context);
+
+    final bool placeLeft = placement == MapControlsPlacement.left;
+    final double panelMaxWidth = placeLeft
+        ? math.min(mediaQuery.size.width / 3, 520)
+        : 520;
+    final Widget panelCard = _buildPanelCard(
+      colorScheme: colorScheme,
+      maxWidth: panelMaxWidth,
+    );
+
+    if (placeLeft) {
+      return Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            mediaQuery.padding.left + 16,
+            mediaQuery.padding.top + 16,
+            16,
+            mediaQuery.padding.bottom + 16,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: 1,
+            child: panelCard,
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       top: false,
@@ -45,38 +80,47 @@ class MapControlsPanel extends StatelessWidget {
               16,
               mediaQuery.padding.bottom + 12,
             ),
-            child: ClipRRect(
+            child: panelCard,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPanelCard({
+    required ColorScheme colorScheme,
+    required double maxWidth,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface.withOpacity(0.95),
               borderRadius: BorderRadius.circular(22),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
-                  child: _SegmentMetricsCard(
-                    currentSpeedKmh: speedKmh,
-                    avgController: avgController,
-                    hasActiveSegment: hasActiveSegment,
-                    speedLimitKph: segmentSpeedLimitKph,
-                    distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-                    distanceToSegmentEndMeters:
-                        segmentDebugPath?.remainingDistanceMeters,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
-              ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 18,
+            ),
+            child: _SegmentMetricsCard(
+              currentSpeedKmh: speedKmh,
+              avgController: avgController,
+              hasActiveSegment: hasActiveSegment,
+              speedLimitKph: segmentSpeedLimitKph,
+              distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+              distanceToSegmentEndMeters:
+                  segmentDebugPath?.remainingDistanceMeters,
             ),
           ),
         ),
