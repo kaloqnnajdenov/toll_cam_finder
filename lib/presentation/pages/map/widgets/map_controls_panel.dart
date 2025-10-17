@@ -36,9 +36,14 @@ class MapControlsPanel extends StatelessWidget {
     final mediaQuery = MediaQuery.of(context);
 
     final bool placeLeft = placement == MapControlsPlacement.left;
+    final double horizontalPadding = placeLeft
+        ? mediaQuery.padding.left + mediaQuery.padding.right + 32
+        : 32;
+    final double availableWidth =
+        math.max(0, mediaQuery.size.width - horizontalPadding);
     final double panelMaxWidth = placeLeft
-        ? math.min(mediaQuery.size.width / 3, 520)
-        : 520;
+        ? math.min(availableWidth, mediaQuery.size.width * 0.45)
+        : availableWidth;
     final Widget panelCard = _buildPanelCard(
       colorScheme: colorScheme,
       maxWidth: panelMaxWidth,
@@ -151,7 +156,6 @@ class _SegmentMetricsCard extends StatelessWidget {
       animation: avgController,
       builder: (context, _) {
         final theme = Theme.of(context);
-        final colorScheme = theme.colorScheme;
         final localizations = AppLocalizations.of(context);
         final String speedUnit = localizations.speedDialUnitKmh;
         final DateTime now = DateTime.now();
@@ -175,22 +179,21 @@ class _SegmentMetricsCard extends StatelessWidget {
               )
             : null;
 
-        final _FormattedSpeed currentSpeed = _formatSpeed(
+        final _MetricValue currentSpeed = _formatSpeed(
           currentSpeedKmh,
           speedUnit,
         );
-        final _FormattedSpeed averageSpeed = averagingActive
+        final _MetricValue averageSpeed = averagingActive
             ? _formatSpeed(avgController.average, speedUnit)
-            : const _FormattedSpeed(value: '-', unit: null);
-        final _FormattedSpeed limitSpeed = _formatSpeed(
+            : const _MetricValue(value: '-', unit: null);
+        final _MetricValue limitSpeed = _formatSpeed(
           speedLimitKph,
           speedUnit,
         );
-        final _FormattedSpeed safeSpeedFormatted = safeSpeed != null
+        final _MetricValue safeSpeedFormatted = safeSpeed != null
             ? _formatSpeed(safeSpeed, speedUnit)
-            : const _FormattedSpeed(value: '-', unit: null);
+            : const _MetricValue(value: '-', unit: null);
 
-        final bool showLimit = limitSpeed.hasValue;
         final bool showSafeSpeed =
             averagingActive && safeSpeedFormatted.hasValue;
 
@@ -200,74 +203,58 @@ class _SegmentMetricsCard extends StatelessWidget {
         final double? distanceMeters = hasActiveSegment
             ? sanitizedEnd ?? sanitizedStart
             : sanitizedStart;
-        final String distanceValue = _formatDistance(
+        final _MetricValue distanceValue = _formatDistance(
           localizations,
           distanceMeters,
         );
 
         final String distanceLabel = localizations.translate(distanceLabelKey);
-        final String distanceDisplay = distanceValue;
+        final List<_MetricTileData> metrics = [
+          _MetricTileData(
+            label: localizations.translate('segmentMetricsCurrentSpeed'),
+            value: currentSpeed,
+          ),
+          _MetricTileData(
+            label: localizations.translate('segmentMetricsAverageSpeed'),
+            value: averageSpeed,
+          ),
+          _MetricTileData(
+            label: showSafeSpeed
+                ? localizations.translate('segmentMetricsSafeSpeed')
+                : localizations.translate('segmentMetricsSpeedLimit'),
+            value: showSafeSpeed ? safeSpeedFormatted : limitSpeed,
+          ),
+          _MetricTileData(
+            label: distanceLabel,
+            value: distanceValue,
+          ),
+        ];
 
-        final _MetricAccessory? primaryAccessory = showSafeSpeed
-            ? _MetricAccessory(
-                label: localizations.translate('segmentMetricsSafeSpeed'),
-                labelAbove: true,
-                child: _MetricSpeedValue(
-                  speed: safeSpeedFormatted,
-                  alignRight: true,
-                ),
-              )
-            : showLimit
-            ? _MetricAccessory(
-                label: localizations.translate('segmentMetricsSpeedLimit'),
-                child: _MetricSpeedValue(speed: limitSpeed, alignRight: true),
-              )
-            : null;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final double width = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : MediaQuery.of(context).size.width;
+            final double spacing = 12;
+            final bool useTwoColumns =
+                !stackMetricsVertically && width >= 360;
+            final double tileWidth = useTwoColumns
+                ? math.max((width - spacing) / 2, 0)
+                : width;
 
-        final _MetricAccessory distanceAccessory = _MetricAccessory(
-          label: distanceLabel,
-          child: _DistanceValue(distanceText: distanceDisplay),
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _MetricLabel(
-              text: localizations.translate('segmentMetricsCurrentSpeed'),
-            ),
-            const SizedBox(height: 4),
-            _MetricValueRow(
-              value: _MetricSpeedValue(speed: currentSpeed),
-              accessory: primaryAccessory,
-              stackVertically: stackMetricsVertically,
-            ),
-            const _MetricDivider(),
-            if (averagingActive) ...[
-              _MetricLabel(
-                text: localizations.translate('segmentMetricsAverageSpeed'),
-              ),
-              const SizedBox(height: 4),
-              _MetricValueRow(
-                value: _MetricSpeedValue(speed: averageSpeed),
-                accessory: distanceAccessory,
-                stackVertically: stackMetricsVertically,
-              ),
-              const _MetricDivider(),
-            ] else if (showLimit && primaryAccessory == null) ...[
-              _MetricLabel(
-                text: localizations.translate('segmentMetricsSpeedLimit'),
-              ),
-              const SizedBox(height: 3),
-              _MetricSpeedValue(speed: limitSpeed),
-              const _MetricDivider(),
-            ],
-            if (!averagingActive) ...[
-              _MetricLabel(text: distanceLabel),
-              const SizedBox(height: 3),
-              _DistanceValue(distanceText: distanceDisplay),
-            ],
-          ],
+            return Wrap(
+              spacing: spacing,
+              runSpacing: 12,
+              children: metrics
+                  .map(
+                    (metric) => SizedBox(
+                      width: tileWidth,
+                      child: _MetricTile(data: metric),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
         );
       },
     );
@@ -321,19 +308,22 @@ class _SegmentMetricsCard extends StatelessWidget {
     return math.max(0, math.min(limitKph, required));
   }
 
-  _FormattedSpeed _formatSpeed(double? speedKph, String unit) {
+  _MetricValue _formatSpeed(double? speedKph, String unit) {
     if (speedKph == null || !speedKph.isFinite) {
-      return const _FormattedSpeed(value: '-', unit: null);
+      return const _MetricValue(value: '-', unit: null);
     }
     final double clamped = speedKph.clamp(0, double.infinity).toDouble();
     final bool useDecimals = clamped < 10;
     final String formatted = clamped.toStringAsFixed(useDecimals ? 1 : 0);
-    return _FormattedSpeed(value: formatted, unit: unit);
+    return _MetricValue(value: formatted, unit: unit);
   }
 
-  String _formatDistance(AppLocalizations localizations, double? meters) {
+  _MetricValue _formatDistance(
+    AppLocalizations localizations,
+    double? meters,
+  ) {
     if (meters == null || !meters.isFinite) {
-      return '-';
+      return const _MetricValue(value: '-', unit: null);
     }
     if (meters >= 1000) {
       final double km = meters / 1000.0;
@@ -341,15 +331,18 @@ class _SegmentMetricsCard extends StatelessWidget {
       final String formatted = km >= 10
           ? km.toStringAsFixed(0)
           : km.toStringAsFixed(1);
-      return '$formatted $unit';
+      return _MetricValue(value: formatted, unit: unit);
     }
     final String unit = localizations.translate('unitMetersShort');
-    return '${meters.toStringAsFixed(0)} $unit';
+    return _MetricValue(
+      value: meters.toStringAsFixed(0),
+      unit: unit,
+    );
   }
 }
 
-class _FormattedSpeed {
-  const _FormattedSpeed({required this.value, this.unit});
+class _MetricValue {
+  const _MetricValue({required this.value, this.unit});
 
   final String value;
   final String? unit;
@@ -359,171 +352,72 @@ class _FormattedSpeed {
   String get label => hasValue ? '$value $unit' : value;
 }
 
-class _MetricLabel extends StatelessWidget {
-  const _MetricLabel({required this.text});
+class _MetricTileData {
+  const _MetricTileData({required this.label, required this.value});
 
-  final String text;
+  final String label;
+  final _MetricValue value;
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.data});
+
+  final _MetricTileData data;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = theme.colorScheme.onSurfaceVariant;
-    return Text(
-      text.toUpperCase(),
-      style: theme.textTheme.labelLarge?.copyWith(
-        color: color,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.0,
-      ),
-    );
-  }
-}
-
-class _MetricDivider extends StatelessWidget {
-  const _MetricDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurface.withOpacity(0.08);
-    return Container(
-      height: 1,
-      margin: const EdgeInsets.symmetric(vertical: 14),
-      color: color,
-    );
-  }
-}
-
-class _MetricSpeedValue extends StatelessWidget {
-  const _MetricSpeedValue({required this.speed, this.alignRight = false});
-
-  final _FormattedSpeed speed;
-  final bool alignRight;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final alignment = alignRight ? Alignment.centerRight : Alignment.centerLeft;
-    final TextStyle baseValueStyle =
-        (speed.unit != null
-            ? theme.textTheme.displaySmall
-            : theme.textTheme.headlineMedium) ??
-        theme.textTheme.displaySmall ??
+    final colorScheme = theme.colorScheme;
+    final TextStyle valueBaseStyle = theme.textTheme.displaySmall ??
+        theme.textTheme.headlineMedium ??
         const TextStyle(fontSize: 36, fontWeight: FontWeight.w700);
-    final valueStyle = baseValueStyle.copyWith(
+    final TextStyle valueStyle = valueBaseStyle.copyWith(
       height: 1.0,
       fontWeight: FontWeight.w800,
-      color: theme.colorScheme.onSurface,
+      color: colorScheme.onSurface,
     );
-    final TextStyle baseUnitStyle =
-        theme.textTheme.titleMedium ??
-        theme.textTheme.titleSmall ??
-        const TextStyle(fontSize: 18, fontWeight: FontWeight.w600);
-    final unitStyle = baseUnitStyle.copyWith(
+    final TextStyle unitStyle = (theme.textTheme.titleMedium ??
+            theme.textTheme.titleSmall ??
+            const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))
+        .copyWith(
       fontWeight: FontWeight.w600,
-      color: theme.colorScheme.onSurface,
+      color: colorScheme.onSurface,
+    );
+    final TextStyle labelStyle = (theme.textTheme.labelMedium ??
+            theme.textTheme.labelSmall ??
+            const TextStyle(fontSize: 12))
+        .copyWith(
+      color: colorScheme.onSurfaceVariant,
+      letterSpacing: 0.8,
+      fontWeight: FontWeight.w600,
     );
 
-    return Align(
-      alignment: alignment,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Text(speed.value, style: valueStyle),
-          if (speed.unit != null) ...[
-            const SizedBox(width: 6),
-            Text(speed.unit!, style: unitStyle),
-          ],
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(16),
       ),
-    );
-  }
-}
-
-class _MetricValueRow extends StatelessWidget {
-  const _MetricValueRow({
-    required this.value,
-    this.accessory,
-    this.stackVertically = false,
-  });
-  final Widget value;
-  final _MetricAccessory? accessory;
-  final bool stackVertically;
-  @override
-  Widget build(BuildContext context) {
-    if (stackVertically && accessory != null) {
-      return Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(width: double.infinity, child: value),
-          const SizedBox(height: 12),
-          accessory!,
+          Text(data.label.toUpperCase(), style: labelStyle),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(data.value.value, style: valueStyle),
+              if (data.value.unit != null) ...[
+                const SizedBox(width: 6),
+                Text(data.value.unit!, style: unitStyle),
+              ],
+            ],
+          ),
         ],
-      );
-    }  
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: value),
-        if (accessory != null) ...[const SizedBox(width: 16), accessory!],
-      ],
-    );
-  }
-}
-
-class _MetricAccessory extends StatelessWidget {
-  const _MetricAccessory({
-    required this.label,
-    required this.child,
-    this.labelAbove = false,
-  });
-
-  final String label;
-  final Widget child;
-  final bool labelAbove;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final labelWidget = Text(
-      label.toUpperCase(),
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        letterSpacing: 0.8,
       ),
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: labelAbove
-          ? [labelWidget, const SizedBox(height: 6), child]
-          : [child, const SizedBox(height: 6), labelWidget],
-    );
-  }
-}
-
-class _DistanceValue extends StatelessWidget {
-  const _DistanceValue({required this.distanceText});
-
-  final String distanceText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textStyle = theme.textTheme.titleLarge?.copyWith(
-      fontWeight: FontWeight.w700,
-      color: theme.colorScheme.onSurface,
-    );
-    final iconColor = theme.colorScheme.onSurface;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.chevron_right, size: 20, color: iconColor),
-        const SizedBox(width: 6),
-        Text(distanceText, style: textStyle),
-      ],
     );
   }
 }
