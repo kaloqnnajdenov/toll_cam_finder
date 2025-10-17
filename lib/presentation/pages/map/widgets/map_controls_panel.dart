@@ -42,11 +42,20 @@ class MapControlsPanel extends StatelessWidget {
     final double availableWidth =
         math.max(0, mediaQuery.size.width - horizontalPadding);
     final double panelMaxWidth = placeLeft
-        ? math.min(availableWidth, mediaQuery.size.width * 0.45)
+        ? math.min(availableWidth, mediaQuery.size.width * 0.25)
         : availableWidth;
+    double? panelMaxHeight;
+    if (placeLeft) {
+      final double availableHeight = mediaQuery.size.height -
+          (mediaQuery.padding.top + mediaQuery.padding.bottom + 32);
+      if (availableHeight.isFinite && availableHeight > 0) {
+        panelMaxHeight = availableHeight;
+      }
+    }
     final Widget panelCard = _buildPanelCard(
       colorScheme: colorScheme,
       maxWidth: panelMaxWidth,
+      maxHeight: panelMaxHeight,
       stackMetricsVertically: !placeLeft,
       forceSingleRow: placeLeft,
     );
@@ -94,11 +103,15 @@ class MapControlsPanel extends StatelessWidget {
   Widget _buildPanelCard({
     required ColorScheme colorScheme,
     required double maxWidth,
+    required double? maxHeight,
     required bool stackMetricsVertically,
     required bool forceSingleRow,
   }) {
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
+      constraints: BoxConstraints(
+        maxWidth: maxWidth,
+        maxHeight: maxHeight ?? double.infinity,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
@@ -126,6 +139,7 @@ class MapControlsPanel extends StatelessWidget {
                   segmentDebugPath?.remainingDistanceMeters,
               stackMetricsVertically: stackMetricsVertically,
               forceSingleRow: forceSingleRow,
+              maxAvailableHeight: maxHeight,
             ),
           ),
         ),
@@ -144,6 +158,7 @@ class _SegmentMetricsCard extends StatelessWidget {
     required this.distanceToSegmentEndMeters,
     required this.stackMetricsVertically,
     required this.forceSingleRow,
+    required this.maxAvailableHeight,
   });
 
   final double? currentSpeedKmh;
@@ -154,6 +169,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   final double? distanceToSegmentEndMeters;
   final bool stackMetricsVertically;
   final bool forceSingleRow;
+  final double? maxAvailableHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -257,11 +273,17 @@ class _SegmentMetricsCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _MetricTile(data: orderedMetrics[row]),
+                          child: _MetricTile(
+                            data: orderedMetrics[row],
+                            visualScale: 1.0,
+                          ),
                         ),
                         const SizedBox(width: spacing),
                         Expanded(
-                          child: _MetricTile(data: orderedMetrics[row + 1]),
+                          child: _MetricTile(
+                            data: orderedMetrics[row + 1],
+                            visualScale: 1.0,
+                          ),
                         ),
                       ],
                     ),
@@ -273,18 +295,71 @@ class _SegmentMetricsCard extends StatelessWidget {
             }
 
             if (forceSingleRow) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (int i = 0; i < metrics.length; i++) ...[
-                     SizedBox(
-                      width: double.infinity,
-                      child: _MetricTile(data: metrics[i]),
-                    ),
-                    if (i + 1 < metrics.length)
-                      const SizedBox(height: spacing),
+              final mediaQuery = MediaQuery.of(context);
+              final double screenWidth = mediaQuery.size.width;
+              final double maxTileWidth = math.min(width, screenWidth * 0.25);
+              final double minTileWidth = math.min(maxTileWidth, 160);
+
+              const double panelVerticalPadding = 14 + 12;
+              final double? boundedHeight = maxAvailableHeight;
+              const double baseTileHeight = 128;
+              const double comfortableMinScale = 0.55;
+              const double absoluteMinScale = 0.35;
+              double visualScale = 1.0;
+              if (boundedHeight != null && boundedHeight.isFinite) {
+                final double availableForTiles = math.max(
+                  0,
+                  boundedHeight - panelVerticalPadding - spacing * (metrics.length - 1),
+                );
+                if (metrics.isNotEmpty && availableForTiles > 0) {
+                  final double rawScale =
+                      availableForTiles / (baseTileHeight * metrics.length);
+                  if (rawScale >= comfortableMinScale) {
+                    visualScale = rawScale.clamp(comfortableMinScale, 1.0);
+                  } else if (rawScale >= absoluteMinScale) {
+                    visualScale = rawScale;
+                  } else if (rawScale > 0) {
+                    visualScale = rawScale;
+                  } else {
+                    visualScale = absoluteMinScale;
+                  }
+                } else {
+                  visualScale = comfortableMinScale;
+                }
+              }
+              visualScale = (visualScale.clamp(0.0, 1.0) as double);
+              if (visualScale == 0) {
+                visualScale = absoluteMinScale;
+              }
+              final double resolvedTileHeight = baseTileHeight * visualScale;
+              final bool enforceFixedHeight =
+                  boundedHeight != null && boundedHeight.isFinite;
+
+              return IntrinsicWidth(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (int i = 0; i < metrics.length; i++) ...[
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: minTileWidth,
+                          maxWidth: maxTileWidth,
+                          minHeight: resolvedTileHeight,
+                          maxHeight: enforceFixedHeight
+                              ? resolvedTileHeight
+                              : double.infinity,
+                        ),
+                        child: _MetricTile(
+                          data: metrics[i],
+                          visualScale: visualScale,
+                        ),
+                      ),
+                      if (i + 1 < metrics.length)
+                        const SizedBox(height: spacing),
+                    ],
                   ],
-                ],
+                ),
               );
             }
 
@@ -299,7 +374,10 @@ class _SegmentMetricsCard extends StatelessWidget {
                   .map(
                     (metric) => SizedBox(
                       width: tileWidth,
-                      child: _MetricTile(data: metric),
+                      child: _MetricTile(
+                        data: metric,
+                        visualScale: 1.0,
+                      ),
                     ),
                   )
                   .toList(),
@@ -410,9 +488,13 @@ class _MetricTileData {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.data});
+  const _MetricTile({
+    required this.data,
+    required this.visualScale,
+  });
 
   final _MetricTileData data;
+  final double visualScale;
 
   @override
   Widget build(BuildContext context) {
@@ -421,19 +503,23 @@ class _MetricTile extends StatelessWidget {
     final TextStyle valueBaseStyle = theme.textTheme.displaySmall ??
         theme.textTheme.headlineMedium ??
         const TextStyle(fontSize: 36, fontWeight: FontWeight.w700);
+    final double scale = visualScale.clamp(0.2, 1.0);
+    final double? baseValueSize = valueBaseStyle.fontSize;
     final TextStyle valueStyle = valueBaseStyle.copyWith(
       height: 1.0,
       fontWeight: FontWeight.w800,
       color: colorScheme.onSurface,
+      fontSize: baseValueSize != null ? baseValueSize * scale : null,
     );
-    final TextStyle unitStyle = (theme.textTheme.titleMedium ??
+    final TextStyle unitBaseStyle = (theme.textTheme.titleMedium ??
             theme.textTheme.titleSmall ??
             const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))
-        .copyWith(
-      fontWeight: FontWeight.w600,
-      color: colorScheme.onSurface,
+        .copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface);
+    final double? unitBaseSize = unitBaseStyle.fontSize;
+    final TextStyle unitStyle = unitBaseStyle.copyWith(
+      fontSize: unitBaseSize != null ? unitBaseSize * scale : null,
     );
-    final TextStyle labelStyle = (theme.textTheme.labelMedium ??
+    final TextStyle labelBaseStyle = (theme.textTheme.labelMedium ??
             theme.textTheme.labelSmall ??
             const TextStyle(fontSize: 12))
         .copyWith(
@@ -441,19 +527,30 @@ class _MetricTile extends StatelessWidget {
       letterSpacing: 0.8,
       fontWeight: FontWeight.w600,
     );
+    final double? labelBaseSize = labelBaseStyle.fontSize;
+    final TextStyle labelStyle = labelBaseStyle.copyWith(
+      fontSize: labelBaseSize != null ? labelBaseSize * scale : null,
+    );
+
+    final double verticalPadding = lerpDouble(6, 12, scale)!;
+    final double horizontalPadding = lerpDouble(10, 16, scale)!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: EdgeInsets.symmetric(
+        vertical: verticalPadding,
+        horizontal: horizontalPadding,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(0.18),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(data.label.toUpperCase(), style: labelStyle),
-          const SizedBox(height: 8),
+          SizedBox(height: lerpDouble(4, 10, scale)!),
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.baseline,
