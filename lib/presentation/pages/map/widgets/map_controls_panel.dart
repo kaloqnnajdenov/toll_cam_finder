@@ -61,10 +61,40 @@ class MapControlsPanel extends StatelessWidget {
             16,
             mediaQuery.padding.bottom + 16,
           ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            widthFactor: 1,
-            child: panelCard,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double maxHeight = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : double.infinity;
+
+              Widget scrollableCard = panelCard;
+              if (maxHeight.isFinite) {
+                scrollableCard = ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.zero,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: panelCard,
+                    ),
+                  ),
+                );
+              } else {
+                scrollableCard = SingleChildScrollView(
+                  padding: EdgeInsets.zero,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: panelCard,
+                  ),
+                );
+              }
+
+              return Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: 1,
+                child: scrollableCard,
+              );
+            },
           ),
         ),
       );
@@ -124,6 +154,7 @@ class MapControlsPanel extends StatelessWidget {
                   segmentDebugPath?.remainingDistanceMeters,
               stackMetricsVertically: stackMetricsVertically,
               forceSingleRow: forceSingleRow,
+              shrinkMetricTiles: forceSingleRow,
             ),
           ),
         ),
@@ -149,6 +180,7 @@ class _SegmentMetricsCard extends StatelessWidget {
     required this.distanceToSegmentEndMeters,
     required this.stackMetricsVertically,
     required this.forceSingleRow,
+    required this.shrinkMetricTiles,
   });
 
   final double? currentSpeedKmh;
@@ -159,6 +191,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   final double? distanceToSegmentEndMeters;
   final bool stackMetricsVertically;
   final bool forceSingleRow;
+  final bool shrinkMetricTiles;
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +316,10 @@ class _SegmentMetricsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (int i = 0; i < metrics.length; i++) ...[
-                    _MetricTile(data: metrics[i]),
+                    _MetricTile(
+                      data: metrics[i],
+                      shrinkWrapWidth: shrinkMetricTiles,
+                    ),
                     if (i + 1 < metrics.length)
                       const SizedBox(height: spacing),
                   ],
@@ -413,9 +449,10 @@ class _MetricTileData {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.data});
+  const _MetricTile({required this.data, this.shrinkWrapWidth = false});
 
   final _MetricTileData data;
+  final bool shrinkWrapWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -445,8 +482,10 @@ class _MetricTile extends StatelessWidget {
       fontWeight: FontWeight.w600,
     );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+    final double horizontalPadding = shrinkWrapWidth ? 15 : 16;
+
+    final Widget tile = Container(
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: horizontalPadding),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(0.18),
         borderRadius: BorderRadius.circular(16),
@@ -458,7 +497,8 @@ class _MetricTile extends StatelessWidget {
           Text(data.label.toUpperCase(), style: labelStyle),
           const SizedBox(height: 8),
           Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                shrinkWrapWidth ? MainAxisSize.min : MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
@@ -472,5 +512,14 @@ class _MetricTile extends StatelessWidget {
         ],
       ),
     );
+
+    if (shrinkWrapWidth) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: IntrinsicWidth(child: tile),
+      );
+    }
+
+    return tile;
   }
 }
