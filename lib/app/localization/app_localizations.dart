@@ -114,6 +114,8 @@ class AppLocalizations {
       'languageLabelBulgarian': 'Bulgarian',
       'languageButton': 'Change language',
       'audioModeTitle': 'Guidance audio mode',
+      'audioModeFullGuidance':
+          'Play all guidance sounds (foreground and background)',
       'audioModeForegroundMuted':
           'Mute in app (background guidance, start/end dings only)',
       'audioModeBackgroundMuted':
@@ -436,6 +438,8 @@ class AppLocalizations {
 'syncTotalSegmentsSummary': 'Общо налични сегменти: {count}.',
       'sync': 'Синхронизирай',
       'audioModeTitle': 'Режим на аудио насоките',
+      'audioModeFullGuidance':
+          'Всички аудио насоки (в приложението и на заден план)',
       'audioModeForegroundMuted':
           'Заглушено в приложението (активно на заден план, само сигнал при старт/край)',
       'audioModeBackgroundMuted':
@@ -506,6 +510,7 @@ class AppLocalizations {
   String get recenter => _value('recenter');
   String get languageButton => _value('languageButton');
   String get audioModeTitle => _value('audioModeTitle');
+  String get audioModeFullGuidance => _value('audioModeFullGuidance');
   String get audioModeForegroundMuted =>
       _value('audioModeForegroundMuted');
   String get audioModeBackgroundMuted =>

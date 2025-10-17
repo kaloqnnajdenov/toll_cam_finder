@@ -37,6 +37,7 @@ class GuidanceAudioPolicy {
 }
 
 enum GuidanceAudioMode {
+  fullGuidance,
   muteForeground,
   muteBackground,
   absoluteMute,
@@ -67,7 +68,7 @@ class GuidanceAudioController extends ChangeNotifier {
     allowBoundaryTones: false,
   );
 
-  GuidanceAudioMode _mode = GuidanceAudioMode.muteForeground;
+  GuidanceAudioMode _mode = GuidanceAudioMode.fullGuidance;
 
   GuidanceAudioMode get mode => _mode;
 
@@ -77,6 +78,8 @@ class GuidanceAudioController extends ChangeNotifier {
     final bool isForeground = effectiveState == AppLifecycleState.resumed;
 
     switch (_mode) {
+      case GuidanceAudioMode.fullGuidance:
+        return _fullAccessPolicy;
       case GuidanceAudioMode.muteForeground:
         return isForeground ? _mutedWithBoundaryPolicy : _fullAccessPolicy;
       case GuidanceAudioMode.muteBackground:
