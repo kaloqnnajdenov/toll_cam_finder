@@ -32,6 +32,7 @@ import '../../services/map/foreground_notification_service.dart';
 import '../../services/map/map_sync_message_service.dart';
 import '../../services/map/segment_ui_service.dart';
 import '../../services/map/speed_service.dart';
+import '../../services/map/osm_speed_limit_service.dart';
 import '../../services/map/upcoming_segment_cue_service.dart';
 import '../../services/map/map_segments_service.dart';
 import 'map/blue_dot_animator.dart';
@@ -39,6 +40,7 @@ import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
+import 'map/widgets/speed_limit_sign.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -69,6 +71,7 @@ class _MapPageState extends State<MapPage>
       const CameraPollingService();
   final MapSyncMessageService _syncMessageService =
       const MapSyncMessageService();
+  final OsmSpeedLimitService _osmSpeedLimitService = OsmSpeedLimitService();
   late final MapSegmentsService _segmentsService;
   late final GuidanceAudioController _audioController;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
@@ -105,6 +108,7 @@ class _MapPageState extends State<MapPage>
 
   double? _lastSegmentAvgKmh;
   double? _activeSegmentSpeedLimitKph;
+  double? _osmSpeedLimitKph;
   double? _nearestSegmentStartMeters;
   SegmentTrackerEvent? _lastSegmentEvent;
   LatLng? _avgLastLatLng;
@@ -116,6 +120,9 @@ class _MapPageState extends State<MapPage>
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
+  LatLng? _lastOsmSpeedQueryLatLng;
+  DateTime? _lastOsmSpeedQueryAt;
+  bool _isFetchingOsmSpeedLimit = false;
 
   bool _useForegroundLocationService = false;
   bool _didRequestNotificationPermission = false;
@@ -162,6 +169,7 @@ class _MapPageState extends State<MapPage>
     unawaited(_segmentGuidanceController.dispose());
     unawaited(_upcomingSegmentCueService.dispose());
     _audioController.removeListener(_updateAudioPolicy);
+    _osmSpeedLimitService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -196,6 +204,7 @@ class _MapPageState extends State<MapPage>
     _center = firstFix;
     final segEvent = _segmentTracker.handleLocationUpdate(current: firstFix);
     _applySegmentEvent(segEvent);
+    _maybeRefreshOsmSpeedLimit(firstFix);
     _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
       position: firstFix,
     );
@@ -302,6 +311,8 @@ class _MapPageState extends State<MapPage>
       );
     }
 
+    _maybeRefreshOsmSpeedLimit(next);
+
     if (!mounted) return;
 
     setState(() {
@@ -381,6 +392,9 @@ class _MapPageState extends State<MapPage>
     } else {
       _activeSegmentSpeedLimitKph = segEvent.activeSegmentSpeedLimitKph;
     }
+    if (segEvent.activeSegmentId != null) {
+      _osmSpeedLimitKph = null;
+    }
 
     _segmentDebugData = segEvent.debugData;
     _activeSegmentDebugPath = activePath;
@@ -415,6 +429,7 @@ class _MapPageState extends State<MapPage>
     _segmentProgressLabel = null;
     _lastSegmentAvgKmh = null;
     _activeSegmentSpeedLimitKph = null;
+    _osmSpeedLimitKph = null;
     _nearestSegmentStartMeters = null;
     _avgCtrl.reset();
     _avgLastLatLng = null;
@@ -425,6 +440,9 @@ class _MapPageState extends State<MapPage>
     _lastSegmentEvent = null;
     _lastNotificationStatus = null;
     unawaited(_segmentGuidanceController.reset());
+    _lastOsmSpeedQueryAt = null;
+    _lastOsmSpeedQueryLatLng = null;
+    _isFetchingOsmSpeedLimit = false;
   }
 
   Future<void> _updateForegroundNotification(SegmentTrackerEvent event) async {
@@ -496,6 +514,60 @@ class _MapPageState extends State<MapPage>
 
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  static const Duration _osmQueryInterval = Duration(seconds: 30);
+  static const double _osmQueryDistanceMeters = 60.0;
+
+  void _maybeRefreshOsmSpeedLimit(LatLng position) {
+    if (_segmentTracker.activeSegmentId != null ||
+        _activeSegmentSpeedLimitKph != null) {
+      _osmSpeedLimitKph = null;
+      return;
+    }
+
+    if (_isFetchingOsmSpeedLimit) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+    final bool recentlyQueried =
+        _lastOsmSpeedQueryAt != null &&
+            now.difference(_lastOsmSpeedQueryAt!) < _osmQueryInterval;
+    final bool nearLastQuery = _lastOsmSpeedQueryLatLng != null &&
+        _distanceCalculator.as(
+              LengthUnit.Meter,
+              _lastOsmSpeedQueryLatLng!,
+              position,
+            ) <
+            _osmQueryDistanceMeters;
+
+    if (recentlyQueried && nearLastQuery) {
+      return;
+    }
+
+    _isFetchingOsmSpeedLimit = true;
+    _lastOsmSpeedQueryAt = now;
+    _lastOsmSpeedQueryLatLng = position;
+
+    unawaited(_fetchOsmSpeedLimit(position));
+  }
+
+  Future<void> _fetchOsmSpeedLimit(LatLng position) async {
+    try {
+      final double? limit = await _osmSpeedLimitService.fetchSpeedLimit(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _osmSpeedLimitKph = limit;
+      });
+    } finally {
+      _isFetchingOsmSpeedLimit = false;
     }
   }
 
@@ -617,6 +689,8 @@ class _MapPageState extends State<MapPage>
     final mediaQuery = MediaQuery.of(context);
     final bool isLandscape =
         mediaQuery.orientation == Orientation.landscape;
+    final double? speedLimitToShow =
+        _activeSegmentSpeedLimitKph ?? _osmSpeedLimitKph;
 
     final Widget mapContent = Stack(
       children: [
@@ -652,22 +726,34 @@ class _MapPageState extends State<MapPage>
         SafeArea(
           child: Align(
             alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, right: 16),
-              child: Builder(
-                builder: (context) {
-                  return Material(
-                    color: Colors.black54,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      onPressed: () =>
-                          Scaffold.of(context).openEndDrawer(),
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      tooltip: AppLocalizations.of(context).openMenu,
-                    ),
-                  );
-                },
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (speedLimitToShow != null)
+                  SpeedLimitSign(
+                    speedLimitKph: speedLimitToShow,
+                    margin: const EdgeInsets.only(top: 16, right: 16),
+                  ),
+                if (speedLimitToShow != null) const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(top: 16, right: 16),
+                  child: Builder(
+                    builder: (context) {
+                      return Material(
+                        color: Colors.black54,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          onPressed: () =>
+                              Scaffold.of(context).openEndDrawer(),
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          tooltip: AppLocalizations.of(context).openMenu,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
