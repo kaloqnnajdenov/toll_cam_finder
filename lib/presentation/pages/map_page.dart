@@ -84,6 +84,7 @@ class _MapPageState extends State<MapPage>
   LatLng? _userLatLng;
   bool _mapReady = false;
   bool _followUser = false;
+  bool _followHeading = false;
   double _currentZoom = AppConstants.initialZoom;
 
   StreamSubscription<Position>? _posSub;
@@ -123,6 +124,8 @@ class _MapPageState extends State<MapPage>
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
+
+  double? _userHeading;
 
   bool _useForegroundLocationService = false;
   bool _didRequestNotificationPermission = false;
@@ -199,6 +202,7 @@ class _MapPageState extends State<MapPage>
 
     final firstKmh = _speedService.normalizeSpeed(pos.speed);
     _speedKmh = _speedSmoother.next(firstKmh);
+    _updateHeading(pos.heading);
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
@@ -297,6 +301,7 @@ class _MapPageState extends State<MapPage>
     final shownKmh = _speedService.normalizeSpeed(position.speed);
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
+    _updateHeading(position.heading);
     if (_avgCtrl.isRunning) {
       _recordAverageProgress(position: next, timestamp: now);
     }
@@ -318,6 +323,17 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _speedKmh = smoothedKmh;
     });
+  }
+
+  void _updateHeading(double heading) {
+    if (!heading.isFinite || heading < 0) {
+      return;
+    }
+
+    _userHeading = heading % 360;
+    if (_followHeading) {
+      _applyHeadingRotation();
+    }
   }
 
   void _moveBlueDot(LatLng next) {
@@ -506,6 +522,11 @@ class _MapPageState extends State<MapPage>
       shouldSetState = true;
     }
 
+    if (external && _followHeading) {
+      _followHeading = false;
+      shouldSetState = true;
+    }
+
     if (shouldSetState && mounted) {
       setState(() {});
     }
@@ -520,6 +541,9 @@ class _MapPageState extends State<MapPage>
       _mapController.move(_userLatLng!, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
     }
+    if (_followHeading) {
+      _applyHeadingRotation();
+    }
     _updateVisibleCameras();
   }
 
@@ -530,6 +554,9 @@ class _MapPageState extends State<MapPage>
         ? AppConstants.zoomWhenFocused
         : _currentZoom;
     _mapController.move(target, zoom);
+    if (_followHeading) {
+      _applyHeadingRotation();
+    }
   }
 
   void _onBlueDotTick() {
@@ -563,6 +590,38 @@ class _MapPageState extends State<MapPage>
     }
 
     _mapController.move(target, camera.zoom);
+  }
+
+  void _applyHeadingRotation() {
+    if (!_mapReady) {
+      return;
+    }
+
+    final heading = _userHeading;
+    if (heading == null) {
+      return;
+    }
+
+    final double normalizedHeading = heading % 360;
+    _mapController.rotate(-normalizedHeading);
+  }
+
+  void _toggleFollowHeading() {
+    if (_followHeading) {
+      setState(() => _followHeading = false);
+      if (_mapReady) {
+        _mapController.rotate(0);
+      }
+      return;
+    }
+
+    setState(() {
+      _followHeading = true;
+      _followUser = true;
+    });
+    if (_userHeading != null) {
+      _applyHeadingRotation();
+    }
   }
 
   Future<void> _loadSegmentsMetadata({bool showErrors = false}) async {
@@ -733,6 +792,8 @@ class _MapPageState extends State<MapPage>
               padding: const EdgeInsets.only(right: 16, bottom: 16),
               child: MapFabColumn(
                 followUser: _followUser,
+                followHeading: _followHeading,
+                onToggleHeading: _toggleFollowHeading,
                 onResetView: _onResetView,
                 avgController: _avgCtrl,
               ),
