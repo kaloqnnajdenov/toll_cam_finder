@@ -34,11 +34,13 @@ import '../../services/map/segment_ui_service.dart';
 import '../../services/map/speed_service.dart';
 import '../../services/map/upcoming_segment_cue_service.dart';
 import '../../services/map/map_segments_service.dart';
+import '../../services/map/osm_speed_limit_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
+import 'map/widgets/speed_limit_sign.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -99,6 +101,11 @@ class _MapPageState extends State<MapPage>
   late final SegmentGuidanceController _segmentGuidanceController;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
+
+  final OsmSpeedLimitService _osmSpeedLimitService = OsmSpeedLimitService();
+  LatLng? _lastSpeedLimitQueryLocation;
+  DateTime? _lastSpeedLimitQueryAt;
+  String? _osmSpeedLimitKph;
 
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
@@ -161,6 +168,7 @@ class _MapPageState extends State<MapPage>
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
     unawaited(_upcomingSegmentCueService.dispose());
+    _osmSpeedLimitService.dispose();
     _audioController.removeListener(_updateAudioPolicy);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -199,6 +207,8 @@ class _MapPageState extends State<MapPage>
     _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
       position: firstFix,
     );
+
+    _maybeFetchSpeedLimit(firstFix);
 
     if (mounted) setState(() {});
 
@@ -291,6 +301,7 @@ class _MapPageState extends State<MapPage>
       _recordAverageProgress(position: next, timestamp: now);
     }
     _moveBlueDot(next);
+    _maybeFetchSpeedLimit(next);
     if (_segmentsService.shouldProcessSegmentUpdate(
       now: now,
       nextCameraCheckAt: _nextCameraCheckAt,
@@ -313,6 +324,41 @@ class _MapPageState extends State<MapPage>
     final from = _blueDotAnimator.position ?? _userLatLng ?? _center;
     _userLatLng = next;
     _blueDotAnimator.animate(from: from, to: next);
+  }
+
+  void _maybeFetchSpeedLimit(LatLng position) {
+    final now = DateTime.now();
+    final lastLocation = _lastSpeedLimitQueryLocation;
+    final lastQueryAt = _lastSpeedLimitQueryAt;
+
+    if (lastLocation != null) {
+      final distanceMoved =
+          _distanceCalculator.as(LengthUnit.Meter, lastLocation, position);
+      const double minDistanceMeters = 30;
+      const Duration minInterval = Duration(seconds: 20);
+      if (distanceMoved < minDistanceMeters &&
+          lastQueryAt != null &&
+          now.difference(lastQueryAt) < minInterval) {
+        return;
+      }
+    }
+
+    _lastSpeedLimitQueryLocation = position;
+    _lastSpeedLimitQueryAt = now;
+    unawaited(_loadSpeedLimit(position));
+  }
+
+  Future<void> _loadSpeedLimit(LatLng position) async {
+    try {
+      final result = await _osmSpeedLimitService.fetchSpeedLimit(position);
+      if (!mounted) return;
+
+      setState(() {
+        _osmSpeedLimitKph = result;
+      });
+    } catch (_) {
+      // Ignore network errors and keep the previous reading.
+    }
   }
 
   void _recordAverageProgress({
@@ -648,6 +694,15 @@ class _MapPageState extends State<MapPage>
               ),
             TollCamerasOverlay(cameras: cameraState),
           ],
+        ),
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, left: 16),
+              child: SpeedLimitSign(speedLimit: _osmSpeedLimitKph),
+            ),
+          ),
         ),
         SafeArea(
           child: Align(
