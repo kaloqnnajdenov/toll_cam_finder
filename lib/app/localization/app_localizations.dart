@@ -161,6 +161,8 @@ class AppLocalizations {
       'publicSharingUnavailable':
           'Public segment sharing is currently unavailable.',
       'publicSharingUnavailableShort': 'Public sharing is not available.',
+      'headingUp': 'Heading up',
+      'northUp': 'North up',
       'recenter': 'Recenter',
       'retryAction': 'Retry',
       'saveLocallyAction': 'Save locally',
@@ -370,6 +372,8 @@ class AppLocalizations {
 'passwordLabel': 'Парола',
 'profile': 'Профил',
 'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',
+'headingUp': 'Посока напред',
+'northUp': 'Север нагоре',
 'recenter': 'Центрирай Екрана',
 'saveLocallyAction': 'Запази локално',
 'saveSegment': 'Запази сегмента',
@@ -507,6 +511,8 @@ class AppLocalizations {
   String get saveSegment => _value('saveSegment');
   String get noSegmentsAvailable => _value('noSegmentsAvailable');
   String get noLocalSegments => _value('noLocalSegments');
+  String get headingUp => _value('headingUp');
+  String get northUp => _value('northUp');
   String get recenter => _value('recenter');
   String get languageButton => _value('languageButton');
   String get audioModeTitle => _value('audioModeTitle');
