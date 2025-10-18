@@ -31,8 +31,6 @@ class MapControlsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final mediaQuery = MediaQuery.of(context);
 
     final bool placeLeft = placement == MapControlsPlacement.left;
@@ -44,6 +42,7 @@ class MapControlsPanel extends StatelessWidget {
     final double panelMaxWidth = placeLeft
         ? math.min(availableWidth, mediaQuery.size.width * 0.25)
         : availableWidth;
+
     double? panelMaxHeight;
     if (placeLeft) {
       final double availableHeight = mediaQuery.size.height -
@@ -52,12 +51,13 @@ class MapControlsPanel extends StatelessWidget {
         panelMaxHeight = availableHeight;
       }
     }
+
     final Widget panelCard = _buildPanelCard(
-      colorScheme: colorScheme,
+      colorScheme: Theme.of(context).colorScheme,
       maxWidth: panelMaxWidth,
       maxHeight: panelMaxHeight,
-      stackMetricsVertically: !placeLeft,
-      forceSingleRow: placeLeft,
+      stackMetricsVertically: !placeLeft, // bottom placement => 2×2
+      forceSingleRow: placeLeft,          // left placement => single column
     );
 
     if (placeLeft) {
@@ -115,20 +115,25 @@ class MapControlsPanel extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+          // stronger blur for frosted look
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
-              color: colorScheme.surface.withOpacity(0.95),
+              color: colorScheme.surface.withOpacity(0.88),
               borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.35),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.08),
-                  blurRadius: 24,
+                  blurRadius: 28,
                   offset: const Offset(0, 12),
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
             child: _SegmentMetricsCard(
               currentSpeedKmh: speedKmh,
               avgController: avgController,
@@ -176,7 +181,6 @@ class _SegmentMetricsCard extends StatelessWidget {
     return AnimatedBuilder(
       animation: avgController,
       builder: (context, _) {
-        final theme = Theme.of(context);
         final localizations = AppLocalizations.of(context);
         final String speedUnit = localizations.speedDialUnitKmh;
         final DateTime now = DateTime.now();
@@ -258,42 +262,18 @@ class _SegmentMetricsCard extends StatelessWidget {
                 : MediaQuery.of(context).size.width;
             const double spacing = 12;
 
+            // --- VERTICAL MODE => 2×2 grid like the screenshot ---
             if (stackMetricsVertically) {
               final List<_MetricTileData> orderedMetrics = [
-                metrics[0],
-                metrics[2],
-                metrics[1],
-                metrics[3],
+                metrics[0], // current
+                metrics[1], // avg
+                metrics[3], // distance
+                metrics[2], // safe / limit
               ];
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (int row = 0; row < orderedMetrics.length; row += 2) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricTile(
-                            data: orderedMetrics[row],
-                            visualScale: 1.0,
-                          ),
-                        ),
-                        const SizedBox(width: spacing),
-                        Expanded(
-                          child: _MetricTile(
-                            data: orderedMetrics[row + 1],
-                            visualScale: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (row + 2 < orderedMetrics.length)
-                      const SizedBox(height: spacing),
-                  ],
-                ],
-              );
+              return _TwoByTwoMetricsGrid(tiles: orderedMetrics);
             }
 
+            // --- LEFT RAIL (single column), unchanged behavior ---
             if (forceSingleRow) {
               final mediaQuery = MediaQuery.of(context);
               final double screenWidth = mediaQuery.size.width;
@@ -306,6 +286,7 @@ class _SegmentMetricsCard extends StatelessWidget {
               const double comfortableMinScale = 0.55;
               const double absoluteMinScale = 0.35;
               double visualScale = 1.0;
+
               if (boundedHeight != null && boundedHeight.isFinite) {
                 final double availableForTiles = math.max(
                   0,
@@ -328,9 +309,8 @@ class _SegmentMetricsCard extends StatelessWidget {
                 }
               }
               visualScale = (visualScale.clamp(0.0, 1.0) as double);
-              if (visualScale == 0) {
-                visualScale = absoluteMinScale;
-              }
+              if (visualScale == 0) visualScale = absoluteMinScale;
+
               final double resolvedTileHeight = baseTileHeight * visualScale;
               final bool enforceFixedHeight =
                   boundedHeight != null && boundedHeight.isFinite;
@@ -353,6 +333,7 @@ class _SegmentMetricsCard extends StatelessWidget {
                         child: _MetricTile(
                           data: metrics[i],
                           visualScale: visualScale,
+                          dense: false, // keep original sizing in rail
                         ),
                       ),
                       if (i + 1 < metrics.length)
@@ -363,6 +344,7 @@ class _SegmentMetricsCard extends StatelessWidget {
               );
             }
 
+            // --- Fallback wrap (unchanged) ---
             final bool useTwoColumns = width >= 360;
             final double tileWidth =
                 useTwoColumns ? math.max((width - spacing) / 2, 0) : width;
@@ -377,6 +359,7 @@ class _SegmentMetricsCard extends StatelessWidget {
                       child: _MetricTile(
                         data: metric,
                         visualScale: 1.0,
+                        dense: false,
                       ),
                     ),
                   )
@@ -389,9 +372,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   }
 
   double? _sanitizeDistance(double? meters) {
-    if (meters == null || !meters.isFinite) {
-      return null;
-    }
+    if (meters == null || !meters.isFinite) return null;
     return meters < 0 ? 0 : meters;
   }
 
@@ -402,36 +383,22 @@ class _SegmentMetricsCard extends StatelessWidget {
     required DateTime? startedAt,
     required DateTime now,
   }) {
-    if (limitKph == null || !limitKph.isFinite) {
-      return null;
-    }
-    if (!averageKph.isFinite) {
-      return null;
-    }
-    if (remainingMeters == null || remainingMeters <= 0) {
-      return null;
-    }
-    if (startedAt == null) {
-      return null;
-    }
+    if (limitKph == null || !limitKph.isFinite) return null;
+    if (!averageKph.isFinite) return null;
+    if (remainingMeters == null || remainingMeters <= 0) return null;
+    if (startedAt == null) return null;
 
     final double remainingKm = remainingMeters / 1000.0;
     final Duration elapsed = now.difference(startedAt);
     final double elapsedHours = elapsed.inSeconds / 3600.0;
-    if (elapsedHours <= 0) {
-      return limitKph;
-    }
+    if (elapsedHours <= 0) return limitKph;
 
     final double denominator =
         (averageKph - limitKph) * elapsedHours + remainingKm;
-    if (denominator <= 0) {
-      return limitKph;
-    }
+    if (denominator <= 0) return limitKph;
 
     final double required = (limitKph * remainingKm) / denominator;
-    if (!required.isFinite) {
-      return limitKph;
-    }
+    if (!required.isFinite) return limitKph;
 
     return math.max(0, math.min(limitKph, required));
   }
@@ -456,16 +423,11 @@ class _SegmentMetricsCard extends StatelessWidget {
     if (meters >= 1000) {
       final double km = meters / 1000.0;
       final String unit = localizations.translate('unitKilometersShort');
-      final String formatted = km >= 10
-          ? km.toStringAsFixed(0)
-          : km.toStringAsFixed(1);
+      final String formatted = km >= 10 ? km.toStringAsFixed(0) : km.toStringAsFixed(1);
       return _MetricValue(value: formatted, unit: unit);
     }
     final String unit = localizations.translate('unitMetersShort');
-    return _MetricValue(
-      value: meters.toStringAsFixed(0),
-      unit: unit,
-    );
+    return _MetricValue(value: meters.toStringAsFixed(0), unit: unit);
   }
 }
 
@@ -487,53 +449,175 @@ class _MetricTileData {
   final _MetricValue value;
 }
 
+/// 2×2 grid used in vertical mode (bottom placement).
+/// Center separators are drawn with true centering.
+class _TwoByTwoMetricsGrid extends StatelessWidget {
+  const _TwoByTwoMetricsGrid({required this.tiles});
+
+  final List<_MetricTileData> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final dividerColor =
+        Theme.of(context).colorScheme.onSurface.withOpacity(0.12);
+
+    const cellGap = 16.0;
+
+    return Stack(
+      children: [
+        // Horizontal center divider
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.center,
+            child: SizedBox(
+              height: 1,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: dividerColor),
+              ),
+            ),
+          ),
+        ),
+        // Vertical center divider
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: 1,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: dividerColor),
+              ),
+            ),
+          ),
+        ),
+        // Content
+        Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      right: cellGap / 2,
+                      bottom: cellGap,
+                    ),
+                    child: _MetricTile(
+                      data: tiles[0],
+                      visualScale: 1.0,
+                      dense: true,  // use preset typography to match screenshot
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: cellGap / 2,
+                      bottom: cellGap,
+                    ),
+                    child: _MetricTile(
+                      data: tiles[1],
+                      visualScale: 1.0,
+                      dense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      right: cellGap / 2,
+                      top: cellGap,
+                    ),
+                    child: _MetricTile(
+                      data: tiles[2],
+                      visualScale: 1.0,
+                      dense: true,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: cellGap / 2,
+                      top: cellGap,
+                    ),
+                    child: _MetricTile(
+                      data: tiles[3],
+                      visualScale: 1.0,
+                      dense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.data,
     required this.visualScale,
+    this.dense = false,
   });
 
   final _MetricTileData data;
   final double visualScale;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final TextStyle valueBaseStyle = theme.textTheme.displaySmall ??
-        theme.textTheme.headlineMedium ??
-        const TextStyle(fontSize: 36, fontWeight: FontWeight.w700);
-    final double scale = visualScale.clamp(0.2, 1.0);
-    final double? baseValueSize = valueBaseStyle.fontSize;
-    final TextStyle valueStyle = valueBaseStyle.copyWith(
-      height: 1.0,
-      fontWeight: FontWeight.w800,
-      color: colorScheme.onSurface,
-      fontSize: baseValueSize != null ? baseValueSize * scale : null,
-    );
-    final TextStyle unitBaseStyle = (theme.textTheme.titleMedium ??
-            theme.textTheme.titleSmall ??
-            const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))
-        .copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface);
-    final double? unitBaseSize = unitBaseStyle.fontSize;
-    final TextStyle unitStyle = unitBaseStyle.copyWith(
-      fontSize: unitBaseSize != null ? unitBaseSize * scale : null,
-    );
-    final TextStyle labelBaseStyle = (theme.textTheme.labelMedium ??
-            theme.textTheme.labelSmall ??
-            const TextStyle(fontSize: 12))
-        .copyWith(
-      color: colorScheme.onSurfaceVariant,
-      letterSpacing: 0.8,
-      fontWeight: FontWeight.w600,
-    );
-    final double? labelBaseSize = labelBaseStyle.fontSize;
-    final TextStyle labelStyle = labelBaseStyle.copyWith(
-      fontSize: labelBaseSize != null ? labelBaseSize * scale : null,
-    );
 
-    final double verticalPadding = lerpDouble(6, 12, scale)!;
-    final double horizontalPadding = lerpDouble(10, 16, scale)!;
+    // When dense=true (2×2), match the screenshot typography closely.
+    final bool preset = dense;
+
+    final double scale = visualScale.clamp(0.2, 1.0);
+
+    final TextStyle labelStyle = (preset
+            ? const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.9,
+              )
+            : (theme.textTheme.labelMedium ??
+                theme.textTheme.labelSmall ??
+                const TextStyle(fontSize: 12)))
+        .copyWith(color: colorScheme.onSurfaceVariant);
+
+    final TextStyle valueStyle = (preset
+            ? const TextStyle(
+                fontSize: 42, // bold large number like screenshot
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+              )
+            : (theme.textTheme.displaySmall ??
+                theme.textTheme.headlineMedium ??
+                const TextStyle(fontSize: 36, fontWeight: FontWeight.w700)))
+        .copyWith(color: colorScheme.onSurface)
+        .copyWith(fontSize: (preset ? 42 : (valueStyleFontSizeFallback(36))) * scale);
+
+    // Units smaller and medium weight
+    final TextStyle unitStyle = (preset
+            ? const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                height: 1.0,
+              )
+            : (theme.textTheme.titleSmall ??
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))
+        .copyWith(color: colorScheme.onSurface)
+        .copyWith(fontSize: (preset ? 16 : (unitStyleFontSizeFallback(18))) * scale);
+
+    final double verticalPadding = lerpDouble(preset ? 8 : 8, preset ? 10 : 14, scale)!;
+    final double horizontalPadding =
+        lerpDouble(preset ? 10 : 12, preset ? 14 : 18, scale)!;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -541,7 +625,7 @@ class _MetricTile extends StatelessWidget {
         horizontal: horizontalPadding,
       ),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.18),
+        color: colorScheme.surface.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -550,7 +634,7 @@ class _MetricTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(data.label.toUpperCase(), style: labelStyle),
-          SizedBox(height: lerpDouble(4, 10, scale)!),
+          SizedBox(height: lerpDouble(preset ? 6 : 6, preset ? 8 : 10, scale)!),
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -567,4 +651,8 @@ class _MetricTile extends StatelessWidget {
       ),
     );
   }
+
+  // helpers because we need a number even if theme fonts are null
+  double valueStyleFontSizeFallback(double fallback) => fallback;
+  double unitStyleFontSizeFallback(double fallback) => fallback;
 }
