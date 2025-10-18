@@ -64,22 +64,15 @@ class _CompassNeedle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     final Color indicatorColor =
-        Theme.of(context).colorScheme.onPrimary.withOpacity(0.95);
-    final TextStyle northStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: indicatorColor.withOpacity(0.8),
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
-        ) ??
-        TextStyle(
-          color: indicatorColor.withOpacity(0.8),
-          fontWeight: FontWeight.w600,
-          fontSize: 10,
-          letterSpacing: 0.4,
-        );
+        theme.floatingActionButtonTheme.foregroundColor ??
+        theme.colorScheme.onPrimary;
 
     final bool shouldRotate = followHeading && headingDegrees != null;
-    final double rotationTurns = shouldRotate ? (headingDegrees! % 360) / 360 : 0;
+    final double rotationTurns = shouldRotate
+        ? (headingDegrees! % 360) / 360
+        : 0;
 
     return SizedBox(
       width: 36,
@@ -87,19 +80,11 @@ class _CompassNeedle extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned(
-            top: 4,
-            child: Text('N', style: northStyle),
-          ),
           AnimatedRotation(
             turns: rotationTurns,
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
-            child: Icon(
-              Icons.navigation,
-              size: 22,
-              color: indicatorColor,
-            ),
+            child: Icon(Icons.navigation, size: 22, color: indicatorColor),
           ),
           AnimatedOpacity(
             opacity: followHeading ? 0 : 1,
