@@ -64,7 +64,7 @@ class MapControlsPanelCard extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
+            padding: const EdgeInsets.fromLTRB(1, 1, 1, 1),
             child: SegmentMetricsCard(
               currentSpeedKmh: speedKmh,
               avgController: avgController,
