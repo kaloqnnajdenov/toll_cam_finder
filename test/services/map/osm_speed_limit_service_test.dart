@@ -17,7 +17,10 @@ void main() {
           _element(
             type: 'way',
             tags: {'maxspeed': '50'},
-            center: const LatLng(52.5205, 13.4052),
+            geometry: [
+              const LatLng(52.5204, 13.4050),
+              const LatLng(52.5206, 13.4054),
+            ],
           ),
         ]),
       );
@@ -33,7 +36,10 @@ void main() {
           _element(
             type: 'way',
             tags: {'maxspeed': '30 mph'},
-            center: const LatLng(52.5205, 13.4052),
+            geometry: [
+              const LatLng(52.5204, 13.4050),
+              const LatLng(52.5206, 13.4054),
+            ],
           ),
         ]),
       );
@@ -49,7 +55,10 @@ void main() {
           _element(
             type: 'way',
             tags: {'maxspeed': 'DE:urban'},
-            center: const LatLng(52.5205, 13.4052),
+            geometry: [
+              const LatLng(52.5204, 13.4050),
+              const LatLng(52.5206, 13.4054),
+            ],
           ),
         ]),
       );
@@ -66,7 +75,10 @@ void main() {
           _element(
             type: 'way',
             tags: {'maxspeed:conditional': '60 @ (07:00-19:00)'},
-            center: const LatLng(52.5205, 13.4052),
+            geometry: [
+              const LatLng(52.5204, 13.4050),
+              const LatLng(52.5206, 13.4054),
+            ],
           ),
         ]),
       );
@@ -98,7 +110,10 @@ void main() {
           _element(
             type: 'way',
             tags: {'maxspeed:sign': 'DE:274-60'},
-            center: const LatLng(52.5205, 13.4052),
+            geometry: [
+              const LatLng(52.5204, 13.4050),
+              const LatLng(52.5206, 13.4054),
+            ],
           ),
         ]),
       );
@@ -106,6 +121,33 @@ void main() {
       final result = await service.fetchSpeedLimit(location);
 
       expect(result, '60');
+    });
+
+    test('prefers the closest way when multiple are returned', () async {
+      final service = OsmSpeedLimitService(
+        client: _fakeClient([
+          _element(
+            type: 'way',
+            tags: {'maxspeed': '40'},
+            geometry: [
+              const LatLng(52.5210, 13.4070),
+              const LatLng(52.5211, 13.4072),
+            ],
+          ),
+          _element(
+            type: 'way',
+            tags: {'maxspeed': '30'},
+            geometry: [
+              const LatLng(52.5199, 13.4049),
+              const LatLng(52.5201, 13.4051),
+            ],
+          ),
+        ]),
+      );
+
+      final result = await service.fetchSpeedLimit(location);
+
+      expect(result, '30');
     });
   });
 }
@@ -125,11 +167,22 @@ Map<String, dynamic> _element({
   required Map<String, String> tags,
   LatLng? center,
   LatLng? location,
+  List<LatLng>? geometry,
 }) {
   final map = <String, dynamic>{
     'type': type,
     'tags': tags,
   };
+
+  if (geometry != null) {
+    map['geometry'] = [
+      for (final point in geometry)
+        {
+          'lat': point.latitude,
+          'lon': point.longitude,
+        }
+    ];
+  }
 
   if (center != null) {
     map['center'] = {'lat': center.latitude, 'lon': center.longitude};
