@@ -782,6 +782,19 @@ class _MapPageState extends State<MapPage>
             ),
           ),
         ),
+        SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 16),
+              child: MapFabColumn(
+                followUser: _followUser,
+                onResetView: _onResetView,
+                avgController: _avgCtrl,
+              ),
+            ),
+          ),
+        ),
       ],
     );
 
