@@ -11,6 +11,7 @@ class MapFabColumn extends StatelessWidget {
     required this.onToggleHeading,
     required this.onResetView,
     required this.avgController,
+    this.headingDegrees,
   });
 
   final bool followUser;
@@ -18,6 +19,7 @@ class MapFabColumn extends StatelessWidget {
   final VoidCallback onToggleHeading;
   final VoidCallback onResetView;
   final AverageSpeedController avgController;
+  final double? headingDegrees;
 
   @override
   Widget build(BuildContext context) {
@@ -25,16 +27,15 @@ class MapFabColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        FloatingActionButton.extended(
+        FloatingActionButton.small(
           heroTag: 'heading_btn',
           onPressed: onToggleHeading,
-          icon: Icon(
-            followHeading ? Icons.explore : Icons.navigation,
-          ),
-          label: Text(
-            followHeading
-                ? AppLocalizations.of(context).northUp
-                : AppLocalizations.of(context).faceTravelDirection,
+          tooltip: followHeading
+              ? AppLocalizations.of(context).northUp
+              : AppLocalizations.of(context).faceTravelDirection,
+          child: _CompassNeedle(
+            followHeading: followHeading,
+            headingDegrees: headingDegrees,
           ),
         ),
         const SizedBox(height: 12),
@@ -48,6 +49,69 @@ class MapFabColumn extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _CompassNeedle extends StatelessWidget {
+  const _CompassNeedle({
+    required this.followHeading,
+    required this.headingDegrees,
+  });
+
+  final bool followHeading;
+  final double? headingDegrees;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color indicatorColor =
+        Theme.of(context).colorScheme.onPrimary.withOpacity(0.95);
+    final TextStyle northStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: indicatorColor.withOpacity(0.8),
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+        ) ??
+        TextStyle(
+          color: indicatorColor.withOpacity(0.8),
+          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          letterSpacing: 0.4,
+        );
+
+    final bool shouldRotate = followHeading && headingDegrees != null;
+    final double rotationTurns = shouldRotate ? (headingDegrees! % 360) / 360 : 0;
+
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            top: 4,
+            child: Text('N', style: northStyle),
+          ),
+          AnimatedRotation(
+            turns: rotationTurns,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            child: Icon(
+              Icons.navigation,
+              size: 22,
+              color: indicatorColor,
+            ),
+          ),
+          AnimatedOpacity(
+            opacity: followHeading ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: Icon(
+              Icons.lock,
+              size: 12,
+              color: indicatorColor.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
