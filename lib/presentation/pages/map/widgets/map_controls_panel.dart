@@ -34,6 +34,7 @@ class MapControlsPanel extends StatelessWidget {
     final mediaQuery = MediaQuery.of(context);
 
     final bool placeLeft = placement == MapControlsPlacement.left;
+    final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
     final double horizontalPadding = placeLeft
         ? mediaQuery.padding.left + mediaQuery.padding.right + 32
         : 32;
@@ -57,7 +58,8 @@ class MapControlsPanel extends StatelessWidget {
       maxWidth: panelMaxWidth,
       maxHeight: panelMaxHeight,
       stackMetricsVertically: !placeLeft, // bottom placement => 2×2
-      forceSingleRow: placeLeft,          // left placement => single column
+      forceSingleRow: placeLeft, // left placement => single column
+      isLandscape: isLandscape,
     );
 
     if (placeLeft) {
@@ -106,6 +108,7 @@ class MapControlsPanel extends StatelessWidget {
     required double? maxHeight,
     required bool stackMetricsVertically,
     required bool forceSingleRow,
+    required bool isLandscape,
   }) {
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -145,6 +148,7 @@ class MapControlsPanel extends StatelessWidget {
               stackMetricsVertically: stackMetricsVertically,
               forceSingleRow: forceSingleRow,
               maxAvailableHeight: maxHeight,
+              isLandscape: isLandscape,
             ),
           ),
         ),
@@ -164,6 +168,7 @@ class _SegmentMetricsCard extends StatelessWidget {
     required this.stackMetricsVertically,
     required this.forceSingleRow,
     required this.maxAvailableHeight,
+    required this.isLandscape,
   });
 
   final double? currentSpeedKmh;
@@ -175,6 +180,7 @@ class _SegmentMetricsCard extends StatelessWidget {
   final bool stackMetricsVertically;
   final bool forceSingleRow;
   final double? maxAvailableHeight;
+  final bool isLandscape;
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +276,10 @@ class _SegmentMetricsCard extends StatelessWidget {
                 metrics[3], // distance
                 metrics[2], // safe / limit
               ];
-              return _TwoByTwoMetricsGrid(tiles: orderedMetrics);
+              return _TwoByTwoMetricsGrid(
+                tiles: orderedMetrics,
+                isLandscape: isLandscape,
+              );
             }
 
             // --- LEFT RAIL (single column), unchanged behavior ---
@@ -319,29 +328,52 @@ class _SegmentMetricsCard extends StatelessWidget {
                       .clamp(80, screenHeight * 0.32)
                       .toDouble();
 
-              return IntrinsicWidth(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (int i = 0; i < metrics.length; i++) ...[
-                      ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: minTileWidth,
-                          maxWidth: maxTileWidth,
-                          minHeight: resolvedTileHeight,
-                        ),
-                        child: _MetricTile(
-                          data: metrics[i],
-                          visualScale: visualScale,
-                          dense: false,
-                        ),
+              final double estimatedContentHeight =
+                  resolvedTileHeight * metrics.length +
+                      spacing * (metrics.length - 1);
+
+              Widget column = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (int i = 0; i < metrics.length; i++) ...[
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: minTileWidth,
+                        maxWidth: maxTileWidth,
+                        minHeight: resolvedTileHeight,
                       ),
-                      if (i + 1 < metrics.length)
-                        const SizedBox(height: spacing),
-                    ],
+                      child: _MetricTile(
+                        data: metrics[i],
+                        visualScale: visualScale,
+                        dense: false,
+                        isLandscape: isLandscape,
+                      ),
+                    ),
+                    if (i + 1 < metrics.length)
+                      const SizedBox(height: spacing),
                   ],
-                ),
+                ],
+              );
+
+              final double scrollableAreaHeight =
+                  boundedHeight != null && boundedHeight.isFinite
+                      ? math.max(0, boundedHeight - panelVerticalPadding)
+                      : double.infinity;
+
+              final bool needsScroll =
+                  estimatedContentHeight > scrollableAreaHeight;
+
+              if (needsScroll) {
+                column = SingleChildScrollView(
+                  padding: EdgeInsets.zero,
+                  clipBehavior: Clip.hardEdge,
+                  child: column,
+                );
+              }
+
+              return IntrinsicWidth(
+                child: column,
               );
             }
 
@@ -361,6 +393,7 @@ class _SegmentMetricsCard extends StatelessWidget {
                         data: metric,
                         visualScale: 1.0,
                         dense: false,
+                        isLandscape: isLandscape,
                       ),
                     ),
                   )
@@ -453,9 +486,10 @@ class _MetricTileData {
 /// 2×2 grid used in vertical mode (bottom placement).
 /// Center separators are drawn with true centering.
 class _TwoByTwoMetricsGrid extends StatelessWidget {
-  const _TwoByTwoMetricsGrid({required this.tiles});
+  const _TwoByTwoMetricsGrid({required this.tiles, required this.isLandscape});
 
   final List<_MetricTileData> tiles;
+  final bool isLandscape;
 
   @override
   Widget build(BuildContext context) {
@@ -504,7 +538,8 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
                     child: _MetricTile(
                       data: tiles[0],
                       visualScale: 1.0,
-                      dense: true,  // use preset typography to match screenshot
+                      dense: true, // use preset typography to match screenshot
+                      isLandscape: isLandscape,
                     ),
                   ),
                 ),
@@ -518,6 +553,7 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
                       data: tiles[1],
                       visualScale: 1.0,
                       dense: true,
+                      isLandscape: isLandscape,
                     ),
                   ),
                 ),
@@ -535,6 +571,7 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
                       data: tiles[2],
                       visualScale: 1.0,
                       dense: true,
+                      isLandscape: isLandscape,
                     ),
                   ),
                 ),
@@ -548,6 +585,7 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
                       data: tiles[3],
                       visualScale: 1.0,
                       dense: true,
+                      isLandscape: isLandscape,
                     ),
                   ),
                 ),
@@ -565,11 +603,13 @@ class _MetricTile extends StatelessWidget {
     required this.data,
     required this.visualScale,
     this.dense = false,
+    required this.isLandscape,
   });
 
   final _MetricTileData data;
   final double visualScale;
   final bool dense;
+  final bool isLandscape;
 
   @override
   Widget build(BuildContext context) {
@@ -581,8 +621,10 @@ class _MetricTile extends StatelessWidget {
 
     final double layoutScale = visualScale.clamp(0.2, 1.0).toDouble();
     final double textScaleFactor = MediaQuery.textScaleFactorOf(context);
-    final double typographicScale =
-        (visualScale * textScaleFactor).clamp(0.3, 1.1).toDouble();
+    final double orientationBoost = isLandscape ? 1.18 : 1.0;
+    final double typographicScale = (visualScale * orientationBoost * textScaleFactor)
+        .clamp(isLandscape ? 0.4 : 0.3, isLandscape ? 1.3 : 1.1)
+        .toDouble();
 
     final TextStyle labelBase = preset
         ? const TextStyle(
@@ -626,8 +668,8 @@ class _MetricTile extends StatelessWidget {
     final double baseUnitFontSize = unitBase.fontSize ?? 18;
     final TextStyle unitStyle = unitBase.copyWith(
       color: colorScheme.onSurface,
-      fontSize:
-          baseUnitFontSize * typographicScale.clamp(0.6, 1.05).toDouble(),
+      fontSize: baseUnitFontSize *
+          typographicScale.clamp(0.6, isLandscape ? 1.2 : 1.05).toDouble(),
     );
 
     final double verticalPadding =
