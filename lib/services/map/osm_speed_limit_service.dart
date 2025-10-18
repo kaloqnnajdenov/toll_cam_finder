@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -25,12 +26,11 @@ class OsmSpeedLimitService {
     final query = '''
 [out:json][timeout:10];
 (
-  way(around:120,${location.latitude},${location.longitude})["highway"];
-  relation(around:120,${location.latitude},${location.longitude})["type"="route"]["route"~"road|highway|motorway"];
-  node(around:80,${location.latitude},${location.longitude})["maxspeed"];
-  node(around:80,${location.latitude},${location.longitude})["traffic_sign"~"maxspeed", i];
+  way(around:60,${location.latitude},${location.longitude})["highway"];
+  node(around:40,${location.latitude},${location.longitude})["maxspeed"];
+  node(around:40,${location.latitude},${location.longitude})["traffic_sign"~"maxspeed", i];
 );
-out tags center qt;
+out tags geom qt;
 ''';
 
     final uri = Uri.parse('$_endpoint?data=${Uri.encodeComponent(query)}');
@@ -54,7 +54,8 @@ out tags center qt;
       return null;
     }
 
-    _SpeedCandidate? bestCandidate;
+    _SpeedCandidate? bestWayCandidate;
+    _SpeedCandidate? bestNodeCandidate;
 
     for (final element in elements) {
       if (element is! Map<String, dynamic>) continue;
@@ -65,26 +66,37 @@ out tags center qt;
       final parsed = _extractMaxSpeed(tags);
       if (parsed == null) continue;
 
-      final elementPriority = _elementPriority(element['type']);
-      final distanceMeters = _distanceToElement(element, location);
-      final combinedPriority = elementPriority * 100 + parsed.priority;
-
-      final candidate = _SpeedCandidate(
-        value: parsed.value,
-        priority: combinedPriority,
-        distanceMeters: distanceMeters,
-      );
-
-      if (bestCandidate == null ||
-          candidate.priority < bestCandidate.priority ||
-          (candidate.priority == bestCandidate.priority &&
-              (candidate.distanceMeters ?? double.infinity) <
-                  (bestCandidate.distanceMeters ?? double.infinity))) {
-        bestCandidate = candidate;
+      final type = element['type'];
+      if (type == 'way') {
+        final distanceMeters = _distanceToWay(element, location);
+        if (distanceMeters == null) continue;
+        if (distanceMeters > _maxWayDistanceMeters) continue;
+        final candidate = _SpeedCandidate(
+          value: parsed.value,
+          priority: parsed.priority,
+          distanceMeters: distanceMeters,
+        );
+        if (bestWayCandidate == null ||
+            _isBetterCandidate(candidate, bestWayCandidate!)) {
+          bestWayCandidate = candidate;
+        }
+      } else if (type == 'node') {
+        final distanceMeters = _distanceToNode(element, location);
+        if (distanceMeters == null) continue;
+        if (distanceMeters > _maxNodeDistanceMeters) continue;
+        final candidate = _SpeedCandidate(
+          value: parsed.value,
+          priority: parsed.priority,
+          distanceMeters: distanceMeters,
+        );
+        if (bestNodeCandidate == null ||
+            _isBetterCandidate(candidate, bestNodeCandidate!)) {
+          bestNodeCandidate = candidate;
+        }
       }
     }
 
-    return bestCandidate?.value;
+    return bestWayCandidate?.value ?? bestNodeCandidate?.value;
   }
 
   void dispose() {
@@ -186,30 +198,16 @@ out tags center qt;
     return _ParsedSpeed(inKmh.round().toString(), priority: basePriority);
   }
 
-  int _elementPriority(dynamic type) {
-    if (type == 'way') {
-      return 0;
+  bool _isBetterCandidate(_SpeedCandidate next, _SpeedCandidate current) {
+    final nextDistance = next.distanceMeters ?? double.infinity;
+    final currentDistance = current.distanceMeters ?? double.infinity;
+    if ((nextDistance - currentDistance).abs() > _distanceEpsilonMeters) {
+      return nextDistance < currentDistance;
     }
-    if (type == 'relation') {
-      return 1;
-    }
-    return 2;
+    return next.priority < current.priority;
   }
 
-  double? _distanceToElement(Map<String, dynamic> element, LatLng origin) {
-    final center = element['center'];
-    if (center is Map<String, dynamic>) {
-      final lat = center['lat'];
-      final lon = center['lon'];
-      if (lat is num && lon is num) {
-        return _distance.as(
-          LengthUnit.Meter,
-          origin,
-          LatLng(lat.toDouble(), lon.toDouble()),
-        );
-      }
-    }
-
+  double? _distanceToNode(Map<String, dynamic> element, LatLng origin) {
     final lat = element['lat'];
     final lon = element['lon'];
     if (lat is num && lon is num) {
@@ -220,7 +218,93 @@ out tags center qt;
       );
     }
 
+    final center = element['center'];
+    if (center is Map<String, dynamic>) {
+      final centerLat = center['lat'];
+      final centerLon = center['lon'];
+      if (centerLat is num && centerLon is num) {
+        return _distance.as(
+          LengthUnit.Meter,
+          origin,
+          LatLng(centerLat.toDouble(), centerLon.toDouble()),
+        );
+      }
+    }
+
     return null;
+  }
+
+  double? _distanceToWay(Map<String, dynamic> element, LatLng origin) {
+    final geometry = element['geometry'];
+    if (geometry is List) {
+      final points = <LatLng>[];
+      for (final point in geometry) {
+        if (point is Map<String, dynamic>) {
+          final lat = point['lat'];
+          final lon = point['lon'];
+          if (lat is num && lon is num) {
+            points.add(LatLng(lat.toDouble(), lon.toDouble()));
+          }
+        }
+      }
+      if (points.isNotEmpty) {
+        return _closestDistanceToPolyline(points, origin);
+      }
+    }
+
+    return _distanceToNode(element, origin);
+  }
+
+  double? _closestDistanceToPolyline(List<LatLng> points, LatLng origin) {
+    if (points.length == 1) {
+      return _distance.as(LengthUnit.Meter, origin, points.first);
+    }
+
+    double? bestDistance;
+    for (var i = 0; i < points.length - 1; i++) {
+      final start = points[i];
+      final end = points[i + 1];
+      final distance = _distanceToSegmentMeters(origin, start, end);
+      if (bestDistance == null || distance < bestDistance) {
+        bestDistance = distance;
+      }
+    }
+
+    return bestDistance;
+  }
+
+  double _distanceToSegmentMeters(LatLng origin, LatLng start, LatLng end) {
+    final startPoint = _projectToMeters(origin, start);
+    final endPoint = _projectToMeters(origin, end);
+
+    final abx = endPoint.x - startPoint.x;
+    final aby = endPoint.y - startPoint.y;
+    final apx = -startPoint.x;
+    final apy = -startPoint.y;
+    final denom = abx * abx + aby * aby;
+
+    double t = 0;
+    if (denom > 0) {
+      t = (apx * abx + apy * aby) / denom;
+      t = t.clamp(0, 1).toDouble();
+    }
+
+    final closestX = startPoint.x + abx * t;
+    final closestY = startPoint.y + aby * t;
+    return math.sqrt(closestX * closestX + closestY * closestY);
+  }
+
+  math.Point<double> _projectToMeters(LatLng origin, LatLng point) {
+    const double radiansPerDegree = math.pi / 180;
+    const double earthRadiusMeters = 6371000;
+
+    final double originLatRad = origin.latitude * radiansPerDegree;
+    final double deltaLat = (point.latitude - origin.latitude) * radiansPerDegree;
+    final double deltaLon = (point.longitude - origin.longitude) * radiansPerDegree;
+
+    final double x = deltaLon * earthRadiusMeters * math.cos(originLatRad);
+    final double y = deltaLat * earthRadiusMeters;
+    return math.Point<double>(x, y);
   }
 
   static const Map<String, _SpeedAlias> _maxspeedAliases = {
@@ -325,3 +409,7 @@ class _SpeedCandidate {
   final int priority;
   final double? distanceMeters;
 }
+
+const double _maxWayDistanceMeters = 60;
+const double _maxNodeDistanceMeters = 30;
+const double _distanceEpsilonMeters = 0.5;
