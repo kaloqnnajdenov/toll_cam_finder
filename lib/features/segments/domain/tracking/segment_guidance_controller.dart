@@ -216,8 +216,15 @@ class SegmentGuidanceController {
   }
 
   Future<void> _configureTextToSpeech() async {
+    // The FlutterTts package used in this project does not expose a
+    // setAudioAttributesForNavigation() method. Keep this as a best-effort
+    // no-op for Android/other platforms and only call the iOS-specific
+    // configuration that exists on the FlutterTts instance.
     try {
-      await _tts.setAudioAttributesForNavigation();
+      // No-op placeholder for platform-specific audio attribute config.
+      // If you later add a package or extension that provides Android audio
+      // attribute configuration, call it here.
+      await Future<void>.value();
     } catch (_) {
       // Ignored: best-effort configuration.
     }

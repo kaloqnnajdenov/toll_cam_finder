@@ -118,15 +118,26 @@ class AverageSpeedController extends ChangeNotifier {
   void _updateAverage({DateTime? now, bool forceNotify = false}) {
     if (!_isRunning || _startedAt == null) {
       _averageKph = 0.0;
+      if (forceNotify) {
+        notifyListeners();
+      }
       return;
     }
+ final DateTime referenceTime;
+    if (now != null) {
+      referenceTime = now;
+    } else if (_lastSampleAt != null) {
+      referenceTime = _lastSampleAt!;
+    } else {
+      referenceTime = DateTime.now();
+    }
 
-    final DateTime current = now ?? DateTime.now();
-    final Duration diff = current.difference(_startedAt!);
+    final Duration diff = referenceTime.difference(_startedAt!);
     if (diff <= Duration.zero) {
       _averageKph = 0.0;
-      _lastSampleAt = current;
-      if (forceNotify) {
+ if (now != null) {
+        _lastSampleAt = referenceTime;
+      }      if (forceNotify) {
         notifyListeners();
       }
       return;
@@ -139,8 +150,9 @@ class AverageSpeedController extends ChangeNotifier {
 
     final bool changed = (_averageKph - nextAverage).abs() > 1e-6;
     _averageKph = nextAverage;
-    _lastSampleAt = current;
-
+if (now != null) {
+      _lastSampleAt = referenceTime;
+    }
     if (forceNotify || changed) {
       notifyListeners();
     }
