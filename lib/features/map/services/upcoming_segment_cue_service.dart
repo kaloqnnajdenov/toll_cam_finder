@@ -4,10 +4,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
+import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 class UpcomingSegmentCueService {
   UpcomingSegmentCueService({AudioPlayer? player})
-      : _player = player ?? AudioPlayer();
+      : _player = player ?? AudioPlayer() {
+    unawaited(_configurePlayer());
+  }
 
   final AudioPlayer _player;
   String? _segmentId;
@@ -57,4 +60,12 @@ class UpcomingSegmentCueService {
   }
 
   Future<void> dispose() => _player.dispose();
+
+  Future<void> _configurePlayer() async {
+    try {
+      await _player.setAudioContext(navigationAudioContext);
+    } catch (_) {
+      // Ignored: best-effort configuration.
+    }
+  }
 }

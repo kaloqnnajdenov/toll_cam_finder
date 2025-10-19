@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,9 +9,12 @@ import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_co
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
+import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await AudioPlayer.global.setAudioContext(navigationAudioContext);
 
   SupabaseClient? supabaseClient;
 

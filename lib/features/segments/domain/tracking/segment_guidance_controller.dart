@@ -6,6 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
+import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 class SegmentGuidanceUiModel {
   const SegmentGuidanceUiModel({
@@ -34,9 +35,11 @@ class SegmentGuidanceResult {
 
 class SegmentGuidanceController {
   SegmentGuidanceController({FlutterTts? tts, AudioPlayer? tonePlayer})
-    : _tts = tts ?? FlutterTts(),
-      _tonePlayer = tonePlayer ?? AudioPlayer(playerId: 'segment-guidance') {
+      : _tts = tts ?? FlutterTts(),
+        _tonePlayer = tonePlayer ?? AudioPlayer(playerId: 'segment-guidance') {
     unawaited(_tts.awaitSpeakCompletion(true));
+    unawaited(_configureTonePlayer());
+    unawaited(_configureTextToSpeech());
   }
 
   static const Duration _quietInterval = Duration(seconds: 20);
@@ -202,6 +205,36 @@ class SegmentGuidanceController {
   Future<void> dispose() async {
     await reset();
     await _tonePlayer.dispose();
+  }
+
+  Future<void> _configureTonePlayer() async {
+    try {
+      await _tonePlayer.setAudioContext(navigationAudioContext);
+    } catch (_) {
+      // Ignored: best-effort configuration.
+    }
+  }
+
+  Future<void> _configureTextToSpeech() async {
+    try {
+      await _tts.setAudioAttributesForNavigation();
+    } catch (_) {
+      // Ignored: best-effort configuration.
+    }
+
+    try {
+      await _tts.setIosAudioCategory(
+        IosTextToSpeechAudioCategory.playback,
+        <IosTextToSpeechAudioCategoryOptions>[
+          IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+          IosTextToSpeechAudioCategoryOptions.duckOthers,
+          IosTextToSpeechAudioCategoryOptions.interruptSpokenAudioAndMixWithOthers,
+        ],
+        IosTextToSpeechAudioMode.voicePrompt,
+      );
+    } catch (_) {
+      // Ignored: best-effort configuration.
+    }
   }
 
   Future<void> _handleSegmentEntry({double? limitKph}) async {
