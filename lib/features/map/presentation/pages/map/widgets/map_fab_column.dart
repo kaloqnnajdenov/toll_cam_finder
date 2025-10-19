@@ -12,6 +12,8 @@ class MapFabColumn extends StatelessWidget {
     required this.onToggleHeading,
     required this.onResetView,
     required this.avgController,
+    required this.showHeadingButton,
+    required this.showRecenterButton,
     this.headingDegrees,
   });
 
@@ -21,6 +23,8 @@ class MapFabColumn extends StatelessWidget {
   final VoidCallback onResetView;
   final AverageSpeedController avgController;
   final double? headingDegrees;
+  final bool showHeadingButton;
+  final bool showRecenterButton;
 
   @override
   Widget build(BuildContext context) {
@@ -30,31 +34,106 @@ class MapFabColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _MapMiniFab(
-          heroTag: 'heading_btn',
-          tooltip: followHeading
-              ? localizations.northUp
-              : localizations.faceTravelDirection,
-          active: followHeading,
-          onPressed: onToggleHeading,
-          child: _CompassNeedle(
-            followHeading: followHeading,
-            headingDegrees: headingDegrees,
-            color: followHeading ? Colors.white : palette.onSurface,
+        _AnimatedFabVisibility(
+          hiddenKey: 'heading_hidden',
+          visible: showHeadingButton,
+          axisAlignment: -1,
+          child: _MapMiniFab(
+            key: const ValueKey('heading_btn'),
+            heroTag: 'heading_btn',
+            tooltip: followHeading
+                ? localizations.northUp
+                : localizations.faceTravelDirection,
+            active: followHeading,
+            onPressed: onToggleHeading,
+            child: _CompassNeedle(
+              followHeading: followHeading,
+              headingDegrees: headingDegrees,
+              color: followHeading ? Colors.white : palette.onSurface,
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        _MapMiniFab(
-          heroTag: 'recenter_btn',
-          tooltip: localizations.recenter,
-          active: followUser,
-          onPressed: onResetView,
-          child: Icon(
-            followUser ? Icons.my_location : Icons.my_location_outlined,
-            color: followUser ? Colors.white : palette.onSurface,
+        _AnimatedFabSpacing(visible: showHeadingButton && showRecenterButton),
+        _AnimatedFabVisibility(
+          hiddenKey: 'recenter_hidden',
+          visible: showRecenterButton,
+          axisAlignment: 1,
+          child: _MapMiniFab(
+            key: const ValueKey('recenter_btn'),
+            heroTag: 'recenter_btn',
+            tooltip: localizations.recenter,
+            active: followUser,
+            onPressed: onResetView,
+            child: Icon(
+              followUser ? Icons.my_location : Icons.my_location_outlined,
+              color: followUser ? Colors.white : palette.onSurface,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+const Duration _kFabAnimationDuration = Duration(milliseconds: 240);
+
+class _AnimatedFabVisibility extends StatelessWidget {
+  const _AnimatedFabVisibility({
+    required this.visible,
+    required this.child,
+    required this.hiddenKey,
+    this.axisAlignment = 0,
+  });
+
+  final bool visible;
+  final Widget child;
+  final String hiddenKey;
+  final double axisAlignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: _kFabAnimationDuration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            axisAlignment: axisAlignment,
+            child: child,
+          ),
+        );
+      },
+      child: visible
+          ? child
+          : SizedBox.shrink(key: ValueKey(hiddenKey)),
+    );
+  }
+}
+
+class _AnimatedFabSpacing extends StatelessWidget {
+  const _AnimatedFabSpacing({required this.visible});
+
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: _kFabAnimationDuration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return SizeTransition(
+          sizeFactor: animation,
+          axisAlignment: 1,
+          child: child,
+        );
+      },
+      child: visible
+          ? const SizedBox(height: 12, key: ValueKey('fab_spacing'))
+          : const SizedBox(key: ValueKey('fab_spacing_empty')),
     );
   }
 }
@@ -106,6 +185,7 @@ class _CompassNeedle extends StatelessWidget {
 
 class _MapMiniFab extends StatelessWidget {
   const _MapMiniFab({
+    super.key,
     required this.heroTag,
     required this.tooltip,
     required this.onPressed,
