@@ -33,6 +33,7 @@ class BottomMapControlsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final double availableWidth =
         math.max(0, mediaQuery.size.width - _horizontalPadding);
+    final double panelMaxWidth = math.min(availableWidth, _maxPanelWidth);
 
     return SafeArea(
       top: false,
@@ -46,21 +47,24 @@ class BottomMapControlsPanel extends StatelessWidget {
               16,
               0,
               16,
-              mediaQuery.padding.bottom + 12,
+              mediaQuery.viewPadding.bottom + 8,
             ),
-            child: MapControlsPanelCard(
-              colorScheme: Theme.of(context).colorScheme,
-              speedKmh: speedKmh,
-              avgController: avgController,
-              hasActiveSegment: hasActiveSegment,
-              segmentSpeedLimitKph: segmentSpeedLimitKph,
-              segmentDebugPath: segmentDebugPath,
-              distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-              maxWidth: availableWidth,
-              maxHeight: null,
-              stackMetricsVertically: true,
-              forceSingleRow: false,
-              isLandscape: isLandscape,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: panelMaxWidth),
+              child: MapControlsPanelCard(
+                colorScheme: Theme.of(context).colorScheme,
+                speedKmh: speedKmh,
+                avgController: avgController,
+                hasActiveSegment: hasActiveSegment,
+                segmentSpeedLimitKph: segmentSpeedLimitKph,
+                segmentDebugPath: segmentDebugPath,
+                distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+                maxWidth: panelMaxWidth,
+                maxHeight: null,
+                stackMetricsVertically: true,
+                forceSingleRow: false,
+                isLandscape: isLandscape,
+              ),
             ),
           ),
         ),
@@ -69,4 +73,5 @@ class BottomMapControlsPanel extends StatelessWidget {
   }
 
   static const double _horizontalPadding = 32;
+  static const double _maxPanelWidth = 420;
 }
