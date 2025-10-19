@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:toll_cam_finder/features/map/domain/utils/average_speed_calculator.dart';
 
@@ -8,8 +10,10 @@ class AverageSpeedController extends ChangeNotifier {
 
   bool _isRunning = false;
   double _distanceMeters = 0.0;
+  double _averageKph = 0.0;
   DateTime? _startedAt;
   DateTime? _lastSampleAt;
+  Timer? _ticker;
 
   final AverageSpeedCalculator _calculator;
 
@@ -29,33 +33,25 @@ class AverageSpeedController extends ChangeNotifier {
     return diff;
   }
 
-  double get average {
-    if (!_isRunning) {
-      return 0.0;
-    }
-    final Duration? elapsedDuration = elapsed;
-    if (elapsedDuration == null) {
-      return 0.0;
-    }
-    return _calculator.calculateKph(
-      distanceMeters: _distanceMeters,
-      elapsed: elapsedDuration,
-    );
-  }
+  double get average => _averageKph;
 
   void start({DateTime? startedAt}) {
     _isRunning = true;
     _distanceMeters = 0.0;
+    _averageKph = 0.0;
     _startedAt = startedAt ?? DateTime.now();
     _lastSampleAt = _startedAt;
+    _startTicker();
     notifyListeners();
   }
 
   void reset() {
     _isRunning = false;
     _distanceMeters = 0.0;
+    _averageKph = 0.0;
     _startedAt = null;
     _lastSampleAt = null;
+    _stopTicker();
     notifyListeners();
   }
 
@@ -69,23 +65,19 @@ class AverageSpeedController extends ChangeNotifier {
 
     if (_startedAt == null) {
       _startedAt = timestamp;
+      _startTicker();
     }
 
     final DateTime clampedTimestamp = timestamp.isBefore(_startedAt!) ? _startedAt! : timestamp;
-    final DateTime? previous = _lastSampleAt;
-    final Duration? delta = previous != null ? clampedTimestamp.difference(previous) : null;
 
     final double sanitizedDistance =
         (distanceDeltaMeters.isFinite && distanceDeltaMeters > 0) ? distanceDeltaMeters : 0.0;
 
-    if (sanitizedDistance == 0.0 && (delta == null || delta <= Duration.zero)) {
-      _lastSampleAt = clampedTimestamp;
-      return;
+    if (sanitizedDistance > 0.0) {
+      _distanceMeters += sanitizedDistance;
     }
 
-    _distanceMeters += sanitizedDistance;
-    _lastSampleAt = clampedTimestamp;
-    notifyListeners();
+    _updateAverage(now: clampedTimestamp);
   }
 
   double avgSpeedDone({
@@ -110,4 +102,53 @@ class AverageSpeedController extends ChangeNotifier {
         segmentLengthMeters: segmentLengthMeters,
         segmentDuration: segmentDuration,
       );
+
+  void _startTicker() {
+    _stopTicker();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateAverage(forceNotify: true);
+    });
+  }
+
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
+  void _updateAverage({DateTime? now, bool forceNotify = false}) {
+    if (!_isRunning || _startedAt == null) {
+      _averageKph = 0.0;
+      return;
+    }
+
+    final DateTime current = now ?? DateTime.now();
+    final Duration diff = current.difference(_startedAt!);
+    if (diff <= Duration.zero) {
+      _averageKph = 0.0;
+      _lastSampleAt = current;
+      if (forceNotify) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    final double nextAverage = _calculator.calculateKph(
+      distanceMeters: _distanceMeters,
+      elapsed: diff,
+    );
+
+    final bool changed = (_averageKph - nextAverage).abs() > 1e-6;
+    _averageKph = nextAverage;
+    _lastSampleAt = current;
+
+    if (forceNotify || changed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopTicker();
+    super.dispose();
+  }
 }
