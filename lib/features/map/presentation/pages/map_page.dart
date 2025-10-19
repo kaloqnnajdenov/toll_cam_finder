@@ -88,6 +88,8 @@ class _MapPageState extends State<MapPage>
   bool _mapReady = false;
   bool _followUser = false;
   bool _followHeading = false;
+  bool _showHeadingFab = true;
+  bool _showRecenterFab = true;
   double _currentZoom = AppConstants.initialZoom;
 
   StreamSubscription<Position>? _posSub;
@@ -538,6 +540,12 @@ class _MapPageState extends State<MapPage>
       shouldSetState = true;
     }
 
+    if (external && (!_showHeadingFab || !_showRecenterFab)) {
+      _showHeadingFab = true;
+      _showRecenterFab = true;
+      shouldSetState = true;
+    }
+
     if (shouldSetState && mounted) {
       setState(() {});
     }
@@ -560,7 +568,10 @@ class _MapPageState extends State<MapPage>
 
   void _onResetView() {
     final target = _blueDotAnimator.position ?? _userLatLng ?? _center;
-    setState(() => _followUser = true);
+    setState(() {
+      _followUser = true;
+      _showRecenterFab = false;
+    });
     final zoom = _currentZoom < AppConstants.zoomWhenFocused
         ? AppConstants.zoomWhenFocused
         : _currentZoom;
@@ -619,7 +630,10 @@ class _MapPageState extends State<MapPage>
 
   void _toggleFollowHeading() {
     if (_followHeading) {
-      setState(() => _followHeading = false);
+      setState(() {
+        _followHeading = false;
+        _showHeadingFab = false;
+      });
       if (_mapReady) {
         _mapController.rotate(0);
       }
@@ -629,6 +643,7 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _followHeading = true;
       _followUser = true;
+      _showHeadingFab = false;
     });
     if (_userHeading != null) {
       _applyHeadingRotation();
@@ -882,6 +897,8 @@ class _MapPageState extends State<MapPage>
             onToggleHeading: _toggleFollowHeading,
             onResetView: _onResetView,
             avgController: _avgCtrl,
+            showHeadingButton: _showHeadingFab,
+            showRecenterButton: _showRecenterFab,
           ),
         ),
       ),
