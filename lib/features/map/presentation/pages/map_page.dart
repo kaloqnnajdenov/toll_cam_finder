@@ -723,97 +723,102 @@ class _MapPageState extends State<MapPage>
     final bool isLandscape =
         mediaQuery.orientation == Orientation.landscape;
 
-    final Widget mapContent = Stack(
-      children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: _center,
-            initialZoom: _currentZoom,
-            onMapReady: _onMapReady,
-          ),
-          children: [
-            const BaseTileLayer(),
+    Widget buildControlsPanel(MapControlsPlacement placement) {
+      return MapControlsPanel(
+        placement: placement,
+        speedKmh: _speedKmh,
+        avgController: _avgCtrl,
+        hasActiveSegment: _segmentTracker.activeSegmentId != null,
+        segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
+        segmentDebugPath: _activeSegmentDebugPath,
+        distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+      );
+    }
 
-            BlueDotMarker(point: markerPoint),
-
-            if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
-              QuerySquareOverlay(points: _segmentDebugData.querySquare),
-            if (kDebugMode &&
-                _segmentDebugData.boundingCandidates.isNotEmpty)
-              CandidateBoundsOverlay(
-                candidates: _segmentDebugData.boundingCandidates,
-              ),
-            if (kDebugMode &&
-                _segmentDebugData.candidatePaths.isNotEmpty)
-              SegmentPolylineOverlay(
-                paths: _segmentDebugData.candidatePaths,
-                startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
-                endGeofenceRadius: _segmentDebugData.endGeofenceRadius,
-              ),
-            TollCamerasOverlay(cameras: cameraState),
-          ],
+    final List<Widget> mapStackChildren = [
+      FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: _center,
+          initialZoom: _currentZoom,
+          onMapReady: _onMapReady,
         ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, left: 16),
-              child: SpeedLimitSign(speedLimit: _osmSpeedLimitKph),
+        children: [
+          const BaseTileLayer(),
+
+          BlueDotMarker(point: markerPoint),
+
+          if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
+            QuerySquareOverlay(points: _segmentDebugData.querySquare),
+          if (kDebugMode &&
+              _segmentDebugData.boundingCandidates.isNotEmpty)
+            CandidateBoundsOverlay(
+              candidates: _segmentDebugData.boundingCandidates,
+            ),
+          if (kDebugMode && _segmentDebugData.candidatePaths.isNotEmpty)
+            SegmentPolylineOverlay(
+              paths: _segmentDebugData.candidatePaths,
+              startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
+              endGeofenceRadius: _segmentDebugData.endGeofenceRadius,
+            ),
+          TollCamerasOverlay(cameras: cameraState),
+        ],
+      ),
+      SafeArea(
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16, left: 16),
+            child: SpeedLimitSign(speedLimit: _osmSpeedLimitKph),
+          ),
+        ),
+      ),
+      SafeArea(
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16, right: 16),
+            child: Builder(
+              builder: (context) {
+                return Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Scaffold.of(context).openEndDrawer(),
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    tooltip: AppLocalizations.of(context).openMenu,
+                  ),
+                );
+              },
             ),
           ),
         ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, right: 16),
-              child: Builder(
-                builder: (context) {
-                  return Material(
-                    color: Colors.black54,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      onPressed: () =>
-                          Scaffold.of(context).openEndDrawer(),
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      tooltip: AppLocalizations.of(context).openMenu,
-                    ),
-                  );
-                },
-              ),
+      ),
+      SafeArea(
+        child: Align(
+          alignment: Alignment.bottomRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16, bottom: 16),
+            child: MapFabColumn(
+              followUser: _followUser,
+              followHeading: _followHeading,
+              headingDegrees: _userHeading,
+              onToggleHeading: _toggleFollowHeading,
+              onResetView: _onResetView,
+              avgController: _avgCtrl,
             ),
           ),
         ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, bottom: 16),
-              child: MapFabColumn(
-                followUser: _followUser,
-                followHeading: _followHeading,
-                headingDegrees: _userHeading,
-                onToggleHeading: _toggleFollowHeading,
-                onResetView: _onResetView,
-                avgController: _avgCtrl,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+      ),
+    ];
 
-    final Widget controlsPanel = MapControlsPanel(
-      placement:
-          isLandscape ? MapControlsPlacement.left : MapControlsPlacement.bottom,
-      speedKmh: _speedKmh,
-      avgController: _avgCtrl,
-      hasActiveSegment: _segmentTracker.activeSegmentId != null,
-      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
-      segmentDebugPath: _activeSegmentDebugPath,
-      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
-    );
+    if (!isLandscape) {
+      mapStackChildren.add(
+        buildControlsPanel(MapControlsPlacement.bottom),
+      );
+    }
+
+    final Widget mapContent = Stack(children: mapStackChildren);
 
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
@@ -821,16 +826,11 @@ class _MapPageState extends State<MapPage>
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                controlsPanel,
+                buildControlsPanel(MapControlsPlacement.left),
                 Expanded(child: mapContent),
               ],
             )
-          : Column(
-              children: [
-                Expanded(child: mapContent),
-                controlsPanel,
-              ],
-            ),
+          : mapContent,
       
     );
   }
