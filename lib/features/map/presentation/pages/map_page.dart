@@ -726,17 +726,18 @@ class _MapPageState extends State<MapPage>
     }
   }
 
-  void _updateControlsPanelHeight() {
-    final BuildContext? context = _controlsPanelKey.currentContext;
-    final double newHeight = context?.size?.height ?? 0;
+  void _updateControlsPanelHeight([double? newHeight]) {
+    final double resolvedHeight = newHeight ??
+        _controlsPanelKey.currentContext?.size?.height ??
+        0;
 
     if (!mounted) {
       return;
     }
 
-    if ((newHeight - _controlsPanelHeight).abs() > 0.5) {
+    if ((resolvedHeight - _controlsPanelHeight).abs() > 0.5) {
       setState(() {
-        _controlsPanelHeight = newHeight;
+        _controlsPanelHeight = resolvedHeight;
       });
     }
   }
@@ -860,22 +861,28 @@ class _MapPageState extends State<MapPage>
       ),
     );
 
-    final Widget controlsPanel = MapControlsPanel(
-      key: _controlsPanelKey,
-      placement: isLandscape
-          ? MapControlsPlacement.left
-          : MapControlsPlacement.bottom,
-      speedKmh: _speedKmh,
-      avgController: _avgCtrl,
-      hasActiveSegment: _segmentTracker.activeSegmentId != null,
-      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
-      segmentDebugPath: _activeSegmentDebugPath,
-      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+    final Widget controlsPanel = NotificationListener<SizeChangedLayoutNotification>(
+      onNotification: (notification) {
+        final BuildContext? context = _controlsPanelKey.currentContext;
+        final double newHeight = context?.size?.height ?? 0;
+        _updateControlsPanelHeight(newHeight);
+        return false;
+      },
+      child: SizeChangedLayoutNotifier(
+        child: MapControlsPanel(
+          key: _controlsPanelKey,
+          placement: isLandscape
+              ? MapControlsPlacement.left
+              : MapControlsPlacement.bottom,
+          speedKmh: _speedKmh,
+          avgController: _avgCtrl,
+          hasActiveSegment: _segmentTracker.activeSegmentId != null,
+          segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
+          segmentDebugPath: _activeSegmentDebugPath,
+          distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+        ),
+      ),
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateControlsPanelHeight();
-    });
 
     final List<Widget> stackChildren = [
       Positioned.fill(child: mapContent),
