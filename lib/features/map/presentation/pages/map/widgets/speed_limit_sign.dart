@@ -8,6 +8,7 @@ class SpeedLimitSign extends StatelessWidget {
   final String? speedLimit;
   final double? currentSpeedKmh;
 
+//TODO: remove logic for dark mode as we dotn use it here
   @override
   Widget build(BuildContext context) {
     final String trimmed = speedLimit?.trim() ?? '';
@@ -20,9 +21,11 @@ class SpeedLimitSign extends StatelessWidget {
     final AppPalette palette = AppColors.of(context);
     final Color fillColor = isOverspeed ? palette.danger : Colors.white;
     final double borderWidth = isOverspeed ? 0 : 6;
-    final Color textColor = isOverspeed ? Colors.white : palette.onSurface;
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+ final Color textColor = isOverspeed
+        ? Colors.white
+        : (isDark ? Colors.black : palette.onSurface);
 
     return IgnorePointer(
       child: Container(

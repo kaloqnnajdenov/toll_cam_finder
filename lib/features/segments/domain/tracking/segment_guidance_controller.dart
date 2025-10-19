@@ -455,7 +455,7 @@ class SegmentGuidanceController {
     if (!required.isFinite) {
       return limitKph;
     }
-    final double clamped = math.max(0, math.min(limitKph, required));
+    final double clamped = math.max(0, required);
     return clamped;
   }
 
