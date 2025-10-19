@@ -237,8 +237,9 @@ class _MapPageState extends State<MapPage>
   }
 
   void _updateAudioPolicy() {
-    final GuidanceAudioPolicy newPolicy =
-        _audioController.policyFor(_appLifecycleState);
+    final GuidanceAudioPolicy newPolicy = _audioController.policyFor(
+      _appLifecycleState,
+    );
     if (newPolicy == _audioPolicy) {
       return;
     }
@@ -351,8 +352,11 @@ class _MapPageState extends State<MapPage>
     final lastQueryAt = _lastSpeedLimitQueryAt;
 
     if (lastLocation != null) {
-      final distanceMoved =
-          _distanceCalculator.as(LengthUnit.Meter, lastLocation, position);
+      final distanceMoved = _distanceCalculator.as(
+        LengthUnit.Meter,
+        lastLocation,
+        position,
+      );
       const double minDistanceMeters = 30;
       const Duration minInterval = Duration(seconds: 20);
       if (distanceMoved < minDistanceMeters &&
@@ -417,7 +421,8 @@ class _MapPageState extends State<MapPage>
 
     double? exitAverage;
 
-    if (segEvent.endedSegment || segEvent.completedSegmentLengthMeters != null) {
+    if (segEvent.endedSegment ||
+        segEvent.completedSegmentLengthMeters != null) {
       final double? segmentLength = segEvent.completedSegmentLengthMeters;
       final Duration? elapsed = _avgCtrl.elapsed;
       final double computedAverage = (segmentLength != null && elapsed != null)
@@ -738,8 +743,7 @@ class _MapPageState extends State<MapPage>
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
     final mediaQuery = MediaQuery.of(context);
-    final bool isLandscape =
-        mediaQuery.orientation == Orientation.landscape;
+    final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
 
     final Widget mapContent = Stack(
       children: [
@@ -757,13 +761,11 @@ class _MapPageState extends State<MapPage>
 
             if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
               QuerySquareOverlay(points: _segmentDebugData.querySquare),
-            if (kDebugMode &&
-                _segmentDebugData.boundingCandidates.isNotEmpty)
+            if (kDebugMode && _segmentDebugData.boundingCandidates.isNotEmpty)
               CandidateBoundsOverlay(
                 candidates: _segmentDebugData.boundingCandidates,
               ),
-            if (kDebugMode &&
-                _segmentDebugData.candidatePaths.isNotEmpty)
+            if (kDebugMode && _segmentDebugData.candidatePaths.isNotEmpty)
               SegmentPolylineOverlay(
                 paths: _segmentDebugData.candidatePaths,
                 startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
@@ -792,8 +794,7 @@ class _MapPageState extends State<MapPage>
                     color: Colors.black54,
                     shape: const CircleBorder(),
                     child: IconButton(
-                      onPressed: () =>
-                          Scaffold.of(context).openEndDrawer(),
+                      onPressed: () => Scaffold.of(context).openEndDrawer(),
                       icon: const Icon(Icons.menu, color: Colors.white),
                       tooltip: AppLocalizations.of(context).openMenu,
                     ),
@@ -828,8 +829,9 @@ class _MapPageState extends State<MapPage>
 
     final Widget controlsPanel = MapControlsPanel(
       key: _controlsPanelKey,
-      placement:
-          isLandscape ? MapControlsPlacement.left : MapControlsPlacement.bottom,
+      placement: isLandscape
+          ? MapControlsPlacement.left
+          : MapControlsPlacement.bottom,
       speedKmh: _speedKmh,
       avgController: _avgCtrl,
       hasActiveSegment: _segmentTracker.activeSegmentId != null,
@@ -842,37 +844,18 @@ class _MapPageState extends State<MapPage>
       _updateControlsPanelHeight();
     });
 
+    final List<Widget> stackChildren = [
+      Positioned.fill(child: mapContent),
+      if (isLandscape)
+        Align(alignment: Alignment.centerLeft, child: controlsPanel)
+      else
+        Positioned(left: 0, right: 0, bottom: 0, child: controlsPanel),
+      mapFab,
+    ];
+
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
-      body: isLandscape
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                controlsPanel,
-                Expanded(
-                  child: Stack(
-                    children: [
-                      mapContent,
-                      mapFab,
-                    ],
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              fit: StackFit.expand,
-              children: [
-                mapContent,
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: controlsPanel,
-                ),
-                mapFab,
-              ],
-            ),
-      
+      body: Stack(fit: StackFit.expand, children: stackChildren),
     );
   }
 }
