@@ -30,9 +30,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/data/toll_segments.csv
     - assets/data/ding_sound.mp3
+    - assets/branding/tollsignal_icon.png
+
+flutter_native_splash:
+  color: "#FFC400"
+  image: assets/branding/tollsignal_icon.png
+  android_12:
+    color: "#FFC400"
+    image: assets/branding/tollsignal_icon.png
+  android: true
+  ios: true
+  web: false
