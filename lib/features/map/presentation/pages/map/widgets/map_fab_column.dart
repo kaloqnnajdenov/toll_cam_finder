@@ -25,6 +25,7 @@ class MapFabColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final palette = AppColors.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -39,7 +40,7 @@ class MapFabColumn extends StatelessWidget {
           child: _CompassNeedle(
             followHeading: followHeading,
             headingDegrees: headingDegrees,
-            color: followHeading ? Colors.white : AppColors.onDark,
+            color: followHeading ? Colors.white : palette.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -50,7 +51,7 @@ class MapFabColumn extends StatelessWidget {
           onPressed: onResetView,
           child: Icon(
             followUser ? Icons.my_location : Icons.my_location_outlined,
-            color: followUser ? Colors.white : AppColors.onDark,
+            color: followUser ? Colors.white : palette.onSurface,
           ),
         ),
       ],
@@ -120,16 +121,22 @@ class _MapMiniFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color backgroundColor =
-        active ? AppColors.primary : AppColors.surface.withOpacity(0.7);
-    final Color borderColor = active ? Colors.transparent : AppColors.divider;
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color backgroundColor = active
+        ? palette.primary
+        : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
+    final Color borderColor = active
+        ? Colors.transparent
+        : palette.divider.withOpacity(isDark ? 1 : 0.7);
 
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),

@@ -39,6 +39,7 @@ class SegmentMetricsCard extends StatelessWidget {
       animation: avgController,
       builder: (context, _) {
         final localizations = AppLocalizations.of(context);
+        final AppPalette palette = AppColors.of(context);
         final String speedUnit = localizations.speedDialUnitKmh;
         final DateTime now = DateTime.now();
         final bool averagingActive =
@@ -79,8 +80,11 @@ class SegmentMetricsCard extends StatelessWidget {
         final bool showSafeSpeed =
             averagingActive && safeSpeedFormatted.hasValue;
 
-        final Color? currentSpeedColor =
-            _resolveCurrentSpeedColor(currentSpeedKmh, speedLimitKph);
+        final Color? currentSpeedColor = _resolveCurrentSpeedColor(
+          palette,
+          currentSpeedKmh,
+          speedLimitKph,
+        );
 
         final String distanceLabelKey = hasActiveSegment
             ? 'segmentMetricsDistanceToEnd'
@@ -100,25 +104,25 @@ class SegmentMetricsCard extends StatelessWidget {
             label: localizations.translate('segmentMetricsCurrentSpeed'),
             value: currentSpeed,
             valueColor: currentSpeedColor,
-            unitColor: AppColors.secondaryText,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: localizations.translate('segmentMetricsAverageSpeed'),
             value: averageSpeed,
-            unitColor: AppColors.secondaryText,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: showSafeSpeed
                 ? localizations.translate('segmentMetricsSafeSpeed')
                 : localizations.translate('segmentMetricsSpeedLimit'),
             value: showSafeSpeed ? safeSpeedFormatted : limitSpeed,
-            unitColor: AppColors.secondaryText,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: distanceLabel,
             value: distanceValue,
-            valueColor: AppColors.onDark,
-            unitColor: AppColors.secondaryText,
+            valueColor: palette.onSurface,
+            unitColor: palette.secondaryText,
           ),
         ];
 
@@ -323,7 +327,10 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color dividerColor = AppColors.divider.withOpacity(0.9);
+    final AppPalette palette = AppColors.of(context);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color dividerColor =
+        palette.divider.withOpacity(isDark ? 0.9 : 0.55);
 
     const cellGap = 16.0;
 
@@ -442,6 +449,7 @@ class _MetricTile extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final bool preset = dense;
     final bool isDark = theme.brightness == Brightness.dark;
+    final AppPalette palette = AppColors.of(context);
 
     final double layoutScale = visualScale.clamp(0.2, 1.0).toDouble();
     final double textScaleFactor = MediaQuery.textScaleFactorOf(context);
@@ -461,7 +469,7 @@ class _MetricTile extends StatelessWidget {
             theme.textTheme.labelSmall ??
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
     final TextStyle labelStyle = labelBase.copyWith(
-      color: AppColors.secondaryText,
+      color: palette.secondaryText,
       fontSize: (labelBase.fontSize ?? 12) *
           typographicScale.clamp(0.7, 1.0).toDouble(),
       letterSpacing: preset ? 0.9 : 0.6,
@@ -478,8 +486,8 @@ class _MetricTile extends StatelessWidget {
             const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.0));
     final double baseValueFontSize = valueBase.fontSize ?? 40;
     final Color valueColor = data.value.isUnavailable
-        ? AppColors.unavailable
-        : (data.valueColor ?? AppColors.onDark);
+        ? palette.unavailable
+        : (data.valueColor ?? palette.onSurface);
     final TextStyle valueStyle = valueBase.copyWith(
       color: valueColor,
       fontSize: baseValueFontSize * typographicScale,
@@ -495,8 +503,8 @@ class _MetricTile extends StatelessWidget {
             const TextStyle(fontSize: 18, fontWeight: FontWeight.w600));
     final double baseUnitFontSize = unitBase.fontSize ?? 18;
     final Color unitColor = data.value.isUnavailable
-        ? AppColors.unavailable
-        : (data.unitColor ?? AppColors.secondaryText);
+        ? palette.unavailable
+        : (data.unitColor ?? palette.secondaryText);
     final TextStyle unitStyle = unitBase.copyWith(
       color: unitColor,
       fontSize: baseUnitFontSize *
@@ -511,12 +519,13 @@ class _MetricTile extends StatelessWidget {
     final bool showBackground = !preset;
     final BoxDecoration? decoration;
     if (showBackground) {
-      final Color baseColor = AppColors.surface.withOpacity(isDark ? 0.55 : 0.6);
+      final Color baseColor =
+          palette.surface.withOpacity(isDark ? 0.55 : 0.82);
       decoration = BoxDecoration(
         color: baseColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.divider.withOpacity(isDark ? 0.9 : 0.75),
+          color: palette.divider.withOpacity(isDark ? 0.9 : 0.65),
           width: 1,
         ),
       );
@@ -556,7 +565,11 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
-Color? _resolveCurrentSpeedColor(double? currentSpeedKmh, double? limitKph) {
+Color? _resolveCurrentSpeedColor(
+  AppPalette palette,
+  double? currentSpeedKmh,
+  double? limitKph,
+) {
   final double? current = _sanitizeSpeedValue(currentSpeedKmh);
   final double? limit = _sanitizeSpeedValue(limitKph);
   if (current == null || limit == null || limit <= 0) {
@@ -565,12 +578,12 @@ Color? _resolveCurrentSpeedColor(double? currentSpeedKmh, double? limitKph) {
 
   final double ratio = current / limit;
   if (ratio <= 0.8) {
-    return AppColors.success;
+    return palette.success;
   }
   if (ratio < 1.0) {
-    return AppColors.warning;
+    return palette.warning;
   }
-  return AppColors.danger;
+  return palette.danger;
 }
 
 double? _sanitizeSpeedValue(double? value) {

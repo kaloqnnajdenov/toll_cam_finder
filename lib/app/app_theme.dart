@@ -2,53 +2,75 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/core/app_colors.dart';
 
-ThemeData buildAppTheme() {
-  const colorScheme = ColorScheme.dark(
-    primary: AppColors.primary,
-    onPrimary: Colors.white,
-    secondary: AppColors.success,
-    onSecondary: Colors.white,
-    tertiary: AppColors.warning,
-    onTertiary: AppColors.background,
-    error: AppColors.danger,
-    onError: Colors.white,
-    background: AppColors.background,
-    onBackground: AppColors.onDark,
-    surface: AppColors.surface,
-    onSurface: AppColors.onDark,
-    surfaceTint: Colors.transparent,
-    outline: AppColors.divider,
-    outlineVariant: AppColors.divider,
-  );
+ThemeData buildAppTheme({required bool isDarkMode}) {
+  final AppPalette palette = isDarkMode ? AppColors.dark : AppColors.light;
+
+  final ColorScheme colorScheme = isDarkMode
+      ? ColorScheme.dark(
+          primary: palette.primary,
+          onPrimary: Colors.white,
+          secondary: palette.success,
+          onSecondary: Colors.white,
+          tertiary: palette.warning,
+          onTertiary: palette.onSurface,
+          error: palette.danger,
+          onError: Colors.white,
+          background: palette.background,
+          onBackground: palette.onSurface,
+          surface: palette.surface,
+          onSurface: palette.onSurface,
+          surfaceTint: Colors.transparent,
+          outline: palette.divider,
+          outlineVariant: palette.divider,
+        )
+      : ColorScheme.light(
+          primary: palette.primary,
+          onPrimary: Colors.white,
+          secondary: palette.success,
+          onSecondary: Colors.white,
+          tertiary: palette.warning,
+          onTertiary: palette.onSurface,
+          error: palette.danger,
+          onError: Colors.white,
+          background: palette.background,
+          onBackground: palette.onSurface,
+          surface: palette.surface,
+          onSurface: palette.onSurface,
+          surfaceTint: Colors.transparent,
+          outline: palette.divider,
+          outlineVariant: palette.divider,
+        );
 
   final floatingActionButtonTheme = FloatingActionButtonThemeData(
-    backgroundColor: AppColors.surface.withOpacity(0.7),
-    foregroundColor: AppColors.onDark,
+    backgroundColor:
+        palette.surface.withOpacity(isDarkMode ? 0.7 : 0.9),
+    foregroundColor: palette.onSurface,
     elevation: 0,
     highlightElevation: 0,
-    shape: const CircleBorder(
-      side: BorderSide(color: AppColors.divider, width: 1),
+    shape: CircleBorder(
+      side: BorderSide(color: palette.divider.withOpacity(isDarkMode ? 1 : 0.6), width: 1),
     ),
   );
 
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: AppColors.background,
-    appBarTheme: const AppBarTheme(
+    scaffoldBackgroundColor: palette.background,
+    appBarTheme: AppBarTheme(
       centerTitle: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      foregroundColor: AppColors.onDark,
+      foregroundColor: palette.onSurface,
       surfaceTintColor: Colors.transparent,
     ),
     floatingActionButtonTheme: floatingActionButtonTheme,
-    dividerColor: AppColors.divider,
-    snackBarTheme: const SnackBarThemeData(
-      backgroundColor: AppColors.toastBackground,
-      contentTextStyle: TextStyle(color: AppColors.onDark),
-      actionTextColor: AppColors.primary,
+    dividerColor: palette.divider,
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: palette.toastBackground,
+      contentTextStyle: TextStyle(color: palette.onSurface),
+      actionTextColor: palette.primary,
       behavior: SnackBarBehavior.floating,
     ),
+    extensions: <ThemeExtension<dynamic>>[palette],
   );
 }

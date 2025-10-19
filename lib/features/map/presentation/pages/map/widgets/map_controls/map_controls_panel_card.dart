@@ -41,10 +41,14 @@ class MapControlsPanelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BorderRadius borderRadius = BorderRadius.circular(28);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = colorScheme.brightness == Brightness.dark;
-    final Color backgroundColor = AppColors.surface.withOpacity(0.72);
-    final Color borderColor = AppColors.divider.withOpacity(isDark ? 1 : 0.9);
-    final Color shadowColor = Colors.black.withOpacity(isDark ? 0.42 : 0.25);
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.72 : 0.9);
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 1 : 0.75);
+    final Color shadowColor =
+        Colors.black.withOpacity(isDark ? 0.42 : 0.16);
 
     return ConstrainedBox(
       constraints: BoxConstraints(

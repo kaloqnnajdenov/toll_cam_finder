@@ -87,22 +87,27 @@ class _OsmAttributionText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppPalette palette = AppColors.of(context);
     final baseStyle = TextStyle(
       fontSize: AppConstants.mapAttributionFontSize,
-      color: AppColors.secondaryText,
+      color: palette.secondaryText,
       height: AppConstants.mapAttributionLineHeight,
     );
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final linkStyle = baseStyle.copyWith(
-      color: AppColors.secondaryText,
+      color: palette.secondaryText,
       decoration: TextDecoration.underline,
       fontWeight: FontWeight.w600,
     );
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.6),
+        color: palette.surface.withOpacity(isDark ? 0.6 : 0.82),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.divider, width: 1),
+        border: Border.all(
+          color: palette.divider.withOpacity(isDark ? 1 : 0.7),
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

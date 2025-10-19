@@ -113,6 +113,7 @@ class AppLocalizations {
       'languageLabelEnglish': 'English',
       'languageLabelBulgarian': 'Bulgarian',
       'languageButton': 'Change language',
+      'darkMode': 'Dark mode',
       'audioModeTitle': 'Guidance audio mode',
       'audioModeFullGuidance':
           'Play all guidance sounds (foreground and background)',
@@ -358,6 +359,7 @@ class AppLocalizations {
       'languageLabelEnglish': 'Английски',
       'languageLabelBulgarian': 'Български',
 'languageButton': 'Смени езика',
+'darkMode': 'Тъмен режим',
 'localSegments': 'Локални сегменти',
 'loginAction': 'Вход',
 'logIn': 'Вход',
@@ -515,6 +517,7 @@ class AppLocalizations {
   String get northUp => _value('northUp');
   String get recenter => _value('recenter');
   String get languageButton => _value('languageButton');
+  String get darkMode => _value('darkMode');
   String get audioModeTitle => _value('audioModeTitle');
   String get audioModeFullGuidance => _value('audioModeFullGuidance');
   String get audioModeForegroundMuted =>

@@ -7,6 +7,7 @@ import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
+import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => GuidanceAudioController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeController(),
         ),
       ],
       child: const TollCamApp(),

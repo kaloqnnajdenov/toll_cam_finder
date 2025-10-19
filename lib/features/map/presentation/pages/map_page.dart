@@ -34,6 +34,7 @@ import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracke
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
+import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 import 'package:toll_cam_finder/shared/services/location_service.dart';
 import 'package:toll_cam_finder/shared/services/notification_permission_service.dart';
 import 'package:toll_cam_finder/shared/services/permission_service.dart';
@@ -782,18 +783,23 @@ class _MapPageState extends State<MapPage>
           top: 0,
           child: IgnorePointer(
             ignoring: true,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.mapScrim,
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: const SizedBox(height: 160),
+            child: Builder(
+              builder: (context) {
+                final palette = AppColors.of(context);
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        palette.mapScrim,
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  child: const SizedBox(height: 160),
+                );
+              },
             ),
           ),
         ),
@@ -818,11 +824,17 @@ class _MapPageState extends State<MapPage>
                 builder: (context) {
                   final ScaffoldState? scaffoldState = Scaffold.maybeOf(context);
                   final bool isDrawerOpen = scaffoldState?.isEndDrawerOpen ?? false;
-                  final Color backgroundColor =
-                      isDrawerOpen ? AppColors.primary : AppColors.surface.withOpacity(0.7);
-                  final Color iconColor = isDrawerOpen ? Colors.white : AppColors.onDark;
+                  final theme = Theme.of(context);
+                  final palette = AppColors.of(context);
+                  final bool isDark = theme.brightness == Brightness.dark;
+                  final Color backgroundColor = isDrawerOpen
+                      ? palette.primary
+                      : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
+                  final Color iconColor = isDrawerOpen ? Colors.white : palette.onSurface;
                   final BorderSide borderSide = BorderSide(
-                    color: isDrawerOpen ? Colors.transparent : AppColors.divider,
+                    color: isDrawerOpen
+                        ? Colors.transparent
+                        : palette.divider.withOpacity(isDark ? 1 : 0.7),
                     width: 1,
                   );
 
@@ -831,7 +843,7 @@ class _MapPageState extends State<MapPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
+                          color: Colors.black.withOpacity(isDark ? 0.35 : 0.14),
                           blurRadius: 24,
                           offset: const Offset(0, 12),
                         ),

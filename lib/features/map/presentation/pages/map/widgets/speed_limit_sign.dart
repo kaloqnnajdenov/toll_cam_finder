@@ -17,9 +17,12 @@ class SpeedLimitSign extends StatelessWidget {
     final bool isOverspeed =
         limitValue != null && current != null && limitValue > 0 && current >= limitValue;
 
-    final Color fillColor = isOverspeed ? AppColors.danger : Colors.white;
+    final AppPalette palette = AppColors.of(context);
+    final Color fillColor = isOverspeed ? palette.danger : Colors.white;
     final double borderWidth = isOverspeed ? 0 : 6;
-    final Color textColor = isOverspeed ? Colors.white : AppColors.background;
+    final Color textColor = isOverspeed ? Colors.white : palette.onSurface;
+
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return IgnorePointer(
       child: Container(
@@ -28,10 +31,10 @@ class SpeedLimitSign extends StatelessWidget {
         decoration: BoxDecoration(
           color: fillColor,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.danger, width: borderWidth),
+          border: Border.all(color: palette.danger, width: borderWidth),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.35),
+              color: Colors.black.withOpacity(isDark ? 0.35 : 0.18),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
