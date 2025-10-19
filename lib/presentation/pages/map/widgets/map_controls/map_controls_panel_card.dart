@@ -39,44 +39,78 @@ class MapControlsPanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final BorderRadius borderRadius = BorderRadius.circular(28);
+
+    final Color primaryOverlay = Color.lerp(
+          colorScheme.surface,
+          Colors.white,
+          isDark ? 0.35 : 0.85,
+        )!
+        .withOpacity(isDark ? 0.65 : 0.92);
+    final Color secondaryOverlay = Color.lerp(
+          colorScheme.surface,
+          Colors.white,
+          isDark ? 0.25 : 0.75,
+        )!
+        .withOpacity(isDark ? 0.58 : 0.85);
+    final Color borderColor = Color.lerp(
+          Colors.white,
+          colorScheme.onSurface,
+          isDark ? 0.65 : 0.1,
+        )!
+        .withOpacity(isDark ? 0.32 : 0.45);
+
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: maxWidth,
         maxHeight: maxHeight ?? double.infinity,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: borderRadius,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              color: colorScheme.surface.withOpacity(0.88),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: borderRadius,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  primaryOverlay,
+                  secondaryOverlay,
+                ],
+              ),
               border: Border.all(
-                color: Colors.white.withOpacity(0.35),
-                width: 1,
+                color: borderColor,
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 28,
-                  offset: const Offset(0, 12),
+                  color: Colors.black.withOpacity(isDark ? 0.36 : 0.12),
+                  blurRadius: 34,
+                  offset: const Offset(0, 18),
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(1, 1, 1, 1),
-            child: SegmentMetricsCard(
-              currentSpeedKmh: speedKmh,
-              avgController: avgController,
-              hasActiveSegment: hasActiveSegment,
-              speedLimitKph: segmentSpeedLimitKph,
-              distanceToSegmentStartMeters: distanceToSegmentStartMeters,
-              distanceToSegmentEndMeters:
-                  segmentDebugPath?.remainingDistanceMeters,
-              stackMetricsVertically: stackMetricsVertically,
-              forceSingleRow: forceSingleRow,
-              maxAvailableHeight: maxHeight,
-              isLandscape: isLandscape,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 4,
+              ),
+              child: SegmentMetricsCard(
+                currentSpeedKmh: speedKmh,
+                avgController: avgController,
+                hasActiveSegment: hasActiveSegment,
+                speedLimitKph: segmentSpeedLimitKph,
+                distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+                distanceToSegmentEndMeters:
+                    segmentDebugPath?.remainingDistanceMeters,
+                stackMetricsVertically: stackMetricsVertically,
+                forceSingleRow: forceSingleRow,
+                maxAvailableHeight: maxHeight,
+                isLandscape: isLandscape,
+              ),
             ),
           ),
         ),
