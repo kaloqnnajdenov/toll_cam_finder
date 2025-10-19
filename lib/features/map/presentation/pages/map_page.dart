@@ -825,10 +825,16 @@ class _MapPageState extends State<MapPage>
                 Expanded(child: mapContent),
               ],
             )
-          : Column(
+          : Stack(
+              fit: StackFit.expand,
               children: [
-                Expanded(child: mapContent),
-                controlsPanel,
+               mapContent,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: controlsPanel,
+                ),
               ],
             ),
       
