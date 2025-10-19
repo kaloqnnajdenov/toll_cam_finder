@@ -27,28 +27,90 @@ class MapFabColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        FloatingActionButton.small(
+        _RoundActionButton(
           heroTag: 'heading_btn',
           onPressed: onToggleHeading,
           tooltip: followHeading
               ? AppLocalizations.of(context).northUp
               : AppLocalizations.of(context).faceTravelDirection,
+          gradientColors: const [
+            Color(0xFF7EB7FF),
+            Color(0xFF4C8DFF),
+          ],
           child: _CompassNeedle(
             followHeading: followHeading,
             headingDegrees: headingDegrees,
           ),
         ),
         const SizedBox(height: 12),
-        FloatingActionButton.extended(
+        _RoundActionButton(
           heroTag: 'recenter_btn',
           onPressed: onResetView,
-          icon: Icon(
-            followUser ? Icons.my_location : Icons.my_location_outlined,
+          tooltip: AppLocalizations.of(context).recenter,
+          gradientColors: const [
+            Color(0xFFF5F7FB),
+            Color(0xFFE1E7F2),
+          ],
+          child: Icon(
+            followUser ? Icons.my_location : Icons.radio_button_unchecked,
+            color: const Color(0xFF3A4B66),
           ),
-          label: Text(AppLocalizations.of(context).recenter),
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _RoundActionButton extends StatelessWidget {
+  const _RoundActionButton({
+    required this.heroTag,
+    required this.onPressed,
+    required this.tooltip,
+    required this.gradientColors,
+    required this.child,
+  });
+
+  final String heroTag;
+  final VoidCallback onPressed;
+  final String tooltip;
+  final List<Color> gradientColors;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color shadowColor = Colors.black.withOpacity(0.12);
+
+    return Hero(
+      tag: heroTag,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          elevation: 4,
+          shadowColor: shadowColor,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: gradientColors,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: Center(child: child),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -64,10 +126,7 @@ class _CompassNeedle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color indicatorColor =
-        theme.floatingActionButtonTheme.foregroundColor ??
-        theme.colorScheme.onPrimary;
+    final Color indicatorColor = Colors.white;
 
     final bool shouldRotate = followHeading && headingDegrees != null;
     final double rotationTurns = shouldRotate
@@ -84,7 +143,7 @@ class _CompassNeedle extends StatelessWidget {
             turns: rotationTurns,
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
-            child: Icon(Icons.navigation, size: 22, color: indicatorColor),
+            child: Icon(Icons.navigation, size: 24, color: indicatorColor),
           ),
           AnimatedOpacity(
             opacity: followHeading ? 0 : 1,
@@ -92,7 +151,7 @@ class _CompassNeedle extends StatelessWidget {
             child: Icon(
               Icons.lock,
               size: 12,
-              color: indicatorColor.withOpacity(0.7),
+              color: Colors.white.withOpacity(0.7),
             ),
           ),
         ],
