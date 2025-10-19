@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/app_messages.dart';
+import '/../core/app_messages.dart';
 import 'local_segments_service.dart';
 
 /// Possible moderation statuses returned for a submitted segment.

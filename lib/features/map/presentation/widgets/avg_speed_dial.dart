@@ -3,7 +3,6 @@ import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
-import 'package:toll_cam_finder/shared/widgets/smooth_number_text.dart';
 
 /// "Average speed" dial styled to match CurrentSpeedDial.
 class AverageSpeedDial extends StatelessWidget {
@@ -76,9 +75,8 @@ class AverageSpeedDial extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          SmoothNumberText(
-                            value: avg,
-                            decimals: decimals,
+                          Text(
+                            avg.toStringAsFixed(decimals),
                             style: textTheme.displaySmall,
                           ),
                           const SizedBox(width: AppConstants.speedDialValueUnitSpacing),

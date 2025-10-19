@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../presentation/pages/auth/login_page.dart';
-import '../presentation/pages/auth/profile_page.dart';
-import '../presentation/pages/auth/sign_up_page.dart';
-import '../presentation/pages/create_segment_page.dart';
-import '../presentation/pages/map_page.dart';
-import '../presentation/pages/segments_page.dart';
+import 'package:toll_cam_finder/features/auth/presentation/pages/login_page.dart';
+import 'package:toll_cam_finder/features/auth/presentation/pages/profile_page.dart';
+import 'package:toll_cam_finder/features/auth/presentation/pages/sign_up_page.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map_page.dart';
+import 'package:toll_cam_finder/features/segments/presentation/pages/create_segment_page.dart';
+import 'package:toll_cam_finder/features/segments/presentation/pages/segments_page.dart';
+
 
 class AppRoutes {
   static const String map = '/';
