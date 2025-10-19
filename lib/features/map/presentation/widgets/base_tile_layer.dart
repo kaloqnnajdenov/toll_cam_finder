@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -88,26 +89,36 @@ class _OsmAttributionText extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseStyle = TextStyle(
       fontSize: AppConstants.mapAttributionFontSize,
-      color: Colors.black.withOpacity(AppConstants.mapAttributionBaseOpacity),
+      color: AppColors.secondaryText,
       height: AppConstants.mapAttributionLineHeight,
     );
     final linkStyle = baseStyle.copyWith(
-      color: Theme.of(context).colorScheme.primary,
+      color: AppColors.secondaryText,
       decoration: TextDecoration.underline,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w600,
     );
 
-    return RichText(
-      text: TextSpan(
-        style: baseStyle,
-        children: [
-          const TextSpan(text: 'Map data from '),
-          TextSpan(
-            text: 'OpenStreetMap',
-            style: linkStyle,
-            recognizer: TapGestureRecognizer()..onTap = onLinkTap,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.divider, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: RichText(
+          text: TextSpan(
+            style: baseStyle,
+            children: [
+              const TextSpan(text: 'Map data from '),
+              TextSpan(
+                text: 'OpenStreetMap',
+                style: linkStyle,
+                recognizer: TapGestureRecognizer()..onTap = onLinkTap,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
