@@ -6,7 +6,7 @@ import 'package:toll_cam_finder/features/map/domain/utils/average_speed_calculat
 /// Tracks average speed (same unit as fed samples).
 class AverageSpeedController extends ChangeNotifier {
   AverageSpeedController({AverageSpeedCalculator? calculator})
-      : _calculator = calculator ?? const AverageSpeedCalculator();
+    : _calculator = calculator ?? const AverageSpeedCalculator();
 
   bool _isRunning = false;
   double _distanceMeters = 0.0;
@@ -68,10 +68,14 @@ class AverageSpeedController extends ChangeNotifier {
       _startTicker();
     }
 
-    final DateTime clampedTimestamp = timestamp.isBefore(_startedAt!) ? _startedAt! : timestamp;
+    final DateTime clampedTimestamp = timestamp.isBefore(_startedAt!)
+        ? _startedAt!
+        : timestamp;
 
     final double sanitizedDistance =
-        (distanceDeltaMeters.isFinite && distanceDeltaMeters > 0) ? distanceDeltaMeters : 0.0;
+        (distanceDeltaMeters.isFinite && distanceDeltaMeters > 0)
+        ? distanceDeltaMeters
+        : 0.0;
 
     if (sanitizedDistance > 0.0) {
       _distanceMeters += sanitizedDistance;
@@ -97,11 +101,10 @@ class AverageSpeedController extends ChangeNotifier {
   double avg_speed_done({
     required double segmentLengthMeters,
     Duration? segmentDuration,
-  }) =>
-      avgSpeedDone(
-        segmentLengthMeters: segmentLengthMeters,
-        segmentDuration: segmentDuration,
-      );
+  }) => avgSpeedDone(
+    segmentLengthMeters: segmentLengthMeters,
+    segmentDuration: segmentDuration,
+  );
 
   void _startTicker() {
     _stopTicker();
@@ -123,21 +126,21 @@ class AverageSpeedController extends ChangeNotifier {
       }
       return;
     }
- final DateTime referenceTime;
-    if (now != null) {
-      referenceTime = now;
-    } else if (_lastSampleAt != null) {
+    DateTime referenceTime = now ?? DateTime.now();
+
+    if (_lastSampleAt != null && referenceTime.isBefore(_lastSampleAt!)) {
       referenceTime = _lastSampleAt!;
-    } else {
-      referenceTime = DateTime.now();
+    }
+
+    if (referenceTime.isBefore(_startedAt!)) {
+      referenceTime = _startedAt!;
     }
 
     final Duration diff = referenceTime.difference(_startedAt!);
     if (diff <= Duration.zero) {
       _averageKph = 0.0;
- if (now != null) {
-        _lastSampleAt = referenceTime;
-      }      if (forceNotify) {
+      _lastSampleAt = referenceTime;
+      if (forceNotify) {
         notifyListeners();
       }
       return;
@@ -150,9 +153,7 @@ class AverageSpeedController extends ChangeNotifier {
 
     final bool changed = (_averageKph - nextAverage).abs() > 1e-6;
     _averageKph = nextAverage;
-if (now != null) {
-      _lastSampleAt = referenceTime;
-    }
+    _lastSampleAt = referenceTime;
     if (forceNotify || changed) {
       notifyListeners();
     }
