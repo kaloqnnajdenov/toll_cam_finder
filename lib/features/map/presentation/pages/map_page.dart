@@ -127,6 +127,9 @@ class _MapPageState extends State<MapPage>
 
   double? _userHeading;
 
+  final GlobalKey _controlsPanelKey = GlobalKey();
+  double _controlsPanelHeight = 0;
+
   bool _useForegroundLocationService = false;
   bool _didRequestNotificationPermission = false;
   String? _lastNotificationStatus;
@@ -715,6 +718,21 @@ class _MapPageState extends State<MapPage>
     }
   }
 
+  void _updateControlsPanelHeight() {
+    final BuildContext? context = _controlsPanelKey.currentContext;
+    final double newHeight = context?.size?.height ?? 0;
+
+    if (!mounted) {
+      return;
+    }
+
+    if ((newHeight - _controlsPanelHeight).abs() > 0.5) {
+      setState(() {
+        _controlsPanelHeight = newHeight;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
@@ -785,26 +803,31 @@ class _MapPageState extends State<MapPage>
             ),
           ),
         ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, bottom: 16),
-              child: MapFabColumn(
-                followUser: _followUser,
-                followHeading: _followHeading,
-                headingDegrees: _userHeading,
-                onToggleHeading: _toggleFollowHeading,
-                onResetView: _onResetView,
-                avgController: _avgCtrl,
-              ),
-            ),
-          ),
-        ),
       ],
     );
 
+    final Widget mapFab = SafeArea(
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: EdgeInsets.only(
+            right: 16,
+            bottom: 16 + (isLandscape ? 0 : _controlsPanelHeight),
+          ),
+          child: MapFabColumn(
+            followUser: _followUser,
+            followHeading: _followHeading,
+            headingDegrees: _userHeading,
+            onToggleHeading: _toggleFollowHeading,
+            onResetView: _onResetView,
+            avgController: _avgCtrl,
+          ),
+        ),
+      ),
+    );
+
     final Widget controlsPanel = MapControlsPanel(
+      key: _controlsPanelKey,
       placement:
           isLandscape ? MapControlsPlacement.left : MapControlsPlacement.bottom,
       speedKmh: _speedKmh,
@@ -815,6 +838,10 @@ class _MapPageState extends State<MapPage>
       distanceToSegmentStartMeters: _nearestSegmentStartMeters,
     );
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateControlsPanelHeight();
+    });
+
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
       body: isLandscape
@@ -822,19 +849,27 @@ class _MapPageState extends State<MapPage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 controlsPanel,
-                Expanded(child: mapContent),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      mapContent,
+                      mapFab,
+                    ],
+                  ),
+                ),
               ],
             )
           : Stack(
               fit: StackFit.expand,
               children: [
-               mapContent,
+                mapContent,
                 Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
                   child: controlsPanel,
                 ),
+                mapFab,
               ],
             ),
       
