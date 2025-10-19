@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_colors.dart';
-import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 
 class MapFabColumn extends StatelessWidget {
   const MapFabColumn({
@@ -11,7 +10,6 @@ class MapFabColumn extends StatelessWidget {
     required this.followHeading,
     required this.onToggleHeading,
     required this.onResetView,
-    required this.avgController,
     this.headingDegrees,
   });
 
@@ -19,10 +17,8 @@ class MapFabColumn extends StatelessWidget {
   final bool followHeading;
   final VoidCallback onToggleHeading;
   final VoidCallback onResetView;
-  final AverageSpeedController avgController;
   final double? headingDegrees;
 
-  //TODO: remove unnecesery logic if not needed in FABs
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
@@ -31,15 +27,10 @@ class MapFabColumn extends StatelessWidget {
       if (!followHeading)
         _MapMiniFab(
           heroTag: 'heading_btn',
-          tooltip: followHeading
-              ? localizations.northUp
-              : localizations.faceTravelDirection,
-          active: false,
+          tooltip: localizations.faceTravelDirection,
           onPressed: onToggleHeading,
           child: _CompassNeedle(
-            followHeading: false,
             headingDegrees: headingDegrees,
-            color: palette.onSurface,
           ),
         ),
       if (!followHeading && !followUser) const SizedBox(height: 12),
@@ -47,7 +38,6 @@ class MapFabColumn extends StatelessWidget {
         _MapMiniFab(
           heroTag: 'recenter_btn',
           tooltip: localizations.recenter,
-          active: false,
           onPressed: onResetView,
           child: Icon(Icons.my_location_outlined, color: palette.onSurface),
         ),
@@ -63,21 +53,17 @@ class MapFabColumn extends StatelessWidget {
 
 class _CompassNeedle extends StatelessWidget {
   const _CompassNeedle({
-    required this.followHeading,
     required this.headingDegrees,
-    required this.color,
   });
 
-  final bool followHeading;
   final double? headingDegrees;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final bool shouldRotate = followHeading && headingDegrees != null;
-    final double rotationTurns = shouldRotate
-        ? (headingDegrees! % 360) / 360
-        : 0;
+    final palette = AppColors.of(context);
+    final color = palette.onSurface;
+    final bool hasHeading = headingDegrees != null;
+    final double rotationTurns = hasHeading ? (headingDegrees! % 360) / 360 : 0;
 
     return SizedBox(
       width: 36,
@@ -91,11 +77,7 @@ class _CompassNeedle extends StatelessWidget {
             curve: Curves.easeOutCubic,
             child: Icon(Icons.navigation, size: 22, color: color),
           ),
-          AnimatedOpacity(
-            opacity: followHeading ? 0 : 1,
-            duration: const Duration(milliseconds: 200),
-            child: Icon(Icons.lock, size: 12, color: color.withOpacity(0.7)),
-          ),
+          Icon(Icons.lock, size: 12, color: color.withOpacity(0.7)),
         ],
       ),
     );
@@ -108,26 +90,22 @@ class _MapMiniFab extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     required this.child,
-    required this.active,
   });
 
   final String heroTag;
   final String tooltip;
   final VoidCallback onPressed;
   final Widget child;
-  final bool active;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-    final Color backgroundColor = active
-        ? palette.primary
-        : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
-    final Color borderColor = active
-        ? Colors.transparent
-        : palette.divider.withOpacity(isDark ? 1 : 0.7);
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.7 : 0.92);
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 1 : 0.7);
 
     return DecoratedBox(
       decoration: BoxDecoration(
