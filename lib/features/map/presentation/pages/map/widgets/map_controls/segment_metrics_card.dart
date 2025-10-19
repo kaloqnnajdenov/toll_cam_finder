@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/speed_limit_colors.dart';
 
 class SegmentMetricsCard extends StatelessWidget {
   const SegmentMetricsCard({
@@ -69,10 +70,7 @@ class SegmentMetricsCard extends StatelessWidget {
         final _MetricValue averageSpeed = averagingActive
             ? _formatSpeed(avgController.average, speedUnit)
             : const _MetricValue(value: _MetricValue.missingValue, unit: null);
-        final _MetricValue limitSpeed = _formatSpeed(
-          speedLimitKph,
-          speedUnit,
-        );
+        final _MetricValue limitSpeed = _formatSpeed(speedLimitKph, speedUnit);
         final _MetricValue safeSpeedFormatted = safeSpeed != null
             ? _formatSpeed(safeSpeed, speedUnit)
             : const _MetricValue(value: _MetricValue.missingValue, unit: null);
@@ -80,11 +78,13 @@ class SegmentMetricsCard extends StatelessWidget {
         final bool showSafeSpeed =
             averagingActive && safeSpeedFormatted.hasValue;
 
-        final Color? currentSpeedColor = _resolveCurrentSpeedColor(
-          palette,
-          currentSpeedKmh,
-          speedLimitKph,
-        );
+        final Color? averageSpeedColor = averagingActive
+            ? resolveSpeedLimitColor(
+                palette,
+                avgController.average,
+                speedLimitKph,
+              )
+            : null;
 
         final String distanceLabelKey = hasActiveSegment
             ? 'segmentMetricsDistanceToEnd'
@@ -97,18 +97,17 @@ class SegmentMetricsCard extends StatelessWidget {
           distanceMeters,
         );
 
-        final String distanceLabel =
-            localizations.translate(distanceLabelKey);
+        final String distanceLabel = localizations.translate(distanceLabelKey);
         final List<_MetricTileData> metrics = [
           _MetricTileData(
             label: localizations.translate('segmentMetricsCurrentSpeed'),
             value: currentSpeed,
-            valueColor: currentSpeedColor,
             unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: localizations.translate('segmentMetricsAverageSpeed'),
             value: averageSpeed,
+            valueColor: averageSpeedColor,
             unitColor: palette.secondaryText,
           ),
           _MetricTileData(
@@ -157,8 +156,9 @@ class SegmentMetricsCard extends StatelessWidget {
             }
 
             final bool useTwoColumns = width >= 360;
-            final double tileWidth =
-                useTwoColumns ? math.max((width - spacing) / 2, 0) : width;
+            final double tileWidth = useTwoColumns
+                ? math.max((width - spacing) / 2, 0)
+                : width;
 
             return Wrap(
               spacing: spacing,
@@ -210,7 +210,7 @@ class _SingleColumnMetrics extends StatelessWidget {
     final double? boundedHeight = maxAvailableHeight;
     final double panelVerticalPadding =
         (mediaQuery.viewPadding.top + mediaQuery.viewPadding.bottom) * 0.15 +
-            28;
+        28;
 
     final double preferredTileHeight = () {
       final double widthDrivenHeight = maxTileWidth * 0.78;
@@ -240,14 +240,12 @@ class _SingleColumnMetrics extends StatelessWidget {
         : 0.6;
     visualScale = math.min(visualScale, widthScale);
 
-    final double resolvedTileHeight =
-        (preferredTileHeight * visualScale)
-            .clamp(80, screenHeight * 0.32)
-            .toDouble();
+    final double resolvedTileHeight = (preferredTileHeight * visualScale)
+        .clamp(80, screenHeight * 0.32)
+        .toDouble();
 
     final double estimatedContentHeight =
-        resolvedTileHeight * metrics.length +
-            spacing * (metrics.length - 1);
+        resolvedTileHeight * metrics.length + spacing * (metrics.length - 1);
 
     Widget column = Column(
       mainAxisSize: MainAxisSize.min,
@@ -267,19 +265,17 @@ class _SingleColumnMetrics extends StatelessWidget {
               isLandscape: isLandscape,
             ),
           ),
-          if (i + 1 < metrics.length)
-            SizedBox(height: spacing),
+          if (i + 1 < metrics.length) SizedBox(height: spacing),
         ],
       ],
     );
 
     final double scrollableAreaHeight =
         boundedHeight != null && boundedHeight.isFinite
-            ? math.max(0, boundedHeight - panelVerticalPadding)
-            : double.infinity;
+        ? math.max(0, boundedHeight - panelVerticalPadding)
+        : double.infinity;
 
-    final bool needsScroll =
-        estimatedContentHeight > scrollableAreaHeight;
+    final bool needsScroll = estimatedContentHeight > scrollableAreaHeight;
 
     if (needsScroll) {
       column = SingleChildScrollView(
@@ -329,8 +325,7 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppPalette palette = AppColors.of(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color dividerColor =
-        palette.divider.withOpacity(isDark ? 0.9 : 0.55);
+    final Color dividerColor = palette.divider.withOpacity(isDark ? 0.9 : 0.55);
 
     const cellGap = 16.0;
 
@@ -466,11 +461,12 @@ class _MetricTile extends StatelessWidget {
             letterSpacing: 0.9,
           )
         : (theme.textTheme.labelMedium ??
-            theme.textTheme.labelSmall ??
-            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
+              theme.textTheme.labelSmall ??
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
     final TextStyle labelStyle = labelBase.copyWith(
       color: palette.secondaryText,
-      fontSize: (labelBase.fontSize ?? 12) *
+      fontSize:
+          (labelBase.fontSize ?? 12) *
           typographicScale.clamp(0.7, 1.0).toDouble(),
       letterSpacing: preset ? 0.9 : 0.6,
     );
@@ -482,8 +478,12 @@ class _MetricTile extends StatelessWidget {
             height: 1.0,
           )
         : (theme.textTheme.displaySmall ??
-            theme.textTheme.headlineMedium ??
-            const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.0));
+              theme.textTheme.headlineMedium ??
+              const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
+                height: 1.0,
+              ));
     final double baseValueFontSize = valueBase.fontSize ?? 40;
     final Color valueColor = data.value.isUnavailable
         ? palette.unavailable
@@ -500,27 +500,33 @@ class _MetricTile extends StatelessWidget {
             height: 1.0,
           )
         : (theme.textTheme.titleSmall ??
-            const TextStyle(fontSize: 18, fontWeight: FontWeight.w600));
+              const TextStyle(fontSize: 18, fontWeight: FontWeight.w600));
     final double baseUnitFontSize = unitBase.fontSize ?? 18;
     final Color unitColor = data.value.isUnavailable
         ? palette.unavailable
         : (data.unitColor ?? palette.secondaryText);
     final TextStyle unitStyle = unitBase.copyWith(
       color: unitColor,
-      fontSize: baseUnitFontSize *
+      fontSize:
+          baseUnitFontSize *
           typographicScale.clamp(0.6, isLandscape ? 1.2 : 1.05).toDouble(),
     );
 
-    final double verticalPadding =
-        lerpDouble(preset ? 8 : 8, preset ? 12 : 16, layoutScale)!;
-    final double horizontalPadding =
-        lerpDouble(preset ? 10 : 12, preset ? 16 : 20, layoutScale)!;
+    final double verticalPadding = lerpDouble(
+      preset ? 8 : 8,
+      preset ? 12 : 16,
+      layoutScale,
+    )!;
+    final double horizontalPadding = lerpDouble(
+      preset ? 10 : 12,
+      preset ? 16 : 20,
+      layoutScale,
+    )!;
 
     final bool showBackground = !preset;
     final BoxDecoration? decoration;
     if (showBackground) {
-      final Color baseColor =
-          palette.surface.withOpacity(isDark ? 0.55 : 0.82);
+      final Color baseColor = palette.surface.withOpacity(isDark ? 0.55 : 0.82);
       decoration = BoxDecoration(
         color: baseColor,
         borderRadius: BorderRadius.circular(20),
@@ -537,7 +543,7 @@ class _MetricTile extends StatelessWidget {
         vertical: verticalPadding,
         horizontal: horizontalPadding,
       ),
-           decoration: decoration,
+      decoration: decoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.max,
@@ -563,33 +569,6 @@ class _MetricTile extends StatelessWidget {
       ),
     );
   }
-}
-
-Color? _resolveCurrentSpeedColor(
-  AppPalette palette,
-  double? currentSpeedKmh,
-  double? limitKph,
-) {
-  final double? current = _sanitizeSpeedValue(currentSpeedKmh);
-  final double? limit = _sanitizeSpeedValue(limitKph);
-  if (current == null || limit == null || limit <= 0) {
-    return null;
-  }
-
-  final double ratio = current / limit;
-  if (ratio <= 0.8) {
-    return palette.success;
-  }
-  if (ratio < 1.0) {
-    return palette.warning;
-  }
-  return palette.danger;
-}
-
-double? _sanitizeSpeedValue(double? value) {
-  if (value == null || !value.isFinite) return null;
-  if (value < 0) return 0;
-  return value;
 }
 
 double? _sanitizeDistance(double? meters) {
@@ -634,18 +613,16 @@ _MetricValue _formatSpeed(double? speedKph, String unit) {
   return _MetricValue(value: formatted, unit: unit);
 }
 
-_MetricValue _formatDistance(
-  AppLocalizations localizations,
-  double? meters,
-) {
+_MetricValue _formatDistance(AppLocalizations localizations, double? meters) {
   if (meters == null || !meters.isFinite) {
     return const _MetricValue(value: _MetricValue.missingValue, unit: null);
   }
   if (meters >= 1000) {
     final double km = meters / 1000.0;
     final String unit = localizations.translate('unitKilometersShort');
-    final String formatted =
-        km >= 10 ? km.toStringAsFixed(0) : km.toStringAsFixed(1);
+    final String formatted = km >= 10
+        ? km.toStringAsFixed(0)
+        : km.toStringAsFixed(1);
     return _MetricValue(value: formatted, unit: unit);
   }
   final String unit = localizations.translate('unitMetersShort');

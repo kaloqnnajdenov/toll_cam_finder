@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/speed_limit_colors.dart';
 
 /// "Average speed" dial styled to match CurrentSpeedDial.
 class AverageSpeedDial extends StatelessWidget {
@@ -29,6 +31,7 @@ class AverageSpeedDial extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final AppPalette palette = AppColors.of(context);
 
     final localizations = AppLocalizations.of(context);
     final resolvedTitle = title ?? AppMessages.speedDialAverageTitle;
@@ -39,7 +42,12 @@ class AverageSpeedDial extends StatelessWidget {
       builder: (context, _) {
         final avgRaw = controller.average;
         final avg = avgRaw.isFinite ? avgRaw : 0.0;
-
+final double? avgForColor = avgRaw.isFinite ? avgRaw : null;
+        final Color? avgColor = resolveSpeedLimitColor(
+          palette,
+          avgForColor,
+          speedLimitKph,
+        );
         return SizedBox(
           width: width,
           child: Card(
@@ -77,7 +85,10 @@ class AverageSpeedDial extends StatelessWidget {
                         children: [
                           Text(
                             avg.toStringAsFixed(decimals),
-                            style: textTheme.displaySmall,
+                             style: avgColor == null
+                                ? textTheme.displaySmall
+                                : (textTheme.displaySmall ?? const TextStyle())
+                                    .copyWith(color: avgColor),
                           ),
                           const SizedBox(width: AppConstants.speedDialValueUnitSpacing),
                           Padding(

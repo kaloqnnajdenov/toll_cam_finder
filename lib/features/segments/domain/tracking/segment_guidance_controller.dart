@@ -445,7 +445,6 @@ class SegmentGuidanceController {
       return limitKph;
     }
 
-    final double distanceSoFar = averageKph * elapsedHours;
     final double denominator =
         (averageKph - limitKph) * elapsedHours + remainingKm;
     if (denominator <= 0) {
