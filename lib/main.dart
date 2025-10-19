@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toll_cam_finder/app/app.dart';
 import 'package:toll_cam_finder/core/supabase_config.dart';
-import 'package:toll_cam_finder/services/average_speed_est.dart';
-
-import 'app/app.dart';
-import 'services/auth_controller.dart';
-import 'services/language_controller.dart';
-import 'services/guidance_audio_controller.dart';
+import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
+import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
+import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
+import 'package:toll_cam_finder/shared/services/language_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

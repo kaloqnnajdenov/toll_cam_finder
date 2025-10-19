@@ -5,7 +5,7 @@ import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:test/test.dart';
 
-import 'package:toll_cam_finder/services/map/osm_speed_limit_service.dart';
+import 'package:toll_cam_finder/features/map/services/osm_speed_limit_service.dart';
 
 void main() {
   const location = LatLng(52.52, 13.405);

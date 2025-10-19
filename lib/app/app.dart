@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
-import '../services/language_controller.dart';
+import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'app_routes.dart';
 import 'app_theme.dart';
 import 'localization/app_localizations.dart';
