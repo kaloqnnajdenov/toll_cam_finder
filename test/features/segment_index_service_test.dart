@@ -2,7 +2,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:test/test.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
-import 'package:toll_cam_finder/features/segemnt_index_service.dart';
+import 'package:toll_cam_finder/features/segments/domain/index/segment_index_service.dart';
 
 void main() {
   final service = SegmentIndexService.instance;
