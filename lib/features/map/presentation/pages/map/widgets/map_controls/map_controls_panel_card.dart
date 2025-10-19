@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 
@@ -39,27 +40,15 @@ class MapControlsPanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = colorScheme.brightness == Brightness.dark;
     final BorderRadius borderRadius = BorderRadius.circular(28);
-
-    final Color primaryOverlay = Color.lerp(
-          colorScheme.surface,
-          Colors.white,
-          isDark ? 0.35 : 0.85,
-        )!
-        .withOpacity(isDark ? 0.65 : 0.92);
-    final Color secondaryOverlay = Color.lerp(
-          colorScheme.surface,
-          Colors.white,
-          isDark ? 0.25 : 0.75,
-        )!
-        .withOpacity(isDark ? 0.58 : 0.85);
-    final Color borderColor = Color.lerp(
-          Colors.white,
-          colorScheme.onSurface,
-          isDark ? 0.65 : 0.1,
-        )!
-        .withOpacity(isDark ? 0.32 : 0.45);
+    final AppPalette palette = AppColors.of(context);
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.72 : 0.9);
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 1 : 0.75);
+    final Color shadowColor =
+        Colors.black.withOpacity(isDark ? 0.42 : 0.16);
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -72,28 +61,21 @@ class MapControlsPanelCard extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: DecoratedBox(
             decoration: BoxDecoration(
-             borderRadius: borderRadius,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  primaryOverlay,
-                  secondaryOverlay,
-                ],
-              ),
+              borderRadius: borderRadius,
+              color: backgroundColor,
               border: Border.all(
                 color: borderColor,
-                width: 1.2,
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                   color: Colors.black.withOpacity(isDark ? 0.36 : 0.12),
+                  color: shadowColor,
                   blurRadius: 34,
                   offset: const Offset(0, 18),
                 ),
               ],
             ),
-             child: Padding(
+            child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 6,
                 vertical: 4,

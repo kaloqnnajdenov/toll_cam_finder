@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 
 class SegmentMetricsCard extends StatelessWidget {
@@ -38,6 +39,7 @@ class SegmentMetricsCard extends StatelessWidget {
       animation: avgController,
       builder: (context, _) {
         final localizations = AppLocalizations.of(context);
+        final AppPalette palette = AppColors.of(context);
         final String speedUnit = localizations.speedDialUnitKmh;
         final DateTime now = DateTime.now();
         final bool averagingActive =
@@ -66,17 +68,23 @@ class SegmentMetricsCard extends StatelessWidget {
         );
         final _MetricValue averageSpeed = averagingActive
             ? _formatSpeed(avgController.average, speedUnit)
-            : const _MetricValue(value: '-', unit: null);
+            : const _MetricValue(value: _MetricValue.missingValue, unit: null);
         final _MetricValue limitSpeed = _formatSpeed(
           speedLimitKph,
           speedUnit,
         );
         final _MetricValue safeSpeedFormatted = safeSpeed != null
             ? _formatSpeed(safeSpeed, speedUnit)
-            : const _MetricValue(value: '-', unit: null);
+            : const _MetricValue(value: _MetricValue.missingValue, unit: null);
 
         final bool showSafeSpeed =
             averagingActive && safeSpeedFormatted.hasValue;
+
+        final Color? currentSpeedColor = _resolveCurrentSpeedColor(
+          palette,
+          currentSpeedKmh,
+          speedLimitKph,
+        );
 
         final String distanceLabelKey = hasActiveSegment
             ? 'segmentMetricsDistanceToEnd'
@@ -95,20 +103,26 @@ class SegmentMetricsCard extends StatelessWidget {
           _MetricTileData(
             label: localizations.translate('segmentMetricsCurrentSpeed'),
             value: currentSpeed,
+            valueColor: currentSpeedColor,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: localizations.translate('segmentMetricsAverageSpeed'),
             value: averageSpeed,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: showSafeSpeed
                 ? localizations.translate('segmentMetricsSafeSpeed')
                 : localizations.translate('segmentMetricsSpeedLimit'),
             value: showSafeSpeed ? safeSpeedFormatted : limitSpeed,
+            unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: distanceLabel,
             value: distanceValue,
+            valueColor: palette.onSurface,
+            unitColor: palette.secondaryText,
           ),
         ];
 
@@ -282,19 +296,27 @@ class _SingleColumnMetrics extends StatelessWidget {
 class _MetricValue {
   const _MetricValue({required this.value, this.unit});
 
+  static const String missingValue = '–';
+
   final String value;
   final String? unit;
 
-  bool get hasValue => unit != null && value != '-';
-
-  String get label => hasValue ? '$value $unit' : value;
+  bool get hasValue => unit != null && value != missingValue;
+  bool get isUnavailable => value == missingValue;
 }
 
 class _MetricTileData {
-  const _MetricTileData({required this.label, required this.value});
+  const _MetricTileData({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.unitColor,
+  });
 
   final String label;
   final _MetricValue value;
+  final Color? valueColor;
+  final Color? unitColor;
 }
 
 class _TwoByTwoMetricsGrid extends StatelessWidget {
@@ -305,8 +327,10 @@ class _TwoByTwoMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dividerColor =
-        Theme.of(context).colorScheme.onSurface.withOpacity(0.12);
+    final AppPalette palette = AppColors.of(context);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color dividerColor =
+        palette.divider.withOpacity(isDark ? 0.9 : 0.55);
 
     const cellGap = 16.0;
 
@@ -422,10 +446,10 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
+    final ThemeData theme = Theme.of(context);
     final bool preset = dense;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final AppPalette palette = AppColors.of(context);
 
     final double layoutScale = visualScale.clamp(0.2, 1.0).toDouble();
     final double textScaleFactor = MediaQuery.textScaleFactorOf(context);
@@ -444,13 +468,11 @@ class _MetricTile extends StatelessWidget {
         : (theme.textTheme.labelMedium ??
             theme.textTheme.labelSmall ??
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
-                final bool isDark = colorScheme.brightness == Brightness.dark;
     final TextStyle labelStyle = labelBase.copyWith(
-color: preset
-          ? colorScheme.onSurface.withOpacity(isDark ? 0.72 : 0.58)
-          : colorScheme.onSurfaceVariant.withOpacity(isDark ? 0.95 : 0.82),      fontSize: (labelBase.fontSize ?? 12) *
+      color: palette.secondaryText,
+      fontSize: (labelBase.fontSize ?? 12) *
           typographicScale.clamp(0.7, 1.0).toDouble(),
-                letterSpacing: preset ? 0.9 : 0.6,
+      letterSpacing: preset ? 0.9 : 0.6,
     );
 
     final TextStyle valueBase = preset
@@ -463,8 +485,11 @@ color: preset
             theme.textTheme.headlineMedium ??
             const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.0));
     final double baseValueFontSize = valueBase.fontSize ?? 40;
+    final Color valueColor = data.value.isUnavailable
+        ? palette.unavailable
+        : (data.valueColor ?? palette.onSurface);
     final TextStyle valueStyle = valueBase.copyWith(
-      color: colorScheme.onSurface,
+      color: valueColor,
       fontSize: baseValueFontSize * typographicScale,
     );
 
@@ -477,8 +502,11 @@ color: preset
         : (theme.textTheme.titleSmall ??
             const TextStyle(fontSize: 18, fontWeight: FontWeight.w600));
     final double baseUnitFontSize = unitBase.fontSize ?? 18;
+    final Color unitColor = data.value.isUnavailable
+        ? palette.unavailable
+        : (data.unitColor ?? palette.secondaryText);
     final TextStyle unitStyle = unitBase.copyWith(
-      color: colorScheme.onSurface,
+      color: unitColor,
       fontSize: baseUnitFontSize *
           typographicScale.clamp(0.6, isLandscape ? 1.2 : 1.05).toDouble(),
     );
@@ -488,18 +516,18 @@ color: preset
     final double horizontalPadding =
         lerpDouble(preset ? 10 : 12, preset ? 16 : 20, layoutScale)!;
 
-final bool showBackground = !preset;
+    final bool showBackground = !preset;
     final BoxDecoration? decoration;
     if (showBackground) {
-      final Color baseColor = Color.lerp(
-            colorScheme.surface,
-            Colors.white,
-            isDark ? 0.15 : 0.6,
-          )!
-          .withOpacity(isDark ? 0.24 : 0.42);
+      final Color baseColor =
+          palette.surface.withOpacity(isDark ? 0.55 : 0.82);
       decoration = BoxDecoration(
         color: baseColor,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: palette.divider.withOpacity(isDark ? 0.9 : 0.65),
+          width: 1,
+        ),
       );
     } else {
       decoration = null;
@@ -537,6 +565,33 @@ final bool showBackground = !preset;
   }
 }
 
+Color? _resolveCurrentSpeedColor(
+  AppPalette palette,
+  double? currentSpeedKmh,
+  double? limitKph,
+) {
+  final double? current = _sanitizeSpeedValue(currentSpeedKmh);
+  final double? limit = _sanitizeSpeedValue(limitKph);
+  if (current == null || limit == null || limit <= 0) {
+    return null;
+  }
+
+  final double ratio = current / limit;
+  if (ratio <= 0.8) {
+    return palette.success;
+  }
+  if (ratio < 1.0) {
+    return palette.warning;
+  }
+  return palette.danger;
+}
+
+double? _sanitizeSpeedValue(double? value) {
+  if (value == null || !value.isFinite) return null;
+  if (value < 0) return 0;
+  return value;
+}
+
 double? _sanitizeDistance(double? meters) {
   if (meters == null || !meters.isFinite) return null;
   return meters < 0 ? 0 : meters;
@@ -571,7 +626,7 @@ double? _estimateSafeSpeed({
 
 _MetricValue _formatSpeed(double? speedKph, String unit) {
   if (speedKph == null || !speedKph.isFinite) {
-    return const _MetricValue(value: '-', unit: null);
+    return const _MetricValue(value: _MetricValue.missingValue, unit: null);
   }
   final double clamped = speedKph.clamp(0, double.infinity).toDouble();
   final bool useDecimals = clamped < 10;
@@ -584,7 +639,7 @@ _MetricValue _formatDistance(
   double? meters,
 ) {
   if (meters == null || !meters.isFinite) {
-    return const _MetricValue(value: '-', unit: null);
+    return const _MetricValue(value: _MetricValue.missingValue, unit: null);
   }
   if (meters >= 1000) {
     final double km = meters / 1000.0;

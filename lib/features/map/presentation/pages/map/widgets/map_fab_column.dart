@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 
 class MapFabColumn extends StatelessWidget {
@@ -23,33 +24,34 @@ class MapFabColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final palette = AppColors.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _AnimatedFabSlot(
-          visible: !followHeading,
-          child: FloatingActionButton.small(
-            heroTag: 'heading_btn',
-            onPressed: onToggleHeading,
-            tooltip: followHeading
-                ? AppLocalizations.of(context).northUp
-                : AppLocalizations.of(context).faceTravelDirection,
-            child: _CompassNeedle(
-              followHeading: followHeading,
-              headingDegrees: headingDegrees,
-            ),
+        _MapMiniFab(
+          heroTag: 'heading_btn',
+          tooltip: followHeading
+              ? localizations.northUp
+              : localizations.faceTravelDirection,
+          active: followHeading,
+          onPressed: onToggleHeading,
+          child: _CompassNeedle(
+            followHeading: followHeading,
+            headingDegrees: headingDegrees,
+            color: followHeading ? Colors.white : palette.onSurface,
           ),
         ),
-        _AnimatedFabSlot(
-          visible: !followUser,
-          child: FloatingActionButton.small(
-            heroTag: 'recenter_btn',
-            onPressed: onResetView,
-            tooltip: AppLocalizations.of(context).recenter,
-            child: Icon(
-              followUser ? Icons.my_location : Icons.my_location_outlined,
-            ),
+        const SizedBox(height: 12),
+        _MapMiniFab(
+          heroTag: 'recenter_btn',
+          tooltip: localizations.recenter,
+          active: followUser,
+          onPressed: onResetView,
+          child: Icon(
+            followUser ? Icons.my_location : Icons.my_location_outlined,
+            color: followUser ? Colors.white : palette.onSurface,
           ),
         ),
       ],
@@ -61,18 +63,15 @@ class _CompassNeedle extends StatelessWidget {
   const _CompassNeedle({
     required this.followHeading,
     required this.headingDegrees,
+    required this.color,
   });
 
   final bool followHeading;
   final double? headingDegrees;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color indicatorColor =
-        theme.floatingActionButtonTheme.foregroundColor ??
-        theme.colorScheme.onPrimary;
-
     final bool shouldRotate = followHeading && headingDegrees != null;
     final double rotationTurns = shouldRotate
         ? (headingDegrees! % 360) / 360
@@ -88,7 +87,7 @@ class _CompassNeedle extends StatelessWidget {
             turns: rotationTurns,
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
-            child: Icon(Icons.navigation, size: 22, color: indicatorColor),
+            child: Icon(Icons.navigation, size: 22, color: color),
           ),
           AnimatedOpacity(
             opacity: followHeading ? 0 : 1,
@@ -96,7 +95,7 @@ class _CompassNeedle extends StatelessWidget {
             child: Icon(
               Icons.lock,
               size: 12,
-              color: indicatorColor.withOpacity(0.7),
+              color: color.withOpacity(0.7),
             ),
           ),
         ],
@@ -105,47 +104,55 @@ class _CompassNeedle extends StatelessWidget {
   }
 }
 
-class _AnimatedFabSlot extends StatelessWidget {
-  const _AnimatedFabSlot({
-    required this.visible,
+class _MapMiniFab extends StatelessWidget {
+  const _MapMiniFab({
+    required this.heroTag,
+    required this.tooltip,
+    required this.onPressed,
     required this.child,
+    required this.active,
   });
 
-  final bool visible;
+  final String heroTag;
+  final String tooltip;
+  final VoidCallback onPressed;
   final Widget child;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
-    return AbsorbPointer(
-      absorbing: !visible,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SizeTransition(
-              sizeFactor: animation,
-              axisAlignment: -1,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: visible
-            ? Column(
-                key: const ValueKey<bool>(true),
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  child,
-                  const SizedBox(height: 12),
-                ],
-              )
-            : const SizedBox.shrink(key: ValueKey<bool>(false)),
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color backgroundColor = active
+        ? palette.primary
+        : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
+    final Color borderColor = active
+        ? Colors.transparent
+        : palette.divider.withOpacity(isDark ? 1 : 0.7);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.small(
+        heroTag: heroTag,
+        onPressed: onPressed,
+        tooltip: tooltip,
+        elevation: 0,
+        highlightElevation: 0,
+        backgroundColor: backgroundColor,
+        shape: CircleBorder(
+          side: BorderSide(color: borderColor, width: 1),
+        ),
+        child: child,
       ),
     );
   }

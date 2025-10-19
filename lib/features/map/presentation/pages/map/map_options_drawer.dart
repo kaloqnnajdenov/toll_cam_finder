@@ -5,11 +5,24 @@ extension _MapPageDrawer on _MapPageState {
     final localizations = AppLocalizations.of(context);
     final languageController = context.watch<LanguageController>();
     final audioController = context.watch<GuidanceAudioController>();
+    final themeController = context.watch<ThemeController>();
+    final bool isDarkMode = themeController.isDarkMode;
     return Drawer(
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
+            ListTile(
+              leading: Icon(
+                isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              ),
+              title: Text(localizations.darkMode),
+              trailing: Switch.adaptive(
+                value: isDarkMode,
+                onChanged: (value) => themeController.setDarkMode(value),
+              ),
+              onTap: themeController.toggle,
+            ),
             ListTile(
               leading: const Icon(Icons.sync),
               title: Text(localizations.sync),
