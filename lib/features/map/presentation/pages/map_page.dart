@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
@@ -775,12 +776,36 @@ class _MapPageState extends State<MapPage>
             TollCamerasOverlay(cameras: cameraState),
           ],
         ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: IgnorePointer(
+            ignoring: true,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.mapScrim,
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: const SizedBox(height: 160),
+            ),
+          ),
+        ),
         SafeArea(
           child: Align(
             alignment: Alignment.topLeft,
             child: Padding(
               padding: const EdgeInsets.only(top: 16, left: 16),
-              child: SpeedLimitSign(speedLimit: _osmSpeedLimitKph),
+              child: SpeedLimitSign(
+                speedLimit: _osmSpeedLimitKph,
+                currentSpeedKmh: _speedKmh,
+              ),
             ),
           ),
         ),
@@ -791,13 +816,35 @@ class _MapPageState extends State<MapPage>
               padding: const EdgeInsets.only(top: 16, right: 16),
               child: Builder(
                 builder: (context) {
-                  return Material(
-                    color: Colors.black54,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      tooltip: AppLocalizations.of(context).openMenu,
+                  final ScaffoldState? scaffoldState = Scaffold.maybeOf(context);
+                  final bool isDrawerOpen = scaffoldState?.isEndDrawerOpen ?? false;
+                  final Color backgroundColor =
+                      isDrawerOpen ? AppColors.primary : AppColors.surface.withOpacity(0.7);
+                  final Color iconColor = isDrawerOpen ? Colors.white : AppColors.onDark;
+                  final BorderSide borderSide = BorderSide(
+                    color: isDrawerOpen ? Colors.transparent : AppColors.divider,
+                    width: 1,
+                  );
+
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.35),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: backgroundColor,
+                      shape: CircleBorder(side: borderSide),
+                      child: IconButton(
+                        onPressed: () => Scaffold.of(context).openEndDrawer(),
+                        icon: Icon(Icons.menu, color: iconColor),
+                        tooltip: AppLocalizations.of(context).openMenu,
+                      ),
                     ),
                   );
                 },
