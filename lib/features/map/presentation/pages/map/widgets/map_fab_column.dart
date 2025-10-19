@@ -30,50 +30,54 @@ class MapFabColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final palette = AppColors.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _AnimatedFabVisibility(
-          hiddenKey: 'heading_hidden',
-          visible: showHeadingButton,
-          axisAlignment: -1,
-          child: _MapMiniFab(
-            key: const ValueKey('heading_btn'),
-            heroTag: 'heading_btn',
-            tooltip: followHeading
-                ? localizations.northUp
-                : localizations.faceTravelDirection,
-            active: followHeading,
-            onPressed: onToggleHeading,
-            child: _CompassNeedle(
-              followHeading: followHeading,
-              headingDegrees: headingDegrees,
-              color: followHeading ? Colors.white : palette.onSurface,
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _AnimatedFabVisibility(
+            hiddenKey: 'heading_hidden',
+            visible: showHeadingButton,
+            axisAlignment: -1,
+            child: _MapMiniFab(
+              key: const ValueKey('heading_btn'),
+              heroTag: 'heading_btn',
+              tooltip: followHeading
+                  ? localizations.northUp
+                  : localizations.faceTravelDirection,
+              active: followHeading,
+              onPressed: onToggleHeading,
+              child: _CompassNeedle(
+                followHeading: followHeading,
+                headingDegrees: headingDegrees,
+                color: followHeading ? Colors.white : palette.onSurface,
+              ),
             ),
           ),
-        ),
-        _AnimatedFabSpacing(visible: showHeadingButton && showRecenterButton),
-        _AnimatedFabVisibility(
-          hiddenKey: 'recenter_hidden',
-          visible: showRecenterButton,
-          axisAlignment: 1,
-          child: _MapMiniFab(
-            key: const ValueKey('recenter_btn'),
-            heroTag: 'recenter_btn',
-            tooltip: localizations.recenter,
-            active: followUser,
-            onPressed: onResetView,
-            child: Icon(
-              followUser ? Icons.my_location : Icons.my_location_outlined,
-              color: followUser ? Colors.white : palette.onSurface,
+          _AnimatedFabSpacing(visible: showHeadingButton && showRecenterButton),
+          _AnimatedFabVisibility(
+            hiddenKey: 'recenter_hidden',
+            visible: showRecenterButton,
+            axisAlignment: 1,
+            child: _MapMiniFab(
+              key: const ValueKey('recenter_btn'),
+              heroTag: 'recenter_btn',
+              tooltip: localizations.recenter,
+              active: followUser,
+              onPressed: onResetView,
+              child: Icon(
+                followUser ? Icons.my_location : Icons.my_location_outlined,
+                color: followUser ? Colors.white : palette.onSurface,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
+
 
 const Duration _kFabAnimationDuration = Duration(milliseconds: 240);
 
@@ -211,29 +215,18 @@ class _MapMiniFab extends StatelessWidget {
         ? Colors.transparent
         : palette.divider.withOpacity(isDark ? 1 : 0.7);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+    return FloatingActionButton.small(
+      heroTag: heroTag,
+      onPressed: onPressed,
+      tooltip: tooltip,
+      elevation: 0,
+      highlightElevation: 0,
+      backgroundColor: backgroundColor,
+      shape: CircleBorder(
+        side: BorderSide(color: borderColor, width: 1),
       ),
-      child: FloatingActionButton.small(
-        heroTag: heroTag,
-        onPressed: onPressed,
-        tooltip: tooltip,
-        elevation: 0,
-        highlightElevation: 0,
-        backgroundColor: backgroundColor,
-        shape: CircleBorder(
-          side: BorderSide(color: borderColor, width: 1),
-        ),
-        child: child,
-      ),
+      child: child,
     );
   }
 }
+
