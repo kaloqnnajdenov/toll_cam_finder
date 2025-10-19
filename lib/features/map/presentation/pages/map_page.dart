@@ -777,32 +777,7 @@ class _MapPageState extends State<MapPage>
             TollCamerasOverlay(cameras: cameraState),
           ],
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          child: IgnorePointer(
-            ignoring: true,
-            child: Builder(
-              builder: (context) {
-                final palette = AppColors.of(context);
-                return DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        palette.mapScrim,
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                  child: const SizedBox(height: 160),
-                );
-              },
-            ),
-          ),
-        ),
+        
         SafeArea(
           child: Align(
             alignment: Alignment.topLeft,

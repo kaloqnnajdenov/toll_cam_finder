@@ -100,30 +100,22 @@ class _OsmAttributionText extends StatelessWidget {
       fontWeight: FontWeight.w600,
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.surface.withOpacity(isDark ? 0.6 : 0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: palette.divider.withOpacity(isDark ? 1 : 0.7),
-          width: 1,
+    return Container(
+      child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: RichText(
+        text: TextSpan(
+        style: baseStyle,
+        children: [
+          const TextSpan(text: 'Map data from '),
+          TextSpan(
+          text: 'OpenStreetMap',
+          style: linkStyle,
+          recognizer: TapGestureRecognizer()..onTap = onLinkTap,
+          ),
+        ],
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: RichText(
-          text: TextSpan(
-            style: baseStyle,
-            children: [
-              const TextSpan(text: 'Map data from '),
-              TextSpan(
-                text: 'OpenStreetMap',
-                style: linkStyle,
-                recognizer: TapGestureRecognizer()..onTap = onLinkTap,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
