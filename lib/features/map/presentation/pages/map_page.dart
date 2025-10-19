@@ -855,7 +855,6 @@ class _MapPageState extends State<MapPage>
             headingDegrees: _userHeading,
             onToggleHeading: _toggleFollowHeading,
             onResetView: _onResetView,
-            avgController: _avgCtrl,
           ),
         ),
       ),
