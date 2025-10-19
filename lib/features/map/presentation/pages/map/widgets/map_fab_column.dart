@@ -27,27 +27,31 @@ class MapFabColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        FloatingActionButton.small(
-          heroTag: 'heading_btn',
-          onPressed: onToggleHeading,
-          tooltip: followHeading
-              ? AppLocalizations.of(context).northUp
-              : AppLocalizations.of(context).faceTravelDirection,
-          child: _CompassNeedle(
-            followHeading: followHeading,
-            headingDegrees: headingDegrees,
+        _AnimatedFabSlot(
+          visible: !followHeading,
+          child: FloatingActionButton.small(
+            heroTag: 'heading_btn',
+            onPressed: onToggleHeading,
+            tooltip: followHeading
+                ? AppLocalizations.of(context).northUp
+                : AppLocalizations.of(context).faceTravelDirection,
+            child: _CompassNeedle(
+              followHeading: followHeading,
+              headingDegrees: headingDegrees,
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        FloatingActionButton.extended(
-          heroTag: 'recenter_btn',
-          onPressed: onResetView,
-          icon: Icon(
-            followUser ? Icons.my_location : Icons.my_location_outlined,
+        _AnimatedFabSlot(
+          visible: !followUser,
+          child: FloatingActionButton.small(
+            heroTag: 'recenter_btn',
+            onPressed: onResetView,
+            tooltip: AppLocalizations.of(context).recenter,
+            child: Icon(
+              followUser ? Icons.my_location : Icons.my_location_outlined,
+            ),
           ),
-          label: Text(AppLocalizations.of(context).recenter),
         ),
-        const SizedBox(height: 12),
       ],
     );
   }
@@ -96,6 +100,52 @@ class _CompassNeedle extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedFabSlot extends StatelessWidget {
+  const _AnimatedFabSlot({
+    required this.visible,
+    required this.child,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      absorbing: !visible,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: visible
+            ? Column(
+                key: const ValueKey<bool>(true),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  child,
+                  const SizedBox(height: 12),
+                ],
+              )
+            : const SizedBox.shrink(key: ValueKey<bool>(false)),
       ),
     );
   }
