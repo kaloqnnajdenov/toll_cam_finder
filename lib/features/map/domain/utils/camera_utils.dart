@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:meta/meta.dart';
 
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
@@ -31,6 +32,7 @@ class CameraUtils {
   bool _loading = true;
   String? _error;
   final Distance _distance = const Distance();
+  _KdNode? _kdTree;
 
   // --- public getters (read-only to the outside) ---
   List<LatLng> get allCameras => _allCameras;
@@ -53,13 +55,18 @@ class CameraUtils {
       final pts = assetPath.toLowerCase().endsWith('.csv')
           ? _parseCamerasFromCsv(data, excludedSegmentIds)
           : _parseCamerasFromGeoJson(data);
-      _allCameras = pts;
-      _visibleCameras = pts;
+      _setCameraPoints(pts);
       _loading = false;
     } catch (e) {
       _loading = false;
       _error = AppMessages.failedToLoadCameras('$e');
+      _setCameraPoints(const []);
     }
+  }
+
+  @visibleForTesting
+  void loadFromPoints(List<LatLng> points) {
+    _setCameraPoints(points);
   }
 
   /// Updates [_visibleCameras] using the (optionally) provided map bounds.
@@ -81,21 +88,20 @@ class CameraUtils {
   /// Calculates the distance to the nearest camera from [point], returning the
   /// value in meters. When no cameras are loaded the method yields `null`.
   double? nearestCameraDistanceMeters(LatLng point) {
-    if (_allCameras.isEmpty) {
+    if (_kdTree == null) {
       return null;
     }
-
-    double? best;
-    for (final camera in _allCameras) {
-      final double meters = _distance(point, camera);
-      if (best == null || meters < best) {
-        best = meters;
-      }
-    }
-    return best;
+    return _nearestNeighbor(_kdTree!, point, double.infinity);
   }
 
   // --- helpers ---
+  void _setCameraPoints(List<LatLng> points) {
+    final pts = List<LatLng>.unmodifiable(points);
+    _allCameras = pts;
+    _visibleCameras = pts;
+    _kdTree = pts.isEmpty ? null : _buildKdTree(pts, 0);
+  }
+
   List<LatLng> _parseCamerasFromGeoJson(String jsonStr) {
     final obj = json.decode(jsonStr) as Map<String, dynamic>;
     final features = (obj['features'] as List?) ?? const [];
@@ -138,7 +144,7 @@ class CameraUtils {
     final endIdx = header.indexOf('end');
 
     if (startIdx == -1 || endIdx == -1) {
-      throw  FormatException(AppMessages.csvMissingStartEndColumns);
+      throw FormatException(AppMessages.csvMissingStartEndColumns);
     }
 
     final pts = <LatLng>[];
@@ -213,4 +219,69 @@ class CameraUtils {
 
     return rootBundle.loadString(assetPath);
   }
+
+  _KdNode? _buildKdTree(List<LatLng> points, int depth) {
+    if (points.isEmpty) return null;
+
+    final axis = depth % 2;
+    final sorted = List<LatLng>.of(points)
+      ..sort((a, b) =>
+          _axisValue(a, axis).compareTo(_axisValue(b, axis)));
+    final mid = sorted.length >> 1;
+    final left = sorted.sublist(0, mid);
+    final right = mid + 1 < sorted.length
+        ? sorted.sublist(mid + 1)
+        : const <LatLng>[];
+
+    return _KdNode(
+      sorted[mid],
+      axis,
+      left: _buildKdTree(left, depth + 1),
+      right: _buildKdTree(right, depth + 1),
+    );
+  }
+
+  double _axisValue(LatLng point, int axis) =>
+      axis == 0 ? point.latitude : point.longitude;
+
+  double _nearestNeighbor(_KdNode node, LatLng target, double best) {
+    var bestDistance = best;
+    final currentDistance = _distance(target, node.point);
+    if (currentDistance < bestDistance) {
+      bestDistance = currentDistance;
+    }
+
+    final diff =
+        _axisValue(target, node.axis) - _axisValue(node.point, node.axis);
+    final first = diff <= 0 ? node.left : node.right;
+    final second = diff <= 0 ? node.right : node.left;
+
+    if (first != null) {
+      bestDistance = _nearestNeighbor(first, target, bestDistance);
+    }
+
+    final planeDistance = _distanceToAxisPlane(target, node);
+    if (second != null && planeDistance < bestDistance) {
+      bestDistance = _nearestNeighbor(second, target, bestDistance);
+    }
+
+    return bestDistance;
+  }
+
+  double _distanceToAxisPlane(LatLng target, _KdNode node) {
+    final planeValue = _axisValue(node.point, node.axis);
+    if (node.axis == 0) {
+      return _distance(target, LatLng(planeValue, target.longitude));
+    }
+    return _distance(target, LatLng(target.latitude, planeValue));
+  }
+}
+
+class _KdNode {
+  _KdNode(this.point, this.axis, {this.left, this.right});
+
+  final LatLng point;
+  final int axis;
+  final _KdNode? left;
+  final _KdNode? right;
 }
