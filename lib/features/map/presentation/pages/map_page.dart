@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -813,7 +814,7 @@ class _MapPageState extends State<MapPage>
         child: Padding(
           padding: EdgeInsets.only(
             right: 16,
-            bottom: 16 + (isLandscape ? 0 : _controlsPanelHeight),
+            bottom: isLandscape ? 0 : _controlsPanelHeight,
           ),
           child: MapFabColumn(
             followUser: _followUser,
