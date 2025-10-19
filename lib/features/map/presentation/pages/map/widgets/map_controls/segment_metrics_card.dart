@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/speed_limit_colors.dart';
 
 class SegmentMetricsCard extends StatelessWidget {
   const SegmentMetricsCard({
@@ -80,11 +81,13 @@ class SegmentMetricsCard extends StatelessWidget {
         final bool showSafeSpeed =
             averagingActive && safeSpeedFormatted.hasValue;
 
-        final Color? currentSpeedColor = _resolveCurrentSpeedColor(
-          palette,
-          currentSpeedKmh,
-          speedLimitKph,
-        );
+        final Color? averageSpeedColor = averagingActive
+            ? resolveSpeedLimitColor(
+                palette,
+                avgController.average,
+                speedLimitKph,
+              )
+            : null;
 
         final String distanceLabelKey = hasActiveSegment
             ? 'segmentMetricsDistanceToEnd'
@@ -103,12 +106,12 @@ class SegmentMetricsCard extends StatelessWidget {
           _MetricTileData(
             label: localizations.translate('segmentMetricsCurrentSpeed'),
             value: currentSpeed,
-            valueColor: currentSpeedColor,
             unitColor: palette.secondaryText,
           ),
           _MetricTileData(
             label: localizations.translate('segmentMetricsAverageSpeed'),
             value: averageSpeed,
+            valueColor: averageSpeedColor,
             unitColor: palette.secondaryText,
           ),
           _MetricTileData(
@@ -563,33 +566,6 @@ class _MetricTile extends StatelessWidget {
       ),
     );
   }
-}
-
-Color? _resolveCurrentSpeedColor(
-  AppPalette palette,
-  double? currentSpeedKmh,
-  double? limitKph,
-) {
-  final double? current = _sanitizeSpeedValue(currentSpeedKmh);
-  final double? limit = _sanitizeSpeedValue(limitKph);
-  if (current == null || limit == null || limit <= 0) {
-    return null;
-  }
-
-  final double ratio = current / limit;
-  if (ratio <= 0.8) {
-    return palette.success;
-  }
-  if (ratio < 1.0) {
-    return palette.warning;
-  }
-  return palette.danger;
-}
-
-double? _sanitizeSpeedValue(double? value) {
-  if (value == null || !value.isFinite) return null;
-  if (value < 0) return 0;
-  return value;
 }
 
 double? _sanitizeDistance(double? meters) {
