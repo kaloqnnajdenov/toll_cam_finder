@@ -41,6 +41,7 @@ import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
 import 'map/widgets/speed_limit_sign.dart';
+import 'map/widgets/vertical_map_chrome.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -754,6 +755,12 @@ class _MapPageState extends State<MapPage>
             TollCamerasOverlay(cameras: cameraState),
           ],
         ),
+      ],
+    );
+
+    final Widget landscapeMapChrome = Stack(
+      children: [
+        mapContent,
         SafeArea(
           child: Align(
             alignment: Alignment.topLeft,
@@ -815,6 +822,17 @@ class _MapPageState extends State<MapPage>
       distanceToSegmentStartMeters: _nearestSegmentStartMeters,
     );
 
+    final double? activeSegmentEndMeters =
+        _activeSegmentDebugPath?.remainingDistanceMeters;
+    final double? effectiveSpeedLimitKph =
+        _activeSegmentSpeedLimitKph ??
+            (_osmSpeedLimitKph != null
+                ? double.tryParse(_osmSpeedLimitKph!)
+                : null);
+    final String? speedLimitLabel = _activeSegmentSpeedLimitKph != null
+        ? _activeSegmentSpeedLimitKph!.toStringAsFixed(0)
+        : _osmSpeedLimitKph;
+
     return Scaffold(
       endDrawer: _buildOptionsDrawer(),
       body: isLandscape
@@ -822,16 +840,24 @@ class _MapPageState extends State<MapPage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 controlsPanel,
-                Expanded(child: mapContent),
+                Expanded(child: landscapeMapChrome),
               ],
             )
-          : Column(
-              children: [
-                Expanded(child: mapContent),
-                controlsPanel,
-              ],
+          : VerticalMapChrome(
+              map: mapContent,
+              onResetView: _onResetView,
+              onToggleHeading: _toggleFollowHeading,
+              followUser: _followUser,
+              followHeading: _followHeading,
+              headingDegrees: _userHeading,
+              speedKmh: _speedKmh,
+              speedLimitKph: effectiveSpeedLimitKph,
+              speedLimitLabel: speedLimitLabel,
+              avgController: _avgCtrl,
+              hasActiveSegment: _segmentTracker.activeSegmentId != null,
+              distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+              distanceToSegmentEndMeters: activeSegmentEndMeters,
             ),
-      
     );
   }
 }
