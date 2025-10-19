@@ -14,8 +14,8 @@ class BaseTileLayer extends StatelessWidget {
     this.attributionLeft = AppConstants.mapAttributionLeftInset,
     this.attributionBottom = AppConstants.mapAttributionBottomInset,
     this.respectSafeArea = true,
-    this.overlapBottomPx =
-        AppConstants.mapAttributionOverlap, // positive moves it LOWER (toward/into inset)
+    this.overlapBottomPx = AppConstants
+        .mapAttributionOverlap, // positive moves it LOWER (toward/into inset)
   });
 
   /// Distance from the left screen edge.
@@ -31,8 +31,9 @@ class BaseTileLayer extends StatelessWidget {
   /// (useful to sit closer to/inside the home-indicator area).
   final double overlapBottomPx;
 
-  static final Uri _osmCopyrightUri =
-      Uri.parse('https://www.openstreetmap.org/copyright');
+  static final Uri _osmCopyrightUri = Uri.parse(
+    'https://www.openstreetmap.org/copyright',
+  );
 
   Future<void> _openOsmCopyright(BuildContext context) async {
     try {
@@ -48,20 +49,20 @@ class BaseTileLayer extends StatelessWidget {
 
   static void _showLaunchError(BuildContext context) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(AppMessages.osmCopyrightLaunchFailed),
-      ),
+      SnackBar(content: Text(AppMessages.osmCopyrightLaunchFailed)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     // How much the OS reserves at the bottom (e.g., iOS home indicator).
-    final safeBottom = respectSafeArea ? MediaQuery.of(context).padding.bottom : 0.0;
+    final safeBottom = respectSafeArea
+        ? MediaQuery.of(context).padding.bottom
+        : 0.0;
 
     // Final distance from the physical bottom of the screen.
-    final effectiveBottom =
-        (attributionBottom + safeBottom - overlapBottomPx).clamp(0.0, double.infinity);
+    final effectiveBottom = (attributionBottom + safeBottom - overlapBottomPx)
+        .clamp(0.0, double.infinity);
 
     return Stack(
       children: [
@@ -100,29 +101,19 @@ class _OsmAttributionText extends StatelessWidget {
       fontWeight: FontWeight.w600,
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.surface.withOpacity(isDark ? 0.6 : 0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: palette.divider.withOpacity(isDark ? 1 : 0.7),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: RichText(
-          text: TextSpan(
-            style: baseStyle,
-            children: [
-              const TextSpan(text: 'Map data from '),
-              TextSpan(
-                text: 'OpenStreetMap',
-                style: linkStyle,
-                recognizer: TapGestureRecognizer()..onTap = onLinkTap,
-              ),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: RichText(
+        text: TextSpan(
+          style: baseStyle,
+          children: [
+            const TextSpan(text: 'Map data from '),
+            TextSpan(
+              text: 'OpenStreetMap',
+              style: linkStyle,
+              recognizer: TapGestureRecognizer()..onTap = onLinkTap,
+            ),
+          ],
         ),
       ),
     );

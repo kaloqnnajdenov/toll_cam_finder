@@ -22,39 +22,41 @@ class MapFabColumn extends StatelessWidget {
   final AverageSpeedController avgController;
   final double? headingDegrees;
 
+  //TODO: remove unnecesery logic if not needed in FABs
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final palette = AppColors.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
+    final children = <Widget>[
+      if (!followHeading)
         _MapMiniFab(
           heroTag: 'heading_btn',
           tooltip: followHeading
               ? localizations.northUp
               : localizations.faceTravelDirection,
-          active: followHeading,
+          active: false,
           onPressed: onToggleHeading,
           child: _CompassNeedle(
-            followHeading: followHeading,
+            followHeading: false,
             headingDegrees: headingDegrees,
-            color: followHeading ? Colors.white : palette.onSurface,
+            color: palette.onSurface,
           ),
         ),
-        const SizedBox(height: 12),
+      if (!followHeading && !followUser) const SizedBox(height: 12),
+      if (!followUser)
         _MapMiniFab(
           heroTag: 'recenter_btn',
           tooltip: localizations.recenter,
-          active: followUser,
+          active: false,
           onPressed: onResetView,
-          child: Icon(
-            followUser ? Icons.my_location : Icons.my_location_outlined,
-            color: followUser ? Colors.white : palette.onSurface,
-          ),
+          child: Icon(Icons.my_location_outlined, color: palette.onSurface),
         ),
-      ],
+    ];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: children,
     );
   }
 }
@@ -92,11 +94,7 @@ class _CompassNeedle extends StatelessWidget {
           AnimatedOpacity(
             opacity: followHeading ? 0 : 1,
             duration: const Duration(milliseconds: 200),
-            child: Icon(
-              Icons.lock,
-              size: 12,
-              color: color.withOpacity(0.7),
-            ),
+            child: Icon(Icons.lock, size: 12, color: color.withOpacity(0.7)),
           ),
         ],
       ),
@@ -149,9 +147,7 @@ class _MapMiniFab extends StatelessWidget {
         elevation: 0,
         highlightElevation: 0,
         backgroundColor: backgroundColor,
-        shape: CircleBorder(
-          side: BorderSide(color: borderColor, width: 1),
-        ),
+        shape: CircleBorder(side: BorderSide(color: borderColor, width: 1)),
         child: child,
       ),
     );
