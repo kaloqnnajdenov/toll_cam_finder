@@ -306,6 +306,10 @@ class AppConstants {
   /// Threshold (km/h) below which the [SpeedSmoother] snaps directly to zero.
   static const double speedSmootherStopSnapKmh = 1.0;
 
+  /// Timeout (milliseconds) after the last GPS update before the UI forces the
+  /// current speed readout to zero.
+  static const int speedIdleResetTimeoutMs = 4000;
+
   /// Default padding (degrees) applied to map bounds when filtering visible
   /// cameras.
   static const double cameraUtilsBoundsPaddingDeg = 0.05;

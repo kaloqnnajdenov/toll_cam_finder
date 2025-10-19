@@ -92,6 +92,7 @@ class _MapPageState extends State<MapPage>
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
+  Timer? _speedIdleResetTimer;
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
@@ -173,6 +174,7 @@ class _MapPageState extends State<MapPage>
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
+    _speedIdleResetTimer?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
@@ -208,6 +210,7 @@ class _MapPageState extends State<MapPage>
 
     final firstKmh = _speedService.normalizeSpeed(pos.speed);
     _speedKmh = _speedSmoother.next(firstKmh);
+    _scheduleSpeedIdleReset();
     _updateHeading(pos.heading);
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
@@ -305,6 +308,7 @@ class _MapPageState extends State<MapPage>
 
   void _handlePositionUpdate(Position position) {
     final DateTime now = DateTime.now();
+    _scheduleSpeedIdleReset();
     final shownKmh = _speedService.normalizeSpeed(position.speed);
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
@@ -372,6 +376,28 @@ class _MapPageState extends State<MapPage>
     _lastSpeedLimitQueryLocation = position;
     _lastSpeedLimitQueryAt = now;
     unawaited(_loadSpeedLimit(position));
+  }
+
+  void _scheduleSpeedIdleReset() {
+    _speedIdleResetTimer?.cancel();
+    _speedIdleResetTimer = Timer(
+      const Duration(milliseconds: AppConstants.speedIdleResetTimeoutMs),
+      _handleSpeedIdleTimeout,
+    );
+  }
+
+  void _handleSpeedIdleTimeout() {
+    _speedIdleResetTimer = null;
+    if (!mounted) {
+      return;
+    }
+    _speedSmoother.reset();
+    if ((_speedKmh ?? 0) <= 0) {
+      return;
+    }
+    setState(() {
+      _speedKmh = 0.0;
+    });
   }
 
   Future<void> _loadSpeedLimit(LatLng position) async {
