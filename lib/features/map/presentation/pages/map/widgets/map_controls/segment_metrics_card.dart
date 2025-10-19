@@ -444,10 +444,13 @@ class _MetricTile extends StatelessWidget {
         : (theme.textTheme.labelMedium ??
             theme.textTheme.labelSmall ??
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
+                final bool isDark = colorScheme.brightness == Brightness.dark;
     final TextStyle labelStyle = labelBase.copyWith(
-      color: colorScheme.onSurfaceVariant,
-      fontSize: (labelBase.fontSize ?? 12) *
+color: preset
+          ? colorScheme.onSurface.withOpacity(isDark ? 0.72 : 0.58)
+          : colorScheme.onSurfaceVariant.withOpacity(isDark ? 0.95 : 0.82),      fontSize: (labelBase.fontSize ?? 12) *
           typographicScale.clamp(0.7, 1.0).toDouble(),
+                letterSpacing: preset ? 0.9 : 0.6,
     );
 
     final TextStyle valueBase = preset
@@ -485,15 +488,28 @@ class _MetricTile extends StatelessWidget {
     final double horizontalPadding =
         lerpDouble(preset ? 10 : 12, preset ? 16 : 20, layoutScale)!;
 
+final bool showBackground = !preset;
+    final BoxDecoration? decoration;
+    if (showBackground) {
+      final Color baseColor = Color.lerp(
+            colorScheme.surface,
+            Colors.white,
+            isDark ? 0.15 : 0.6,
+          )!
+          .withOpacity(isDark ? 0.24 : 0.42);
+      decoration = BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(20),
+      );
+    } else {
+      decoration = null;
+    }
     return Container(
       padding: EdgeInsets.symmetric(
         vertical: verticalPadding,
         horizontal: horizontalPadding,
       ),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-      ),
+           decoration: decoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.max,
