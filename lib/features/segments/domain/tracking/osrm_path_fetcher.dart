@@ -19,6 +19,16 @@ Future<List<GeoPoint>?> fetchOsrmRoute({
     '?overview=full&geometries=geojson',
   );
 
+  const logLabel = '[OSM Routing]';
+  final logMessage =
+      '$logLabel Requesting route from ${start.lat.toStringAsFixed(6)}, '
+      '${start.lon.toStringAsFixed(6)} '
+      'to ${end.lat.toStringAsFixed(6)}, ${end.lon.toStringAsFixed(6)}';
+  onDebug?.call(logMessage);
+  if (kDebugMode) {
+    debugPrint(logMessage);
+  }
+
   try {
     final response = await client.get(uri, headers: const {
       'User-Agent': 'toll_cam_finder/segment-tracker',
@@ -26,7 +36,12 @@ Future<List<GeoPoint>?> fetchOsrmRoute({
     });
 
     if (response.statusCode != 200) {
-      onDebug?.call('status ${response.statusCode} for ${uri.path}');
+      final statusMessage =
+          '$logLabel Non-200 response (${response.statusCode}) for ${uri.path}';
+      onDebug?.call(statusMessage);
+      if (kDebugMode) {
+        debugPrint(statusMessage);
+      }
       return null;
     }
 
@@ -80,8 +95,10 @@ Future<List<GeoPoint>?> fetchOsrmRoute({
 
     return path;
   } catch (e) {
+    final failureMessage = '$logLabel Failed to fetch enhanced path: $e';
+    onDebug?.call(failureMessage);
     if (kDebugMode) {
-      onDebug?.call('failed to fetch enhanced path: $e');
+      debugPrint(failureMessage);
     }
     return null;
   }
