@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
@@ -34,11 +35,23 @@ out tags geom qt;
 ''';
 
     final uri = Uri.parse('$_endpoint?data=${Uri.encodeComponent(query)}');
+    const logLabel = '[OSM Overpass]';
+    if (kDebugMode) {
+      debugPrint(
+        '$logLabel Requesting speed limit near '
+        '${location.latitude.toStringAsFixed(6)}, '
+        '${location.longitude.toStringAsFixed(6)}',
+      );
+    }
+
     final response = await _client
         .get(uri, headers: {'User-Agent': 'toll_cam_finder/1.0'})
         .timeout(_timeout);
 
     if (response.statusCode != 200) {
+      if (kDebugMode) {
+        debugPrint('$logLabel Non-200 response (${response.statusCode})');
+      }
       return null;
     }
 
@@ -46,11 +59,17 @@ out tags geom qt;
     try {
       decoded = jsonDecode(response.body) as Map<String, dynamic>;
     } on FormatException {
+      if (kDebugMode) {
+        debugPrint('$logLabel Failed to decode response body');
+      }
       return null;
     }
 
     final elements = decoded['elements'];
     if (elements is! List || elements.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('$logLabel No elements returned for this location');
+      }
       return null;
     }
 
@@ -96,7 +115,15 @@ out tags geom qt;
       }
     }
 
-    return bestWayCandidate?.value ?? bestNodeCandidate?.value;
+    final result = bestWayCandidate?.value ?? bestNodeCandidate?.value;
+    if (kDebugMode) {
+      if (result != null) {
+        debugPrint('$logLabel Using speed limit $result km/h');
+      } else {
+        debugPrint('$logLabel Unable to determine speed limit');
+      }
+    }
+    return result;
   }
 
   void dispose() {
