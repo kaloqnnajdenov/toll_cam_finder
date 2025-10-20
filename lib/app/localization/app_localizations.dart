@@ -185,6 +185,11 @@ class AppLocalizations {
       'segmentDeleted': 'Segment {displayId} deleted.',
       'segmentHidden':
           'Segment {displayId} hidden. Cameras and warnings are disabled.',
+      'segmentBadgeHidden': 'Hidden',
+      'segmentBadgeLocal': 'Local',
+      'segmentBadgeReview': 'In review',
+      'segmentLocationStartLabel': 'Start',
+      'segmentLocationEndLabel': 'End',
       'segmentMetadataUpdateUnavailable':
           'Segment metadata cannot be updated on the web.',
       'segmentMissingCoordinates':
@@ -415,8 +420,13 @@ class AppLocalizations {
 'segmentPickerEndMarkerLabel': 'B',
 'segmentMissingCoordinates':
 'Запазеният сегмент няма координати и не може да бъде споделен публично.',
-'segmentHidden':
-'Сегмент {displayId} е скрит. Камерите и предупрежденията са изключени.',
+      'segmentHidden':
+          'Сегмент {displayId} е скрит. Камерите и предупрежденията са изключени.',
+      'segmentBadgeHidden': 'Скрит',
+      'segmentBadgeLocal': 'Локален',
+      'segmentBadgeReview': 'В преглед',
+      'segmentLocationStartLabel': 'Начало',
+      'segmentLocationEndLabel': 'Край',
 'segmentVisible':
 'Сегмент {displayId} отново е видим. Камерите и предупрежденията са възстановени.',
 'segmentVisibilityDisableSubtitle':
