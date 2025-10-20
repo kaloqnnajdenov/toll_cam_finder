@@ -247,6 +247,51 @@ class SegmentIndexService {
     return out;
   }
 
+  List<GeoPoint>? _pathFromGeoJsonCell(Object? cell) {
+    if (cell == null) {
+      return null;
+    }
+
+    if (cell is String) {
+      final trimmed = cell.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      try {
+        return _pathFromGeoJsonGeometry(json.decode(trimmed));
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return _pathFromGeoJsonGeometry(cell);
+  }
+
+  List<GeoPoint>? _pathFromGeoJsonGeometry(dynamic geoJson) {
+    if (geoJson is Map<String, dynamic>) {
+      final type = (geoJson['type'] ?? '').toString();
+      if (type == 'Feature') {
+        return _pathFromGeoJsonGeometry(geoJson['geometry']);
+      }
+      if (type == 'LineString' && geoJson['coordinates'] is List) {
+        return _toGeoPointsFromLonLatList(geoJson['coordinates'] as List);
+      }
+      if (type == 'MultiLineString' && geoJson['coordinates'] is List) {
+        final path = <GeoPoint>[];
+        for (final part in geoJson['coordinates'] as List) {
+          if (part is List) {
+            path.addAll(_toGeoPointsFromLonLatList(part));
+          }
+        }
+        return path.isEmpty ? null : path;
+      }
+    } else if (geoJson is List) {
+      return _toGeoPointsFromLonLatList(geoJson);
+    }
+
+    return null;
+  }
+
   List<SegmentGeometry> _parseCsv(String raw) {
     final rows = const CsvToListConverter(
       fieldDelimiter: ';',
@@ -262,6 +307,8 @@ class SegmentIndexService {
         .toList(growable: false);
     final startIdx = header.indexOf('start');
     final endIdx = header.indexOf('end');
+    final idIdx = header.indexOf('id');
+    final geoJsonIdx = header.indexOf('geojson');
 
     if (startIdx == -1 || endIdx == -1) {
       throw  FormatException(AppMessages.csvMissingStartEndColumns);
@@ -278,14 +325,13 @@ class SegmentIndexService {
     var rowIdx = 0;
     for (final row in rows.skip(1)) {
       rowIdx++;
-      if (row.length <= startIdx || row.length <= endIdx) {
-        continue;
+      LatLng? start;
+      LatLng? end;
+      if (row.length > startIdx) {
+        start = _latLngFromCsv(row[startIdx]);
       }
-
-      final start = _latLngFromCsv(row[startIdx]);
-      final end = _latLngFromCsv(row[endIdx]);
-      if (start == null || end == null) {
-        continue;
+      if (row.length > endIdx) {
+        end = _latLngFromCsv(row[endIdx]);
       }
 
       final idParts = <String>[];
@@ -306,7 +352,16 @@ class SegmentIndexService {
         if (eName.isNotEmpty) idParts.add(eName);
       }
 
-      idParts.add('row$rowIdx');
+      final explicitId = idIdx != -1 && row.length > idIdx
+          ? row[idIdx].toString().trim()
+          : '';
+      if (explicitId.isNotEmpty) {
+        idParts
+          ..clear()
+          ..add(explicitId);
+      } else {
+        idParts.add('row$rowIdx');
+      }
       final id = idParts.join('::');
 
       double? speedLimit;
@@ -315,13 +370,25 @@ class SegmentIndexService {
         speedLimit = value.isEmpty ? null : double.tryParse(value);
       }
 
+      List<GeoPoint>? path;
+      if (geoJsonIdx != -1 && row.length > geoJsonIdx) {
+        path = _pathFromGeoJsonCell(row[geoJsonIdx]);
+      }
+
+      if (path == null || path.length < 2) {
+        if (start == null || end == null) {
+          continue;
+        }
+        path = [
+          GeoPoint(start.latitude, start.longitude),
+          GeoPoint(end.latitude, end.longitude),
+        ];
+      }
+
       segments.add(
         SegmentGeometry(
           id: id,
-          path: [
-            GeoPoint(start.latitude, start.longitude),
-            GeoPoint(end.latitude, end.longitude),
-          ],
+          path: path,
           speedLimitKph: speedLimit,
         ),
       );
@@ -367,6 +434,24 @@ class SegmentIndexService {
       p,
       radiusMeters: radiusMeters,
     ).map((g) => g.id).toList(growable: false);
+  }
+
+  List<SegmentGeometry> segmentsWithinBounds(LatLngBounds bounds) {
+    final idx = _index;
+    if (idx == null) {
+      return const [];
+    }
+
+    final southWest = bounds.southWest;
+    final northEast = bounds.northEast;
+    final geoBounds = GeoBounds(
+      minLat: southWest.latitude,
+      minLon: southWest.longitude,
+      maxLat: northEast.latitude,
+      maxLon: northEast.longitude,
+    );
+
+    return idx.segmentsWithinBounds(geoBounds);
   }
 
   @visibleForTesting
