@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
@@ -40,9 +41,7 @@ class TollSegmentsSyncService {
   /// 3. Updates the in-memory cache and trims the locally stored custom rows.
   Future<TollSegmentsSyncResult> sync({required SupabaseClient client}) async {
     if (kIsWeb) {
-      throw  TollSegmentsSyncException(
-        AppMessages.syncNotSupportedOnWeb,
-      );
+      throw TollSegmentsSyncException(AppMessages.syncNotSupportedOnWeb);
     }
 
     try {
@@ -62,10 +61,7 @@ class TollSegmentsSyncService {
         approvedLocalSegments: approvalOutcome.approvedCount,
       );
 
-      await _writeLocalRows(
-        localCsvPath,
-        approvalOutcome.remainingLocalRows,
-      );
+      await _writeLocalRows(localCsvPath, approvalOutcome.remainingLocalRows);
       TollSegmentsDataStore.instance.updateRemoteRows(remoteRows);
 
       return diff;
@@ -144,9 +140,13 @@ class TollSegmentsSyncService {
 
       return response
           .cast<Map<String, dynamic>>()
-          .map((record) => Map<String, dynamic>.from(record)
-            ..removeWhere((key, value) =>
-                _normalize(key) == _normalize(_addedByUserColumn)))
+          .map(
+            (record) => Map<String, dynamic>.from(record)
+              ..removeWhere(
+                (key, value) =>
+                    _normalize(key) == _normalize(_addedByUserColumn),
+              ),
+          )
           .toList(growable: false);
     } on PostgrestException catch (error) {
       if (_isMissingColumnError(error, _moderationStatusColumn)) {
@@ -412,7 +412,7 @@ class TollSegmentsSyncService {
       final key = entry.key;
       final normalizedKey = _normalize(key);
       if (normalizedColumn == normalizedKey) {
-        return entry.value?.toString() ?? '';
+        return _stringifyValue(entry.value);
       }
     }
 
@@ -421,12 +421,28 @@ class TollSegmentsSyncService {
       final normalizedAlias = _normalize(alias);
       for (final entry in record.entries) {
         if (_normalize(entry.key) == normalizedAlias) {
-          return entry.value?.toString() ?? '';
+          return _stringifyValue(entry.value);
         }
       }
     }
 
     return null;
+  }
+
+  String _stringifyValue(Object? value) {
+    if (value == null) {
+      return '';
+    }
+
+    if (value is Map || value is List) {
+      try {
+        return json.encode(value);
+      } catch (_) {
+        // Fall through to string conversion if encoding fails.
+      }
+    }
+
+    return value.toString();
   }
 
   String _normalize(String value) {
