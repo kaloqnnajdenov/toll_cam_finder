@@ -1,18 +1,15 @@
 library segment_tracker;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/core/spatial/segment_geometry.dart';
 import 'package:toll_cam_finder/features/segments/domain/index/segment_index_service.dart';
-import 'package:toll_cam_finder/features/segments/domain/tracking/osrm_path_fetcher.dart';
 
 part 'segment_tracker_models.dart';
 part 'segment_match.dart';
@@ -20,20 +17,16 @@ part 'active_segment_state.dart';
 part 'segment_transition.dart';
 part 'debug_extensions.dart';
 part 'geometry_extensions.dart';
-part 'path_fetch_extensions.dart';
 
 class SegmentTracker {
   SegmentTracker({
     required SegmentIndexService indexService,
-    http.Client? httpClient,
     this.candidateRadiusMeters = AppConstants.candidateRadiusMeters,
     this.onPathToleranceMeters = AppConstants.segmentOnPathToleranceMeters,
     this.startGeofenceRadiusMeters =
         AppConstants.segmentStartGeofenceRadiusMeters,
     this.endGeofenceRadiusMeters = AppConstants.segmentEndGeofenceRadiusMeters,
-  }) : _index = indexService,
-       _httpClient = httpClient ?? http.Client(),
-       _ownsHttpClient = httpClient == null;
+  }) : _index = indexService;
 
   static const int _strictMissThreshold = 3;
   static const int _looseMissThreshold = 6;
@@ -41,8 +34,6 @@ class SegmentTracker {
   static const double _looseExitMultiplier = 2.5;
 
   final SegmentIndexService _index;
-  final http.Client _httpClient;
-  final bool _ownsHttpClient;
 
   final double candidateRadiusMeters;
   final double onPathToleranceMeters;
@@ -53,9 +44,6 @@ class SegmentTracker {
       const SegmentTrackerDebugData.empty();
   _ActiveSegmentState? _active;
 
-  final Map<String, List<GeoPoint>> _pathOverrides = <String, List<GeoPoint>>{};
-  final Set<String> _fetchFailures = <String>{};
-  final Set<String> _fetching = <String>{};
   final Set<String> _ignoredSegmentIds = <String>{};
   SegmentGeometry? _lastExitedGeometry;
 
@@ -129,7 +117,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       }
 
       filteredCandidates.add(geom);
-      final path = _effectivePathFor(geom);
+      final path = geom.path;
       final nearest = _nearestPointOnPath(userPoint, path);
       final double startDist = _distanceBetween(userPoint, path.first);
       final double endDist = _distanceBetween(userPoint, path.last);
@@ -138,7 +126,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
         nearest.segmentIndex,
         nearest.segmentFraction,
       );
-      final bool detailed = _isPathDetailed(geom, path);
+      final bool detailed = path.length > 2;
 
       matches.add(
         SegmentMatch(
@@ -174,20 +162,13 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     );
   }
 
-  void dispose() {
-    if (_ownsHttpClient) {
-      _httpClient.close();
-    }
-  }
+  void dispose() {}
 
   void _resetTrackingState() {
     if (_active != null) {
       _clearActiveSegment(reason: 'reset');
     }
     _isReady = false;
-    _pathOverrides.clear();
-    _fetchFailures.clear();
-    _fetching.clear();
     _lastExitedGeometry = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
@@ -262,7 +243,6 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
   }
 
   void _startSegment(SegmentMatch entry) {
-    final bool fetchFailed = _fetchFailures.contains(entry.geometry.id);
     final active = _ActiveSegmentState(
       geometry: entry.geometry,
       path: entry.path,
@@ -272,18 +252,10 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
 
     _active = active;
 
-    if (!entry.isDetailed && !fetchFailed) {
-      _ensureEnhancedPath(entry.geometry);
-    }
-
-    if (!entry.isDetailed && fetchFailed) {
-      active.forceKeepUntilEnd = true;
-    }
-
     if (kDebugMode) {
       debugPrint(
         '[SEG] entered segment ${entry.geometry.id} '
-        '(detailed=${entry.isDetailed}, fetchFailed=$fetchFailed)',
+        '(detailed=${entry.isDetailed})',
       );
     }
   }

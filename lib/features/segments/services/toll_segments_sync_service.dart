@@ -389,6 +389,10 @@ class TollSegmentsSyncService {
     for (final column in TollSegmentsCsvSchema.header) {
       final value = _extractField(record, column);
       if (value == null) {
+        if (TollSegmentsCsvSchema.optionalColumns.contains(column)) {
+          values.add('');
+          continue;
+        }
         throw TollSegmentsSyncException(
           AppMessages.missingRequiredColumn(column),
         );

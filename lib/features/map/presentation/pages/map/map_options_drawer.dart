@@ -261,6 +261,7 @@ extension _MapPageDrawer on _MapPageState {
 
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
+    _updateVisibleSegments();
     setState(() {});
   }
 
@@ -310,5 +311,6 @@ extension _MapPageDrawer on _MapPageState {
 
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
+    _updateVisibleSegments();
   }
 }

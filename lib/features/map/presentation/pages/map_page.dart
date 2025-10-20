@@ -103,6 +103,8 @@ class _MapPageState extends State<MapPage>
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
+  List<Polyline> _visibleSegmentPolylines = const [];
+  Map<String, String> _visibleSegmentSignatures = const {};
   late final SegmentGuidanceController _segmentGuidanceController;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
@@ -569,6 +571,7 @@ class _MapPageState extends State<MapPage>
     }
 
     _updateVisibleCameras();
+    _updateVisibleSegments();
   }
 
   // ------------------ reset view button ------------------
@@ -582,6 +585,7 @@ class _MapPageState extends State<MapPage>
       _applyHeadingRotation();
     }
     _updateVisibleCameras();
+    _updateVisibleSegments();
   }
 
   void _onResetView() {
@@ -684,6 +688,7 @@ class _MapPageState extends State<MapPage>
     if (!mounted) return;
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
+    _updateVisibleSegments();
   }
 
   void _updateVisibleCameras() {
@@ -699,6 +704,67 @@ class _MapPageState extends State<MapPage>
 
     setState(() {
       _cameraController.updateVisible(bounds: bounds);
+    });
+  }
+
+  void _updateVisibleSegments() {
+    LatLngBounds? bounds;
+    if (_mapReady) {
+      try {
+        bounds = _mapController.camera.visibleBounds;
+      } catch (_) {
+        bounds = null;
+      }
+    }
+
+    final indexService = SegmentIndexService.instance;
+    if (bounds == null || !indexService.isReady) {
+      if (!mounted ||
+          (_visibleSegmentPolylines.isEmpty &&
+              _visibleSegmentSignatures.isEmpty)) {
+        return;
+      }
+      setState(() {
+        _visibleSegmentPolylines = const [];
+        _visibleSegmentSignatures = const {};
+      });
+      return;
+    }
+
+    final segments = indexService.segmentsWithinBounds(bounds);
+    final signatures = <String, String>{};
+    final polylines = <Polyline>[];
+
+    for (final segment in segments) {
+      final path = segment.path;
+      if (path.length < 2) {
+        continue;
+      }
+      signatures[segment.id] =
+          '${path.length}:${path.first.lat}:${path.first.lon}:${path.last.lat}:${path.last.lon}';
+      polylines.add(
+        Polyline(
+          points: path
+              .map((point) => LatLng(point.lat, point.lon))
+              .toList(growable: false),
+          strokeWidth: 4.0,
+          color: Colors.blueAccent.withOpacity(0.8),
+        ),
+      );
+    }
+
+    if (mapEquals(_visibleSegmentSignatures, signatures) &&
+        polylines.length == _visibleSegmentPolylines.length) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _visibleSegmentSignatures = signatures;
+      _visibleSegmentPolylines = polylines;
     });
   }
 
@@ -729,6 +795,7 @@ class _MapPageState extends State<MapPage>
     }
 
     setState(() {});
+    _updateVisibleSegments();
   }
 
   Future<void> _runStartupSync() async {
@@ -787,6 +854,9 @@ class _MapPageState extends State<MapPage>
             const BaseTileLayer(),
 
             BlueDotMarker(point: markerPoint),
+
+            if (_visibleSegmentPolylines.isNotEmpty)
+              PolylineLayer(polylines: _visibleSegmentPolylines),
 
             if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
               QuerySquareOverlay(points: _segmentDebugData.querySquare),

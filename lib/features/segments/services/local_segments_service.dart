@@ -122,6 +122,7 @@ class LocalSegmentsService {
       draft.speedLimitKph != null
           ? draft.speedLimitKph!.toString()
           : '',
+      '',
     ];
 
     rows.add(newRow);
@@ -353,7 +354,18 @@ class LocalSegmentsService {
       'End',
     ];
 
-    if (matchesHeader(expectedHeader)) {
+    const headerWithoutGeoJson = <String>[
+      'ID',
+      'name',
+      'road',
+      'Start name',
+      'End name',
+      'Start',
+      'End',
+      'speed_limit_kph',
+    ];
+
+    if (matchesHeader(expectedHeader) || matchesHeader(headerWithoutGeoJson)) {
       rows[0] = expectedHeader;
       for (var i = 1; i < rows.length; i++) {
         final upgraded = List<String>.from(rows[i]);

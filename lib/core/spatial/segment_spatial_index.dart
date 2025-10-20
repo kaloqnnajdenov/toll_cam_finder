@@ -42,4 +42,14 @@ class SegmentSpatialIndex {
     ));
     return hits.map((e) => e.geom).toList(growable: false);
   }
+
+  List<SegmentGeometry> segmentsWithinBounds(GeoBounds bounds) {
+    final hits = _tree.search(RBushBox(
+      minX: bounds.minLon,
+      minY: bounds.minLat,
+      maxX: bounds.maxLon,
+      maxY: bounds.maxLat,
+    ));
+    return hits.map((e) => e.geom).toList(growable: false);
+  }
 }

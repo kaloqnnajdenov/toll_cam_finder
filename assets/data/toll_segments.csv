@@ -1,1 +1,1 @@
-id;road;Start name;End name;Start;End;speed_limit_kph
+ID;name;road;Start name;End name;Start;End;speed_limit_kph;geojson

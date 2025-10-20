@@ -15,7 +15,14 @@ class TollSegmentsCsvSchema {
     'Start',
     'End',
     'speed_limit_kph',
+    'geojson',
   ];
+
+  /// Columns that are considered optional when parsing sync responses. Missing
+  /// values for these entries will be treated as empty strings instead of
+  /// raising errors during synchronization. This ensures newly added columns
+  /// remain backwards compatible while older datasets gradually migrate.
+  static const Set<String> optionalColumns = {'geojson'};
 
   /// Prefix applied to identifiers of user-created segments that only exist on
   /// the local device. These rows must be preserved during cloud synchronisation
