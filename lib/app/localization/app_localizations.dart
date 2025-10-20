@@ -317,6 +317,8 @@ class AppLocalizations {
 'Сигурен ли си, че искаш да запазиш сегмента само за себе си?',
 'confirmMakeSegmentPublic':
 'Сигурен ли си, че искаш да направиш този сегмент публичен?',
+'confirmDeleteSegment':
+'Сигурен ли си, че искаш да изтриеш сегмент {displayId}?',
 'comingSoon': 'Очаквайте скоро',
 'coordinatesMustBeProvided':
 'Координатите трябва да бъдат въведени във формат „ширина, дължина“.',
@@ -341,6 +343,10 @@ class AppLocalizations {
       'createSegmentMissingFieldEndCoordinates': 'крайни координати',
       'createSegmentMissingFieldsDelimiter': ', ',
       'createSegmentMissingFieldsConjunction': 'и',
+      'deleteAction': 'Изтрий',
+      'deleteSegmentAction': 'Изтрий сегмента',
+      'deleteSegmentConfirmationTitle': 'Изтриване на сегмента',
+      'failedToDeleteSegment': 'Неуспешно изтриване на сегмента.',
       'createSegmentMapInstructionBody':
 'Постави или премести маркерите, за да коригираш началната и крайната точка. Координатите се попълват автоматично при преместване.',
 'createSegmentMapInstructionTitle': 'Поставете началната и крайната точка на картата',
@@ -389,6 +395,7 @@ class AppLocalizations {
 'segmentDebugTagEnd': 'край',
 'segmentDebugTagSeparator': ' · ',
 'segmentDebugTagStart': 'начало',
+'segmentDeleted': 'Сегмент {displayId} е изтрит.',
 'segmentProgressEndKilometers':
 '{distance} км до края на сегмента',
 'segmentProgressEndMeters': '{distance} м до края на сегмента',
@@ -408,10 +415,22 @@ class AppLocalizations {
 'segmentPickerEndMarkerLabel': 'B',
 'segmentMissingCoordinates':
 'Запазеният сегмент няма координати и не може да бъде споделен публично.',
+'segmentHidden':
+'Сегмент {displayId} е скрит. Камерите и предупрежденията са изключени.',
+'segmentVisible':
+'Сегмент {displayId} отново е видим. Камерите и предупрежденията са възстановени.',
+'segmentVisibilityDisableSubtitle':
+'Няма да се показват камери и предупреждения за този сегмент.',
+'segmentVisibilityRestoreSubtitle':
+'Камерите и предупрежденията за този сегмент ще бъдат възстановени.',
+'hideSegmentOnMapAction': 'Скрий сегмента на картата',
+'showSegmentOnMapAction': 'Покажи сегмента на картата',
 'segmentNotFoundLocally': 'Сегментът не беше намерен локално.',
 'personalSegmentDefaultName': 'Личен сегмент',
 'onlySegmentsSavedLocallyCanBeShared':
 'Само сегменти, запазени локално, могат да бъдат споделяни публично.',
+'onlyLocalSegmentsCanBeDeleted':
+'Само сегменти, запазени локално, могат да бъдат изтрити.',
 'segmentAlreadyApprovedAndPublic':
 'Сегмент {displayId} вече беше одобрен от администраторите и е публичен.',
 'speedDialAverageTitle': 'Средна скорост',
