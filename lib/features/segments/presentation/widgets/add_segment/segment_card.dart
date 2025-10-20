@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_repository.dart';
 
 class SegmentCard extends StatelessWidget {
@@ -51,7 +52,7 @@ class SegmentCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _SegmentLocation(
-                      title: 'Start',
+                      title: AppMessages.segmentLocationStartLabel,
                       value: segment.startDisplayName,
                       fallback: segment.startCoordinates,
                     ),
@@ -59,7 +60,7 @@ class SegmentCard extends StatelessWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _SegmentLocation(
-                      title: 'End',
+                      title: AppMessages.segmentLocationEndLabel,
                       value: segment.endDisplayName,
                       fallback: segment.endCoordinates,
                     ),
@@ -91,7 +92,7 @@ class _DeactivatedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Hidden',
+        AppMessages.segmentBadgeHidden,
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onErrorContainer,
         ),
@@ -113,7 +114,7 @@ class _LocalBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Local',
+        AppMessages.segmentBadgeLocal,
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onSecondaryContainer,
         ),
@@ -135,7 +136,7 @@ class _ReviewBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Review',
+        AppMessages.segmentBadgeReview,
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onTertiaryContainer,
         ),

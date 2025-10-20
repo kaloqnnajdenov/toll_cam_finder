@@ -65,6 +65,16 @@ class AppMessages {
       _l.translate('segmentVisibilityRestoreSubtitle');
   static String get segmentVisibilityDisableSubtitle =>
       _l.translate('segmentVisibilityDisableSubtitle');
+  static String get segmentBadgeHidden =>
+      _l.translate('segmentBadgeHidden');
+  static String get segmentBadgeLocal =>
+      _l.translate('segmentBadgeLocal');
+  static String get segmentBadgeReview =>
+      _l.translate('segmentBadgeReview');
+  static String get segmentLocationStartLabel =>
+      _l.translate('segmentLocationStartLabel');
+  static String get segmentLocationEndLabel =>
+      _l.translate('segmentLocationEndLabel');
   static String segmentHidden(String displayId) =>
       _l.translate('segmentHidden', {'displayId': displayId});
   static String segmentVisible(String displayId) =>
