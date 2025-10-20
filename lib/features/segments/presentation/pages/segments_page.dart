@@ -91,10 +91,20 @@ class _SegmentsPageState extends State<SegmentsPage> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _onCreateSegmentPressed,
-          icon: const Icon(Icons.add),
-          label: Text(localizations.createSegment),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButton: SafeArea(
+          minimum: const EdgeInsets.all(16),
+          child: FilledButton.icon(
+            onPressed: _onCreateSegmentPressed,
+            icon: const Icon(Icons.add),
+            label: Text(localizations.createSegment),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+            ),
+          ),
         ),
       ),
     );
