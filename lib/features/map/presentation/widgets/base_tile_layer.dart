@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -69,6 +70,7 @@ class BaseTileLayer extends StatelessWidget {
         TileLayer(
           urlTemplate: AppConstants.mapURL,
           userAgentPackageName: AppConstants.userAgentPackageName,
+          tileProvider: _loggingTileProvider,
         ),
         Positioned(
           left: attributionLeft,
@@ -116,6 +118,31 @@ class _OsmAttributionText extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+final _LoggingNetworkTileProvider _loggingTileProvider =
+    _LoggingNetworkTileProvider();
+
+class _LoggingNetworkTileProvider extends NetworkTileProvider {
+  _LoggingNetworkTileProvider();
+
+  @override
+  ImageProvider getImageWithCancelLoadingSupport(
+    TileCoordinates coordinates,
+    TileLayer options,
+    Future<void> cancelLoading,
+  ) {
+    if (kDebugMode) {
+      final url = getTileUrl(coordinates, options);
+      debugPrint('Requesting OpenStreetMap tile: $url');
+    }
+
+    return super.getImageWithCancelLoadingSupport(
+      coordinates,
+      options,
+      cancelLoading,
     );
   }
 }
