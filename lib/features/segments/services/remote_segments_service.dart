@@ -291,12 +291,12 @@ class RemoteSegmentsService {
       return true;
     }
 
-    final details = error.details?.toLowerCase() ?? '';
+    final details = (error.details?.toString() ?? '').toLowerCase();
     if (details.contains('id')) {
       return true;
     }
 
-    final hint = error.hint?.toLowerCase() ?? '';
+    final hint = (error.hint?.toString() ?? '').toLowerCase();
     return hint.contains('id');
   }
 
