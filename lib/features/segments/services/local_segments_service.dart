@@ -5,6 +5,7 @@ import 'package:toll_cam_finder/core/app_messages.dart';
 
 import 'segments_metadata_service.dart';
 import 'toll_segments_csv_constants.dart';
+import 'toll_segments_data_store.dart';
 import 'toll_segments_file_system.dart';
 import 'toll_segments_file_system_stub.dart'
     if (dart.library.io) 'toll_segments_file_system_io.dart'
@@ -110,7 +111,19 @@ class LocalSegmentsService {
       rows.insert(0, TollSegmentsCsvSchema.header);
     }
 
-    final localId = SegmentIdGenerator.generateLocalId();
+    final remoteRows = await TollSegmentsDataStore.instance.ensureRemoteRows(
+      assetPath: kTollSegmentsAssetPath,
+    );
+    final remoteIds = remoteRows.map((row) => row.isNotEmpty ? row.first : '');
+    final existingLocalIds = rows
+        .where((row) => row.isNotEmpty)
+        .where((row) => row.first.toLowerCase() != 'id')
+        .map((row) => row.first);
+
+    final localId = SegmentIdGenerator.generateLocalId(
+      existingLocalIds: existingLocalIds,
+      remoteIds: remoteIds,
+    );
     final newRow = <String>[
       localId,
       draft.name,
