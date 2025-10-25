@@ -123,6 +123,7 @@ class _MapPageState extends State<MapPage>
   Timer? _offlineRedirectTimer;
   Timer? _osmUnavailableRedirectTimer;
   bool _hasConnectivity = true;
+  bool _isOsmServiceAvailable = true;
 
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
@@ -274,9 +275,11 @@ class _MapPageState extends State<MapPage>
     } else {
       _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.offline);
       if (_segmentsOnlyModeController.reason ==
-              SegmentsOnlyModeReason.offline &&
-          !_segmentsOnlyPageOpen) {
+          SegmentsOnlyModeReason.offline) {
         _segmentsOnlyModeController.exitMode();
+        if (_segmentsOnlyPageOpen) {
+          unawaited(_closeSegmentsOnlyPageIfOpen());
+        }
       }
     }
   }
@@ -511,18 +514,22 @@ class _MapPageState extends State<MapPage>
 
       setState(() {
         _osmSpeedLimitKph = result;
+        _isOsmServiceAvailable = true;
       });
       _cancelSegmentsOnlyRedirectTimer(
         SegmentsOnlyModeReason.osmUnavailable,
       );
       if (_segmentsOnlyModeController.reason ==
-              SegmentsOnlyModeReason.osmUnavailable &&
-          !_segmentsOnlyPageOpen) {
+          SegmentsOnlyModeReason.osmUnavailable) {
         _segmentsOnlyModeController.exitMode();
+        if (_segmentsOnlyPageOpen) {
+          unawaited(_closeSegmentsOnlyPageIfOpen());
+        }
       }
     } catch (_) {
       if (!mounted) return;
 
+      _isOsmServiceAvailable = false;
       _segmentsOnlyModeController.enterMode(
         SegmentsOnlyModeReason.osmUnavailable,
       );
@@ -991,7 +998,40 @@ class _MapPageState extends State<MapPage>
       await Navigator.of(context).pushNamed(AppRoutes.segmentsOnly);
     } finally {
       _segmentsOnlyPageOpen = false;
-      _segmentsOnlyModeController.exitMode();
+      if (_shouldExitSegmentsOnlyModeAfterNav(reason)) {
+        _segmentsOnlyModeController.exitMode();
+      }
+    }
+  }
+
+  Future<void> _closeSegmentsOnlyPageIfOpen() async {
+    if (!_segmentsOnlyPageOpen || !mounted) {
+      return;
+    }
+
+    await Navigator.of(context).maybePop();
+  }
+
+  bool _shouldExitSegmentsOnlyModeAfterNav(
+      SegmentsOnlyModeReason reason) {
+    final SegmentsOnlyModeReason? currentReason =
+        _segmentsOnlyModeController.reason;
+
+    if (!_segmentsOnlyModeController.isActive || currentReason == null) {
+      return true;
+    }
+
+    if (currentReason != reason) {
+      return true;
+    }
+
+    switch (reason) {
+      case SegmentsOnlyModeReason.manual:
+        return true;
+      case SegmentsOnlyModeReason.offline:
+        return _hasConnectivity;
+      case SegmentsOnlyModeReason.osmUnavailable:
+        return _isOsmServiceAvailable;
     }
   }
 
