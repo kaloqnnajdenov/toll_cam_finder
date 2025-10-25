@@ -20,7 +20,7 @@ class ForegroundNotificationService {
       final String limitText =
           (limit != null && limit.isFinite) ? '${limit.toStringAsFixed(0)} km/h' : '--';
       final String avgText = avg.isFinite ? '${avg.toStringAsFixed(0)} km/h' : '--';
-      return 'Limit $limitText • Avg $avgText';
+      return 'On segment • Avg $avgText • Allowed $limitText';
     }
 
     final double? distance = _segmentUiService
