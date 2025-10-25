@@ -68,17 +68,13 @@ class _CompassNeedle extends StatelessWidget {
     return SizedBox(
       width: 36,
       height: 36,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedRotation(
-            turns: rotationTurns,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-            child: Icon(Icons.navigation, size: 22, color: color),
-          ),
-          Icon(Icons.lock, size: 12, color: color.withOpacity(0.7)),
-        ],
+      child: Center(
+        child: AnimatedRotation(
+          turns: rotationTurns,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          child: Icon(Icons.navigation, size: 22, color: color),
+        ),
       ),
     );
   }

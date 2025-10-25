@@ -28,7 +28,7 @@ class RemoteSegmentsService {
   static const String _roadColumn = 'road';
   static const String _startColumn = 'Start';
   static const String _endColumn = 'End';
-  static const String _routeGeoJsonColumn = 'route_geojson';
+  static const String _routeGeoJsonColumn = 'geojson';
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(

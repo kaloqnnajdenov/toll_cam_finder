@@ -67,21 +67,8 @@ class TollCamerasOverlay extends StatelessWidget {
     }
 
     // Marker layer
-    return MarkerLayer(
-      markers: cameras.visibleCameras.map((p) {
-        return Marker(
-          point: p,
-          width: 32,
-          height: 32,
-          alignment: Alignment.center,
-          child: markerBuilder?.call(context, p) ??
-              const Icon(
-                Icons.videocam,
-                size: 24,
-                color: Colors.deepOrangeAccent,
-              ),
-        );
-      }).toList(),
+    return const MarkerLayer(
+      markers: <Marker>[],
     );
   }
 }
