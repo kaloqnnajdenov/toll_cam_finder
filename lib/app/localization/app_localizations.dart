@@ -227,6 +227,7 @@ class AppLocalizations {
           "Don't worry, we are still observing for segments and average speed, but as this is a free app, we rely on free map providers, which are currently experiencing a shortage. We are sorry for the inconvenience and we are working on the issue.",
       'segmentsOnlyModeOfflineMessage':
           "You appear to be offline. We'll keep monitoring segments and your average speed, but the map requires an internet connection. Check your connection and come back when you're online again.",
+      'segmentsOnlyModeContinueButton': 'Continue to map',
       'segmentsOnlyModeReminder':
           'Segments and averages continue to update while this view is open.',
       'selectLanguage': 'Select language',
@@ -433,6 +434,7 @@ class AppLocalizations {
 'Не се притеснявайте, все още наблюдаваме сегментите и средната скорост, но тъй като приложението е безплатно, разчитаме на безплатни доставчици на карти, които в момента изпитват затруднения. Извиняваме се за неудобството и работим по отстраняването на проблема.',
 'segmentsOnlyModeOfflineMessage':
 'Изглежда сте офлайн. Продължаваме да следим сегментите и средната ви скорост, но картата изисква интернет връзка. Проверете връзката си и се върнете, когато сте отново онлайн.',
+'segmentsOnlyModeContinueButton': 'Продължи към картата',
 'segmentsOnlyModeReminder':
 'Сегментите и средната скорост продължават да се обновяват, докато този екран е отворен.',
 'selectLanguage': 'Избери език',
@@ -558,6 +560,8 @@ class AppLocalizations {
       _value('segmentsOnlyModeOsmBlockedMessage');
   String get segmentsOnlyModeOfflineMessage =>
       _value('segmentsOnlyModeOfflineMessage');
+  String get segmentsOnlyModeContinueButton =>
+      _value('segmentsOnlyModeContinueButton');
   String get segmentsOnlyModeReminder =>
       _value('segmentsOnlyModeReminder');
   String get language => _value('language');

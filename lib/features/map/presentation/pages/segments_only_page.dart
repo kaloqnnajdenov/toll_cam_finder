@@ -23,9 +23,11 @@ class SegmentsOnlyPage extends StatelessWidget {
     final segmentsController = context.watch<SegmentsOnlyModeController>();
     final avgController = context.watch<AverageSpeedController>();
 
-    final reason = segmentsController.reason ?? SegmentsOnlyModeReason.manual;
+    final SegmentsOnlyModeReason reason =
+        segmentsController.reason ?? SegmentsOnlyModeReason.manual;
     final bool isForcedMode = reason == SegmentsOnlyModeReason.offline ||
         reason == SegmentsOnlyModeReason.osmUnavailable;
+    final bool canResumeMap = !isForcedMode;
 
     final String message;
     switch (reason) {
@@ -63,43 +65,57 @@ class SegmentsOnlyPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          message,
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 24),
-                        MapControlsPanelCard(
-                          colorScheme: theme.colorScheme,
-                          speedKmh: segmentsController.currentSpeedKmh,
-                          avgController: avgController,
-                          hasActiveSegment: segmentsController.hasActiveSegment,
-                          segmentSpeedLimitKph:
-                              segmentsController.segmentSpeedLimitKph,
-                          segmentDebugPath: segmentsController.segmentDebugPath,
-                          distanceToSegmentStartMeters:
-                              segmentsController.distanceToSegmentStartMeters,
-                          maxWidth: constraints.maxWidth,
-                          maxHeight: null,
-                          stackMetricsVertically: constraints.maxWidth < 480,
-                          forceSingleRow: false,
-                          isLandscape:
-                              mediaQuery.orientation == Orientation.landscape,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          localizations.segmentsOnlyModeReminder,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
+                final Widget scrollChild = ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        message,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 24),
+                      MapControlsPanelCard(
+                        colorScheme: theme.colorScheme,
+                        speedKmh: segmentsController.currentSpeedKmh,
+                        avgController: avgController,
+                        hasActiveSegment: segmentsController.hasActiveSegment,
+                        segmentSpeedLimitKph:
+                            segmentsController.segmentSpeedLimitKph,
+                        segmentDebugPath: segmentsController.segmentDebugPath,
+                        distanceToSegmentStartMeters:
+                            segmentsController.distanceToSegmentStartMeters,
+                        maxWidth: constraints.maxWidth,
+                        maxHeight: null,
+                        stackMetricsVertically: constraints.maxWidth < 480,
+                        forceSingleRow: false,
+                        isLandscape:
+                            mediaQuery.orientation == Orientation.landscape,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        localizations.segmentsOnlyModeReminder,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
+                );
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(child: scrollChild),
+                    ),
+                    if (canResumeMap) ...[
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        child:
+                            Text(localizations.segmentsOnlyModeContinueButton),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),
