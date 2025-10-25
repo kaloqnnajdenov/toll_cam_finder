@@ -32,6 +32,7 @@ class SegmentTracker {
   static const int _looseMissThreshold = 6;
   static const int _maxCandidateMisses = 4;
   static const double _looseExitMultiplier = 2.5;
+  static const Duration _reloadKeepAliveDuration = Duration(seconds: 15);
 
   final SegmentIndexService _index;
 
@@ -43,6 +44,7 @@ class SegmentTracker {
   SegmentTrackerDebugData _latestDebugData =
       const SegmentTrackerDebugData.empty();
   _ActiveSegmentState? _active;
+  _ActiveSegmentSnapshot? _pendingRestore;
 
   final Set<String> _ignoredSegmentIds = <String>{};
   SegmentGeometry? _lastExitedGeometry;
@@ -52,7 +54,7 @@ class SegmentTracker {
   String? get activeSegmentId => _active?.geometry.id;
 
   Future<bool> initialise({required String assetPath}) async {
-    _resetTrackingState();
+    _resetTrackingState(preserveActive: false);
     if (!_index.isReady) {
       await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     }
@@ -64,7 +66,7 @@ class SegmentTracker {
   }
 
   Future<bool> reload({required String assetPath}) async {
-    _resetTrackingState();
+    _resetTrackingState(preserveActive: true);
     await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     _isReady = _index.isReady;
     if (!_isReady) {
@@ -73,7 +75,7 @@ class SegmentTracker {
     return _isReady;
   }
 
-void updateIgnoredSegments(Set<String> ignoredIds) {
+  void updateIgnoredSegments(Set<String> ignoredIds) {
     _ignoredSegmentIds
       ..clear()
       ..addAll(ignoredIds);
@@ -90,13 +92,22 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     final SegmentGeometry? exitedGeometry = _lastExitedGeometry;
     _lastExitedGeometry = null;
 
+    final SegmentGeometry? activeGeometry = _active?.geometry;
+    final _ActiveSegmentSnapshot? snapshot = _pendingRestore;
+    final String? activeSegmentId =
+        activeGeometry?.id ?? snapshot?.segmentId;
+    final double? activeSegmentSpeedLimit =
+        activeGeometry?.speedLimitKph ?? snapshot?.segmentSpeedLimitKph;
+    final double? activeSegmentLength =
+        activeGeometry?.lengthMeters ?? snapshot?.segmentLengthMeters;
+
     if (!_isReady) {
       return SegmentTrackerEvent(
         startedSegment: false,
         endedSegment: false,
-        activeSegmentId: _active?.geometry.id,
-        activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
-        activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+        activeSegmentId: activeSegmentId,
+        activeSegmentSpeedLimitKph: activeSegmentSpeedLimit,
+        activeSegmentLengthMeters: activeSegmentLength,
         completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
         debugData: _latestDebugData,
       );
@@ -151,12 +162,17 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     
     final transition = _updateActiveSegment(matches);
 
+    final SegmentGeometry? refreshedGeometry = _active?.geometry;
+    final _ActiveSegmentSnapshot? refreshedSnapshot = _pendingRestore;
+
     return SegmentTrackerEvent(
       startedSegment: transition.started,
       endedSegment: transition.ended,
-      activeSegmentId: _active?.geometry.id,
-      activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
-      activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+      activeSegmentId: refreshedGeometry?.id ?? refreshedSnapshot?.segmentId,
+      activeSegmentSpeedLimitKph:
+          refreshedGeometry?.speedLimitKph ?? refreshedSnapshot?.segmentSpeedLimitKph,
+      activeSegmentLengthMeters:
+          refreshedGeometry?.lengthMeters ?? refreshedSnapshot?.segmentLengthMeters,
       completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
       debugData: _latestDebugData,
     );
@@ -164,17 +180,39 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
 
   void dispose() {}
 
-  void _resetTrackingState() {
-    if (_active != null) {
-      _clearActiveSegment(reason: 'reset');
+  void _resetTrackingState({required bool preserveActive}) {
+    if (preserveActive && _active != null) {
+      _active!
+        ..consecutiveMisses = 0
+        ..extendKeepAlive(_reloadKeepAliveDuration);
+      _pendingRestore = _ActiveSegmentSnapshot(
+        segmentId: _active!.geometry.id,
+        forceKeepUntilEnd: _active!.forceKeepUntilEnd,
+        enteredAt: _active!.enteredAt,
+        keepAliveUntil: _active!.keepAliveUntil,
+        segmentLengthMeters: _active!.geometry.lengthMeters,
+        segmentSpeedLimitKph: _active!.geometry.speedLimitKph,
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[SEG] suspending segment ${_active!.geometry.id} for reload',
+        );
+      }
+    } else {
+      _pendingRestore = null;
+      _active = null;
+      _lastExitedGeometry = null;
     }
+
     _isReady = false;
-    _lastExitedGeometry = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
   _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {
     if (_active == null) {
+      if (_maybeRestoreActive(matches)) {
+        return const _SegmentTransition();
+      }
       final entry = _chooseEntryMatch(matches);
       if (entry != null) {
         _startSegment(entry);
@@ -184,6 +222,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
 
     final active = _active!;
+    final DateTime now = DateTime.now();
     SegmentMatch? current;
     for (final match in matches) {
       if (match.geometry.id == active.geometry.id) {
@@ -193,6 +232,10 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
 
     if (current == null) {
+      if (active.hasKeepAlive(now)) {
+        return const _SegmentTransition();
+      }
+
       active.consecutiveMisses++;
       if (active.consecutiveMisses >= _maxCandidateMisses) {
         _clearActiveSegment(reason: 'no candidates');
@@ -202,6 +245,9 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
 
     active.lastMatch = current;
+    active.path = current.path;
+    active.forceKeepUntilEnd = active.forceKeepUntilEnd || !current.isDetailed;
+    active.clearKeepAlive();
 
     if (current.endHit) {
       _clearActiveSegment(reason: 'end geofence');
@@ -251,6 +297,8 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     )..lastMatch = entry;
 
     _active = active;
+    _pendingRestore = null;
+    active.clearKeepAlive();
 
     if (kDebugMode) {
       debugPrint(
@@ -266,7 +314,66 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     }
     if (_active != null) {
       _lastExitedGeometry = _active!.geometry;
+      _active!.clearKeepAlive();
     }
     _active = null;
+    _pendingRestore = null;
   }
+
+  bool _maybeRestoreActive(List<SegmentMatch> matches) {
+    final snapshot = _pendingRestore;
+    if (snapshot == null) {
+      return false;
+    }
+
+    for (final match in matches) {
+      if (match.geometry.id != snapshot.segmentId) {
+        continue;
+      }
+
+      final double looseExitDistance =
+          onPathToleranceMeters * _looseExitMultiplier;
+      final bool distanceOk =
+          match.withinTolerance || match.distanceMeters <= looseExitDistance;
+      if (!distanceOk) {
+        continue;
+      }
+
+      _active = _ActiveSegmentState(
+        geometry: match.geometry,
+        path: match.path,
+        forceKeepUntilEnd: snapshot.forceKeepUntilEnd || !match.isDetailed,
+        enteredAt: snapshot.enteredAt,
+      )..lastMatch = match;
+
+      _active!.restoreKeepAlive(snapshot.keepAliveUntil);
+
+      _pendingRestore = null;
+
+      if (kDebugMode) {
+        debugPrint('[SEG] restored segment ${match.geometry.id}');
+      }
+      return true;
+    }
+
+    return false;
+  }
+}
+
+class _ActiveSegmentSnapshot {
+  const _ActiveSegmentSnapshot({
+    required this.segmentId,
+    required this.forceKeepUntilEnd,
+    required this.enteredAt,
+    this.keepAliveUntil,
+    this.segmentLengthMeters,
+    this.segmentSpeedLimitKph,
+  });
+
+  final String segmentId;
+  final bool forceKeepUntilEnd;
+  final DateTime enteredAt;
+  final DateTime? keepAliveUntil;
+  final double? segmentLengthMeters;
+  final double? segmentSpeedLimitKph;
 }

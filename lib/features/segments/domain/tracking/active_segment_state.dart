@@ -27,6 +27,12 @@ class _ActiveSegmentState {
   /// Timestamp at which the segment became active, used by timeout heuristics.
   final DateTime enteredAt;
 
+  /// Optional deadline until which the segment should be kept alive despite
+  /// missing candidates. This is used when the tracker reloads while a segment
+  /// is already active so temporary data unavailability does not trigger an
+  /// exit.
+  DateTime? keepAliveUntil;
+
   /// Number of consecutive update cycles in which the active segment failed to
   /// produce a satisfactory match.
   int consecutiveMisses = 0;
@@ -34,4 +40,49 @@ class _ActiveSegmentState {
   /// Most recent positive match for the active segment. This is reused for
   /// debugging and to provide continuity when no fresh candidates are present.
   SegmentMatch? lastMatch;
+
+  /// Extends the keep-alive deadline by the provided [duration]. When the
+  /// segment already has a future deadline the later of the two is retained.
+  void extendKeepAlive(Duration duration, {DateTime? now}) {
+    final DateTime baseline = now ?? DateTime.now();
+    final DateTime candidate = baseline.add(duration);
+    final DateTime? existing = keepAliveUntil;
+    if (existing == null || existing.isBefore(candidate)) {
+      keepAliveUntil = candidate;
+    }
+  }
+
+  /// Restores a previously persisted keep-alive deadline, dropping it if it
+  /// already expired.
+  void restoreKeepAlive(DateTime? until) {
+    if (until == null) {
+      keepAliveUntil = null;
+      return;
+    }
+    if (until.isAfter(DateTime.now())) {
+      keepAliveUntil = until;
+    } else {
+      keepAliveUntil = null;
+    }
+  }
+
+  /// Clears the keep-alive deadline so normal miss handling resumes
+  /// immediately.
+  void clearKeepAlive() {
+    keepAliveUntil = null;
+  }
+
+  /// Returns whether the keep-alive deadline is still in the future, clearing
+  /// it automatically if the grace window elapsed.
+  bool hasKeepAlive(DateTime now) {
+    final DateTime? expiry = keepAliveUntil;
+    if (expiry == null) {
+      return false;
+    }
+    if (now.isBefore(expiry)) {
+      return true;
+    }
+    keepAliveUntil = null;
+    return false;
+  }
 }
