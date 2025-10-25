@@ -97,7 +97,7 @@ class _MapPageState extends State<MapPage>
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
-  StreamSubscription<ConnectivityResult>? _connectivitySub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   Timer? _speedIdleResetTimer;
 
   // Helpers
@@ -250,19 +250,19 @@ class _MapPageState extends State<MapPage>
       _mapController.move(_center, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
     }
-
     await _subscribeToPositionStream();
   }
 
   Future<void> _initConnectivityMonitoring() async {
     _connectivitySub ??=
         _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
-    final ConnectivityResult result = await _connectivity.checkConnectivity();
-    _onConnectivityChanged(result);
+    final List<ConnectivityResult> results = await _connectivity.checkConnectivity();
+    _onConnectivityChanged(results);
   }
 
-  void _onConnectivityChanged(ConnectivityResult result) {
-    final bool isConnected = result != ConnectivityResult.none;
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final bool isConnected =
+        results.isNotEmpty && results.any((r) => r != ConnectivityResult.none);
     if (isConnected == _hasConnectivity) {
       return;
     }

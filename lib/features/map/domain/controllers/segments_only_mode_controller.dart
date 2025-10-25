@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 
-import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker_models.dart';
 
 enum SegmentsOnlyModeReason { manual, osmUnavailable, offline }
 
