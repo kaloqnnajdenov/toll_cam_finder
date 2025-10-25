@@ -178,6 +178,7 @@ class AppMessages {
   static String get retryAction => _l.translate('retryAction');
   static String get yesAction => _l.translate('yesAction');
   static String get noAction => _l.translate('noAction');
+  static String get okAction => _l.translate('okAction');
   static String get cancelAction => _l.translate('cancelAction');
   static String get deleteAction => _l.translate('deleteAction');
   static String get mapHintPlacePointA =>
@@ -317,6 +318,8 @@ class AppMessages {
       );
   static String get supabaseNotConfiguredForSync =>
       _l.translate('supabaseNotConfiguredForSync');
+  static String get syncRequiresInternetConnection =>
+      _l.translate('syncRequiresInternetConnection');
   static String get unexpectedSyncError =>
       _l.translate('unexpectedSyncError');
 

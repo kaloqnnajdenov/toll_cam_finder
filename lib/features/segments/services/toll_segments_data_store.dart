@@ -25,6 +25,17 @@ class TollSegmentsDataStore {
     );
   }
 
+  /// Ensures the remote rows are loaded into memory and returns a copy.
+  Future<List<List<String>>> ensureRemoteRows({
+    String assetPath = kTollSegmentsAssetPath,
+  }) async {
+    final rows = await _ensureRemoteRows(assetPath: assetPath);
+    return List<List<String>>.from(
+      rows.map((row) => List<String>.from(row)),
+      growable: false,
+    );
+  }
+
   /// Clears the cached remote rows.
   void clear() {
     _remoteRows = null;

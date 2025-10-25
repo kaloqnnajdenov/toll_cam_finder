@@ -47,21 +47,38 @@ class RemoteSegmentsService {
       );
     }
 
-    final pendingId = await _computeNextRemoteId(client);
+    var pendingId = await _computeNextRemoteId(client);
 
     try {
-      await client.from(tableName).insert(<String, dynamic>{
-        'id': pendingId,
-        _nameColumn: draft.name,
-        _roadColumn: draft.roadName,
-        'Start name': draft.startDisplayName,
-        'End name': draft.endDisplayName,
-        'Start': draft.startCoordinates,
-        'End': draft.endCoordinates,
-        'speed_limit_kph': draft.speedLimitKph,
-        _moderationStatusColumn: _pendingStatus,
-        _addedByUserColumn: addedByUserId,
-      });
+      while (true) {
+        try {
+          await client.from(tableName).insert(<String, dynamic>{
+            'id': pendingId,
+            _nameColumn: draft.name,
+            _roadColumn: draft.roadName,
+            'Start name': draft.startDisplayName,
+            'End name': draft.endDisplayName,
+            'Start': draft.startCoordinates,
+            'End': draft.endCoordinates,
+            'speed_limit_kph': draft.speedLimitKph,
+            _moderationStatusColumn: _pendingStatus,
+            _addedByUserColumn: addedByUserId,
+          });
+          break;
+        } on PostgrestException catch (error) {
+          if (_isIdConflict(error)) {
+            pendingId += 1;
+            if (pendingId > _smallIntMax) {
+              throw RemoteSegmentsServiceException(
+                AppMessages.unableToAssignNewSegmentId,
+                cause: error,
+              );
+            }
+            continue;
+          }
+          rethrow;
+        }
+      }
     } on SocketException catch (error) {
       throw RemoteSegmentsServiceException(
         AppMessages.noConnectionUnableToSubmitForModeration,
@@ -75,6 +92,9 @@ class RemoteSegmentsService {
         cause: error,
       );
     } catch (error, stackTrace) {
+      if (error is RemoteSegmentsServiceException) {
+        rethrow;
+      }
       throw RemoteSegmentsServiceException(
         AppMessages.unexpectedErrorSubmittingForModeration,
         cause: error,
@@ -258,6 +278,26 @@ class RemoteSegmentsService {
     }
 
     return nextId;
+  }
+
+  bool _isIdConflict(PostgrestException error) {
+    final code = error.code?.toUpperCase();
+    if (code != '23505') {
+      return false;
+    }
+
+    final message = (error.message ?? '').toLowerCase();
+    if (message.contains('id')) {
+      return true;
+    }
+
+    final details = (error.details?.toString() ?? '').toLowerCase();
+    if (details.contains('id')) {
+      return true;
+    }
+
+    final hint = (error.hint?.toString() ?? '').toLowerCase();
+    return hint.contains('id');
   }
 
   int _parseId(dynamic value) {
