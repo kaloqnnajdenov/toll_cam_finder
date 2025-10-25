@@ -505,6 +505,7 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _speedKmh = 0.0;
     });
+    _updateSegmentsOnlyMetrics();
   }
 
   Future<void> _loadSpeedLimit(LatLng position) async {

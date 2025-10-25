@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
+import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/widgets/map_controls/map_controls_panel_card.dart';
+import 'package:toll_cam_finder/shared/services/language_controller.dart';
+import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 
 class SegmentsOnlyPage extends StatelessWidget {
   const SegmentsOnlyPage({super.key});
@@ -41,7 +46,18 @@ class SegmentsOnlyPage extends StatelessWidget {
         appBar: AppBar(
           automaticallyImplyLeading: !isForcedMode,
           title: Text(localizations.segmentsOnlyModeTitle),
+          actions: [
+            Builder(
+              builder: (context) {
+                return IconButton(
+                  icon: const Icon(Icons.tune),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                );
+              },
+            ),
+          ],
         ),
+        endDrawer: const _SegmentsOnlyOptionsDrawer(),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -91,5 +107,217 @@ class SegmentsOnlyPage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SegmentsOnlyOptionsDrawer extends StatelessWidget {
+  const _SegmentsOnlyOptionsDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          children: [
+            Consumer<ThemeController>(
+              builder: (context, themeController, _) {
+                final bool isDarkMode = themeController.isDarkMode;
+                return ListTile(
+                  leading: Icon(
+                    isDarkMode
+                        ? Icons.dark_mode_outlined
+                        : Icons.light_mode_outlined,
+                  ),
+                  title: Text(localizations.darkMode),
+                  trailing: Switch.adaptive(
+                    value: isDarkMode,
+                    onChanged: (value) => themeController.setDarkMode(value),
+                  ),
+                  onTap: themeController.toggle,
+                );
+              },
+            ),
+            Consumer<GuidanceAudioController>(
+              builder: (context, audioController, _) {
+                return ListTile(
+                  leading: const Icon(Icons.volume_up_outlined),
+                  title: Text(localizations.audioModeTitle),
+                  subtitle: Text(
+                    _audioModeLabel(audioController.mode, localizations),
+                  ),
+                  onTap: () => _showAudioModeSheet(context),
+                );
+              },
+            ),
+            Consumer<LanguageController>(
+              builder: (context, languageController, _) {
+                return ListTile(
+                  leading: const Icon(Icons.language),
+                  title: Text(localizations.languageButton),
+                  subtitle: Text(languageController.currentOption.label),
+                  onTap: () => _showLanguageSheet(context),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(localizations.profile),
+              onTap: () => _showProfileSheet(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _audioModeLabel(
+    GuidanceAudioMode mode,
+    AppLocalizations localizations,
+  ) {
+    switch (mode) {
+      case GuidanceAudioMode.fullGuidance:
+        return localizations.audioModeFullGuidance;
+      case GuidanceAudioMode.muteForeground:
+        return localizations.audioModeForegroundMuted;
+      case GuidanceAudioMode.muteBackground:
+        return localizations.audioModeBackgroundMuted;
+      case GuidanceAudioMode.absoluteMute:
+        return localizations.audioModeAbsoluteMute;
+    }
+  }
+
+  void _showAudioModeSheet(BuildContext context) {
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!navigator.mounted) return;
+      final rootContext = navigator.context;
+      showModalBottomSheet<void>(
+        context: rootContext,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Consumer<GuidanceAudioController>(
+              builder: (context, controller, _) {
+                final localizations = AppLocalizations.of(context);
+                return ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: Text(localizations.audioModeTitle),
+                    ),
+                    for (final mode in GuidanceAudioMode.values)
+                      RadioListTile<GuidanceAudioMode>(
+                        title: Text(
+                          _audioModeLabel(mode, localizations),
+                        ),
+                        value: mode,
+                        groupValue: controller.mode,
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          controller.setMode(value);
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!navigator.mounted) return;
+      final rootContext = navigator.context;
+      showModalBottomSheet<void>(
+        context: rootContext,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Consumer<LanguageController>(
+              builder: (context, controller, _) {
+                final localizations = AppLocalizations.of(context);
+                final options = controller.languageOptions;
+                return ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: Text(localizations.selectLanguage),
+                    ),
+                    for (final option in options)
+                      ListTile(
+                        title: Text(option.label),
+                        trailing: option.locale == controller.locale
+                            ? const Icon(Icons.check)
+                            : null,
+                        enabled: option.available,
+                        subtitle: option.available
+                            ? null
+                            : Text(localizations.comingSoon),
+                        onTap: option.available
+                            ? () {
+                                controller.setLocale(option.locale);
+                                Navigator.of(sheetContext).pop();
+                              }
+                            : null,
+                      ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  void _showProfileSheet(BuildContext context) {
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!navigator.mounted) return;
+      final rootContext = navigator.context;
+      final localizations = AppLocalizations.of(rootContext);
+      final auth = rootContext.read<AuthController>();
+      if (auth.isLoggedIn) {
+        navigator.pushNamed(AppRoutes.profile);
+        return;
+      }
+      showModalBottomSheet<void>(
+        context: rootContext,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.login),
+                  title: Text(localizations.logIn),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    navigator.pushNamed(AppRoutes.login);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt),
+                  title: Text(localizations.createAccountCta),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    navigator.pushNamed(AppRoutes.signUp);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 }
