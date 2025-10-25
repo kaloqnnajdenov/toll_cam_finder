@@ -42,6 +42,11 @@ extension _MapPageDrawer on _MapPageState {
               onTap: _onSegmentsSelected,
             ),
             ListTile(
+              leading: const Icon(Icons.speed_outlined),
+              title: Text(localizations.segmentsOnlyModeButton),
+              onTap: _onSegmentsOnlyModeSelected,
+            ),
+            ListTile(
               leading: const Icon(Icons.volume_up_outlined),
               title: Text(localizations.audioModeTitle),
               subtitle: Text(
@@ -223,6 +228,14 @@ extension _MapPageDrawer on _MapPageState {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_openSegmentsPage());
+    });
+  }
+
+  void _onSegmentsOnlyModeSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_openSegmentsOnlyPage(SegmentsOnlyModeReason.manual));
     });
   }
 
