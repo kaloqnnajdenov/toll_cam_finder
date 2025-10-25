@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
-import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/widgets/map_controls/map_controls_panel_card.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
+import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 
 class SegmentsOnlyPage extends StatelessWidget {
   const SegmentsOnlyPage({super.key});
@@ -21,7 +21,8 @@ class SegmentsOnlyPage extends StatelessWidget {
     final mediaQuery = MediaQuery.of(context);
 
     final segmentsController = context.watch<SegmentsOnlyModeController>();
-    final avgController = context.watch<AverageSpeedController>();
+    final currentSegment = context.watch<CurrentSegmentController>();
+    final avgController = currentSegment.averageController;
 
     final SegmentsOnlyModeReason reason =
         segmentsController.reason ?? SegmentsOnlyModeReason.manual;

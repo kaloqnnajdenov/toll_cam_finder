@@ -16,7 +16,6 @@ import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
-import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/utils/speed_smoother.dart';
@@ -32,6 +31,8 @@ import 'package:toll_cam_finder/features/map/services/segment_ui_service.dart';
 import 'package:toll_cam_finder/features/map/services/speed_service.dart';
 import 'package:toll_cam_finder/features/map/services/upcoming_segment_cue_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/index/segment_index_service.dart';
+import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
+import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_guidance_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
@@ -102,7 +103,7 @@ class _MapPageState extends State<MapPage>
 
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
-  late final AverageSpeedController _avgCtrl;
+  late final CurrentSegmentController _currentSegmentController;
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final Distance _distanceCalculator = const Distance();
   final TollCameraController _cameraController = TollCameraController();
@@ -125,19 +126,7 @@ class _MapPageState extends State<MapPage>
   bool _hasConnectivity = true;
   bool _isOsmServiceAvailable = true;
 
-  SegmentTrackerDebugData _segmentDebugData =
-      const SegmentTrackerDebugData.empty();
-
-  double? _lastSegmentAvgKmh;
-  double? _activeSegmentSpeedLimitKph;
-  double? _nearestSegmentStartMeters;
-  SegmentTrackerEvent? _lastSegmentEvent;
-  LatLng? _avgLastLatLng;
-  DateTime? _avgLastSampleAt;
-
   double? _speedKmh;
-  String? _segmentProgressLabel;
-  SegmentDebugPath? _activeSegmentDebugPath;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
   DateTime? _nextCameraCheckAt;
@@ -151,6 +140,9 @@ class _MapPageState extends State<MapPage>
   bool _didRequestNotificationPermission = false;
   String? _lastNotificationStatus;
 
+  AverageSpeedController get _avgCtrl =>
+      _currentSegmentController.averageController;
+
   @override
   void initState() {
     super.initState();
@@ -160,7 +152,7 @@ class _MapPageState extends State<MapPage>
     _appLifecycleState =
         WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
 
-    _avgCtrl = context.read<AverageSpeedController>();
+    _currentSegmentController = context.read<CurrentSegmentController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
     _segmentGuidanceController = SegmentGuidanceController();
     _audioController = context.read<GuidanceAudioController>();
@@ -200,6 +192,7 @@ class _MapPageState extends State<MapPage>
     _offlineRedirectTimer?.cancel();
     _osmUnavailableRedirectTimer?.cancel();
     _segmentsOnlyModeController.exitMode();
+    _currentSegmentController.reset();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -366,8 +359,9 @@ class _MapPageState extends State<MapPage>
 
     _useForegroundLocationService = enable;
     _lastNotificationStatus = null;
-    if (enable && _lastSegmentEvent != null) {
-      unawaited(_updateForegroundNotification(_lastSegmentEvent!));
+    final SegmentTrackerEvent? lastEvent = _currentSegmentController.lastEvent;
+    if (enable && lastEvent != null) {
+      unawaited(_updateForegroundNotification(lastEvent));
     }
     if (_posSub != null) {
       unawaited(_subscribeToPositionStream());
@@ -418,9 +412,10 @@ class _MapPageState extends State<MapPage>
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
     _updateHeading(position.heading);
-    if (_avgCtrl.isRunning) {
-      _recordAverageProgress(position: next, timestamp: now);
-    }
+    _currentSegmentController.recordProgress(
+      position: next,
+      timestamp: now,
+    );
     _moveBlueDot(next);
     _maybeFetchSpeedLimit(next);
     if (_segmentsService.shouldProcessSegmentUpdate(
@@ -540,88 +535,31 @@ class _MapPageState extends State<MapPage>
     }
   }
 
-  void _recordAverageProgress({
-    required LatLng position,
-    required DateTime timestamp,
-  }) {
-    final LatLng? previousPosition = _avgLastLatLng;
-
-    if (previousPosition == null || _avgLastSampleAt == null) {
-      _avgLastLatLng = position;
-      _avgLastSampleAt = timestamp;
-      return;
-    }
-
-    final double distanceMeters = _distanceCalculator.as(
-      LengthUnit.Meter,
-      previousPosition,
-      position,
-    );
-
-    final double sanitizedDistance =
-        (distanceMeters.isFinite && distanceMeters > 0) ? distanceMeters : 0.0;
-
-    _avgCtrl.recordProgress(
-      distanceDeltaMeters: sanitizedDistance,
-      timestamp: timestamp,
-    );
-
-    _avgLastLatLng = position;
-    _avgLastSampleAt = timestamp;
-  }
-
   void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
     final DateTime timestamp = now ?? DateTime.now();
     final SegmentDebugPath? activePath = _segmentUiService
         .resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
 
-    double? exitAverage;
-
-    if (segEvent.endedSegment ||
-        segEvent.completedSegmentLengthMeters != null) {
-      final double? segmentLength = segEvent.completedSegmentLengthMeters;
-      final Duration? elapsed = _avgCtrl.elapsed;
-      final double computedAverage = (segmentLength != null && elapsed != null)
-          ? _avgCtrl.avgSpeedDone(
-              segmentLengthMeters: segmentLength,
-              segmentDuration: elapsed,
-            )
-          : _avgCtrl.average;
-
-      exitAverage = computedAverage;
-      _lastSegmentAvgKmh = computedAverage.isFinite ? computedAverage : null;
-      _avgCtrl.reset();
-      _avgLastLatLng = null;
-      _avgLastSampleAt = null;
-    }
-
-    if (segEvent.startedSegment) {
-      _lastSegmentAvgKmh = null;
-      _avgCtrl.start(startedAt: timestamp);
-      _avgLastLatLng = _userLatLng;
-      _avgLastSampleAt = timestamp;
-    }
-
-    if (segEvent.activeSegmentId == null) {
-      _activeSegmentSpeedLimitKph = null;
-    } else {
-      _activeSegmentSpeedLimitKph = segEvent.activeSegmentSpeedLimitKph;
-    }
-
-    _segmentDebugData = segEvent.debugData;
-    _activeSegmentDebugPath = activePath;
-    _nearestSegmentStartMeters = segEvent.activeSegmentId != null
+    final double? nearestStart = segEvent.activeSegmentId != null
         ? 0
         : _segmentUiService.nearestUpcomingSegmentDistance(
             segEvent.debugData.candidatePaths,
           );
-    _segmentProgressLabel = _segmentUiService.buildSegmentProgressLabel(
+    final String? progressLabel = _segmentUiService.buildSegmentProgressLabel(
       event: segEvent,
       activePath: activePath,
       localizations: AppLocalizations.of(context),
       cueService: _upcomingSegmentCueService,
     );
-    _lastSegmentEvent = segEvent;
+
+    final double? exitAverage = _currentSegmentController.updateWithEvent(
+      event: segEvent,
+      timestamp: timestamp,
+      activePath: activePath,
+      distanceToSegmentStartMeters: nearestStart,
+      progressLabel: progressLabel,
+      userPosition: _userLatLng,
+    );
     _updateSegmentsOnlyMetrics();
     unawaited(_updateForegroundNotification(segEvent));
 
@@ -638,18 +576,9 @@ class _MapPageState extends State<MapPage>
   }
 
   void _resetSegmentState() {
-    _segmentDebugData = const SegmentTrackerDebugData.empty();
-    _segmentProgressLabel = null;
-    _lastSegmentAvgKmh = null;
-    _activeSegmentSpeedLimitKph = null;
-    _nearestSegmentStartMeters = null;
-    _avgCtrl.reset();
-    _avgLastLatLng = null;
-    _avgLastSampleAt = null;
-    _activeSegmentDebugPath = null;
+    _currentSegmentController.reset();
     _nextCameraCheckAt = null;
     _upcomingSegmentCueService.reset();
-    _lastSegmentEvent = null;
     _lastNotificationStatus = null;
     _updateSegmentsOnlyMetrics();
     unawaited(_segmentGuidanceController.reset());
@@ -980,10 +909,11 @@ class _MapPageState extends State<MapPage>
   void _updateSegmentsOnlyMetrics() {
     _segmentsOnlyModeController.updateMetrics(
       currentSpeedKmh: _speedKmh,
-      hasActiveSegment: _segmentTracker.activeSegmentId != null,
-      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
-      segmentDebugPath: _activeSegmentDebugPath,
-      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+      hasActiveSegment: _currentSegmentController.hasActiveSegment,
+      segmentSpeedLimitKph: _currentSegmentController.activeSegmentSpeedLimitKph,
+      segmentDebugPath: _currentSegmentController.activePath,
+      distanceToSegmentStartMeters:
+          _currentSegmentController.distanceToSegmentStartMeters,
     );
   }
 
@@ -1038,6 +968,7 @@ class _MapPageState extends State<MapPage>
 
   @override
   Widget build(BuildContext context) {
+    final currentSegment = context.watch<CurrentSegmentController>();
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
     final mediaQuery = MediaQuery.of(context);
@@ -1060,17 +991,20 @@ class _MapPageState extends State<MapPage>
             if (_visibleSegmentPolylines.isNotEmpty)
               PolylineLayer(polylines: _visibleSegmentPolylines),
 
-            if (kDebugMode && _segmentDebugData.querySquare.isNotEmpty)
-              QuerySquareOverlay(points: _segmentDebugData.querySquare),
-            if (kDebugMode && _segmentDebugData.boundingCandidates.isNotEmpty)
+            if (kDebugMode &&
+                currentSegment.debugData.querySquare.isNotEmpty)
+              QuerySquareOverlay(points: currentSegment.debugData.querySquare),
+            if (kDebugMode &&
+                currentSegment.debugData.boundingCandidates.isNotEmpty)
               CandidateBoundsOverlay(
-                candidates: _segmentDebugData.boundingCandidates,
+                candidates: currentSegment.debugData.boundingCandidates,
               ),
-            if (kDebugMode && _segmentDebugData.candidatePaths.isNotEmpty)
+            if (kDebugMode &&
+                currentSegment.debugData.candidatePaths.isNotEmpty)
               SegmentPolylineOverlay(
-                paths: _segmentDebugData.candidatePaths,
-                startGeofenceRadius: _segmentDebugData.startGeofenceRadius,
-                endGeofenceRadius: _segmentDebugData.endGeofenceRadius,
+                paths: currentSegment.debugData.candidatePaths,
+                startGeofenceRadius: currentSegment.debugData.startGeofenceRadius,
+                endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
               ),
             TollCamerasOverlay(cameras: cameraState),
           ],
@@ -1165,10 +1099,11 @@ class _MapPageState extends State<MapPage>
           : MapControlsPlacement.bottom,
       speedKmh: _speedKmh,
       avgController: _avgCtrl,
-      hasActiveSegment: _segmentTracker.activeSegmentId != null,
-      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
-      segmentDebugPath: _activeSegmentDebugPath,
-      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+      hasActiveSegment: currentSegment.hasActiveSegment,
+      segmentSpeedLimitKph: currentSegment.activeSegmentSpeedLimitKph,
+      segmentDebugPath: currentSegment.activePath,
+      distanceToSegmentStartMeters:
+          currentSegment.distanceToSegmentStartMeters,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
