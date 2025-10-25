@@ -13,6 +13,7 @@ import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
@@ -732,16 +733,19 @@ class _MapPageState extends State<MapPage>
     }
 
     final segments = indexService.segmentsWithinBounds(bounds);
+    final ignoredSegmentIds = _segmentsMetadata.deactivatedSegmentIds;
     final signatures = <String, String>{};
     final polylines = <Polyline>[];
 
     for (final segment in segments) {
+      if (ignoredSegmentIds.contains(segment.id)) {
+        continue;
+      }
       final path = segment.path;
       if (path.length < 2) {
         continue;
       }
-      signatures[segment.id] =
-          '${path.length}:${path.first.lat}:${path.first.lon}:${path.last.lat}:${path.last.lon}';
+      signatures[segment.id] = _segmentSignature(path);
       polylines.add(
         Polyline(
           points: path
@@ -766,6 +770,19 @@ class _MapPageState extends State<MapPage>
       _visibleSegmentSignatures = signatures;
       _visibleSegmentPolylines = polylines;
     });
+  }
+
+  String _segmentSignature(List<GeoPoint> path) {
+    final buffer = StringBuffer();
+    buffer.write(path.length);
+    for (final point in path) {
+      buffer
+        ..write(';')
+        ..write(point.lat.toStringAsFixed(6))
+        ..write(',')
+        ..write(point.lon.toStringAsFixed(6));
+    }
+    return buffer.toString();
   }
 
   Future<void> _initSegmentsIndex() async {
