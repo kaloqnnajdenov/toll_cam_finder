@@ -43,6 +43,7 @@ class SegmentTracker {
   SegmentTrackerDebugData _latestDebugData =
       const SegmentTrackerDebugData.empty();
   _ActiveSegmentState? _active;
+  _ActiveSegmentSnapshot? _pendingRestore;
 
   final Set<String> _ignoredSegmentIds = <String>{};
   SegmentGeometry? _lastExitedGeometry;
@@ -73,7 +74,7 @@ class SegmentTracker {
     return _isReady;
   }
 
-void updateIgnoredSegments(Set<String> ignoredIds) {
+  void updateIgnoredSegments(Set<String> ignoredIds) {
     _ignoredSegmentIds
       ..clear()
       ..addAll(ignoredIds);
@@ -166,8 +167,19 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
 
   void _resetTrackingState() {
     if (_active != null) {
-      _clearActiveSegment(reason: 'reset');
+      _pendingRestore = _ActiveSegmentSnapshot(
+        segmentId: _active!.geometry.id,
+        forceKeepUntilEnd: _active!.forceKeepUntilEnd,
+        enteredAt: _active!.enteredAt,
+      );
+      if (kDebugMode) {
+        debugPrint('[SEG] preserving segment ${_active!.geometry.id} for reload');
+      }
+    } else {
+      _pendingRestore = null;
     }
+
+    _active = null;
     _isReady = false;
     _lastExitedGeometry = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
@@ -175,6 +187,9 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
 
   _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {
     if (_active == null) {
+      if (_maybeRestoreActive(matches)) {
+        return const _SegmentTransition();
+      }
       final entry = _chooseEntryMatch(matches);
       if (entry != null) {
         _startSegment(entry);
@@ -251,6 +266,7 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
     )..lastMatch = entry;
 
     _active = active;
+    _pendingRestore = null;
 
     if (kDebugMode) {
       debugPrint(
@@ -268,5 +284,55 @@ void updateIgnoredSegments(Set<String> ignoredIds) {
       _lastExitedGeometry = _active!.geometry;
     }
     _active = null;
+    _pendingRestore = null;
   }
+
+  bool _maybeRestoreActive(List<SegmentMatch> matches) {
+    final snapshot = _pendingRestore;
+    if (snapshot == null) {
+      return false;
+    }
+
+    for (final match in matches) {
+      if (match.geometry.id != snapshot.segmentId) {
+        continue;
+      }
+
+      final double looseExitDistance =
+          onPathToleranceMeters * _looseExitMultiplier;
+      final bool distanceOk =
+          match.withinTolerance || match.distanceMeters <= looseExitDistance;
+      if (!distanceOk) {
+        continue;
+      }
+
+      _active = _ActiveSegmentState(
+        geometry: match.geometry,
+        path: match.path,
+        forceKeepUntilEnd: snapshot.forceKeepUntilEnd,
+        enteredAt: snapshot.enteredAt,
+      )..lastMatch = match;
+
+      _pendingRestore = null;
+
+      if (kDebugMode) {
+        debugPrint('[SEG] restored segment ${match.geometry.id}');
+      }
+      return true;
+    }
+
+    return false;
+  }
+}
+
+class _ActiveSegmentSnapshot {
+  const _ActiveSegmentSnapshot({
+    required this.segmentId,
+    required this.forceKeepUntilEnd,
+    required this.enteredAt,
+  });
+
+  final String segmentId;
+  final bool forceKeepUntilEnd;
+  final DateTime enteredAt;
 }
