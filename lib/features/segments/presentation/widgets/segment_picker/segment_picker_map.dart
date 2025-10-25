@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
@@ -19,11 +21,13 @@ class SegmentPickerMap extends StatefulWidget {
     required this.startController,
     required this.endController,
     this.isFullScreen = false,
+    this.onRouteGeoJsonChanged,
   });
 
   final TextEditingController startController;
   final TextEditingController endController;
   final bool isFullScreen;
+  final ValueChanged<String?>? onRouteGeoJsonChanged;
 
   @override
   State<SegmentPickerMap> createState() => _SegmentPickerMapState();
@@ -269,7 +273,9 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
       _setEndpoint(endpoint, latLng);
       if (!refreshRoute) {
         final other = _getEndpoint(_oppositeEndpoint(endpoint));
-        _routePoints = other != null ? <LatLng>[latLng, other] : null;
+        final fallback = other != null ? <LatLng>[latLng, other] : null;
+        _routePoints = fallback;
+        widget.onRouteGeoJsonChanged?.call(_encodeGeoJson(fallback));
       }
     });
     _writeToController(_controllerFor(endpoint), latLng);
@@ -293,6 +299,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     _clearController(widget.startController);
     _clearController(widget.endController);
     _mapController.move(AppConstants.initialCenter, AppConstants.initialZoom);
+    widget.onRouteGeoJsonChanged?.call(null);
   }
 
   void _zoomBy(double delta) {
@@ -324,6 +331,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
         builder: (context) => SegmentPickerMapFullScreenPage(
           startController: widget.startController,
           endController: widget.endController,
+          onRouteGeoJsonChanged: widget.onRouteGeoJsonChanged,
         ),
       ),
     );
@@ -359,6 +367,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
         _lastRouteEnd = null;
       });
       _routeRequestToken = null;
+      widget.onRouteGeoJsonChanged?.call(null);
       return;
     }
 
@@ -374,6 +383,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
     setState(() {
       _routePoints = fallback;
     });
+    widget.onRouteGeoJsonChanged?.call(_encodeGeoJson(fallback));
 
     final token = Object();
     _routeRequestToken = token;
@@ -398,6 +408,7 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
         _routePoints = fallback;
       }
     });
+    widget.onRouteGeoJsonChanged?.call(_encodeGeoJson(_routePoints));
   }
 
   bool _positionsEqual(LatLng? a, LatLng? b) {
@@ -463,6 +474,21 @@ class _SegmentPickerMapState extends State<SegmentPickerMap> {
         ? widget.startController
         : widget.endController;
   }
+
+  String? _encodeGeoJson(List<LatLng>? points) {
+    if (points == null || points.length < 2) {
+      return null;
+    }
+
+    final coordinates = points
+        .map((point) => [point.longitude, point.latitude])
+        .toList(growable: false);
+
+    return jsonEncode(<String, dynamic>{
+      'type': 'LineString',
+      'coordinates': coordinates,
+    });
+  }
 }
 
 class SegmentPickerMapFullScreenPage extends StatelessWidget {
@@ -470,10 +496,12 @@ class SegmentPickerMapFullScreenPage extends StatelessWidget {
     super.key,
     required this.startController,
     required this.endController,
+    this.onRouteGeoJsonChanged,
   });
 
   final TextEditingController startController;
   final TextEditingController endController;
+  final ValueChanged<String?>? onRouteGeoJsonChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +512,7 @@ class SegmentPickerMapFullScreenPage extends StatelessWidget {
           startController: startController,
           endController: endController,
           isFullScreen: true,
+          onRouteGeoJsonChanged: onRouteGeoJsonChanged,
         ),
       ),
     );

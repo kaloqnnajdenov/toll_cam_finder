@@ -28,6 +28,7 @@ class RemoteSegmentsService {
   static const String _roadColumn = 'road';
   static const String _startColumn = 'Start';
   static const String _endColumn = 'End';
+  static const String _routeGeoJsonColumn = 'route_geojson';
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(
@@ -52,7 +53,7 @@ class RemoteSegmentsService {
     try {
       while (true) {
         try {
-          await client.from(tableName).insert(<String, dynamic>{
+          final payload = <String, dynamic>{
             'id': pendingId,
             _nameColumn: draft.name,
             _roadColumn: draft.roadName,
@@ -63,7 +64,11 @@ class RemoteSegmentsService {
             'speed_limit_kph': draft.speedLimitKph,
             _moderationStatusColumn: _pendingStatus,
             _addedByUserColumn: addedByUserId,
-          });
+          };
+          if (draft.routeGeoJson != null && draft.routeGeoJson!.isNotEmpty) {
+            payload[_routeGeoJsonColumn] = draft.routeGeoJson;
+          }
+          await client.from(tableName).insert(payload);
           break;
         } on PostgrestException catch (error) {
           if (_isIdConflict(error)) {
