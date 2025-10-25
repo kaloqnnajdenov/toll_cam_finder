@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -17,6 +18,7 @@ import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
+import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/utils/speed_smoother.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/base_tile_layer.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
@@ -75,8 +77,10 @@ class _MapPageState extends State<MapPage>
       const CameraPollingService();
   final MapSyncMessageService _syncMessageService =
       const MapSyncMessageService();
+  final Connectivity _connectivity = Connectivity();
   late final MapSegmentsService _segmentsService;
   late final GuidanceAudioController _audioController;
+  late final SegmentsOnlyModeController _segmentsOnlyModeController;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
@@ -93,6 +97,7 @@ class _MapPageState extends State<MapPage>
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
+  StreamSubscription<ConnectivityResult>? _connectivitySub;
   Timer? _speedIdleResetTimer;
 
   // Helpers
@@ -114,6 +119,9 @@ class _MapPageState extends State<MapPage>
   LatLng? _lastSpeedLimitQueryLocation;
   DateTime? _lastSpeedLimitQueryAt;
   String? _osmSpeedLimitKph;
+  bool _segmentsOnlyPageOpen = false;
+  bool _hasNotifiedOsmUnavailable = false;
+  bool _hasConnectivity = true;
 
   SegmentTrackerDebugData _segmentDebugData =
       const SegmentTrackerDebugData.empty();
@@ -154,6 +162,8 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
     _segmentGuidanceController = SegmentGuidanceController();
     _audioController = context.read<GuidanceAudioController>();
+    _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
+    unawaited(_initConnectivityMonitoring());
     _audioController.addListener(_updateAudioPolicy);
     _segmentsService = MapSegmentsService(
       metadataService: _metadataService,
@@ -177,6 +187,7 @@ class _MapPageState extends State<MapPage>
   void dispose() {
     _posSub?.cancel();
     _mapEvtSub?.cancel();
+    _connectivitySub?.cancel();
     _speedIdleResetTimer?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
@@ -184,6 +195,7 @@ class _MapPageState extends State<MapPage>
     unawaited(_upcomingSegmentCueService.dispose());
     _osmSpeedLimitService.dispose();
     _audioController.removeListener(_updateAudioPolicy);
+    _segmentsOnlyModeController.exitMode();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -228,12 +240,42 @@ class _MapPageState extends State<MapPage>
 
     if (mounted) setState(() {});
 
+    _updateSegmentsOnlyMetrics();
+
     if (_mapReady) {
       _mapController.move(_center, AppConstants.zoomWhenFocused);
       _currentZoom = AppConstants.zoomWhenFocused;
     }
 
     await _subscribeToPositionStream();
+  }
+
+  Future<void> _initConnectivityMonitoring() async {
+    _connectivitySub ??=
+        _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
+    final ConnectivityResult result = await _connectivity.checkConnectivity();
+    _onConnectivityChanged(result);
+  }
+
+  void _onConnectivityChanged(ConnectivityResult result) {
+    final bool isConnected = result != ConnectivityResult.none;
+    if (isConnected == _hasConnectivity) {
+      return;
+    }
+
+    _hasConnectivity = isConnected;
+
+    if (!isConnected) {
+      _segmentsOnlyModeController.enterMode(SegmentsOnlyModeReason.offline);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_openSegmentsOnlyPage(SegmentsOnlyModeReason.offline));
+      });
+    } else if (_segmentsOnlyModeController.reason ==
+            SegmentsOnlyModeReason.offline &&
+        !_segmentsOnlyPageOpen) {
+      _segmentsOnlyModeController.exitMode();
+    }
   }
 
   Future<void> _subscribeToPositionStream() async {
@@ -337,6 +379,8 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _speedKmh = smoothedKmh;
     });
+
+    _updateSegmentsOnlyMetrics();
   }
 
   void _updateHeading(double heading) {
@@ -411,8 +455,22 @@ class _MapPageState extends State<MapPage>
       setState(() {
         _osmSpeedLimitKph = result;
       });
+      _hasNotifiedOsmUnavailable = false;
     } catch (_) {
-      // Ignore network errors and keep the previous reading.
+      if (!mounted) return;
+
+      _segmentsOnlyModeController.enterMode(
+        SegmentsOnlyModeReason.osmUnavailable,
+      );
+      if (_hasNotifiedOsmUnavailable) {
+        return;
+      }
+
+      _hasNotifiedOsmUnavailable = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_openSegmentsOnlyPage(SegmentsOnlyModeReason.osmUnavailable));
+      });
     }
   }
 
@@ -498,6 +556,7 @@ class _MapPageState extends State<MapPage>
       cueService: _upcomingSegmentCueService,
     );
     _lastSegmentEvent = segEvent;
+    _updateSegmentsOnlyMetrics();
     unawaited(_updateForegroundNotification(segEvent));
 
     unawaited(
@@ -526,6 +585,7 @@ class _MapPageState extends State<MapPage>
     _upcomingSegmentCueService.reset();
     _lastSegmentEvent = null;
     _lastNotificationStatus = null;
+    _updateSegmentsOnlyMetrics();
     unawaited(_segmentGuidanceController.reset());
   }
 
@@ -848,6 +908,32 @@ class _MapPageState extends State<MapPage>
       setState(() {
         _controlsPanelHeight = newHeight;
       });
+    }
+  }
+
+  void _updateSegmentsOnlyMetrics() {
+    _segmentsOnlyModeController.updateMetrics(
+      currentSpeedKmh: _speedKmh,
+      hasActiveSegment: _segmentTracker.activeSegmentId != null,
+      segmentSpeedLimitKph: _activeSegmentSpeedLimitKph,
+      segmentDebugPath: _activeSegmentDebugPath,
+      distanceToSegmentStartMeters: _nearestSegmentStartMeters,
+    );
+  }
+
+  Future<void> _openSegmentsOnlyPage(
+      SegmentsOnlyModeReason reason) async {
+    _segmentsOnlyModeController.enterMode(reason);
+    if (_segmentsOnlyPageOpen || !mounted) {
+      return;
+    }
+
+    _segmentsOnlyPageOpen = true;
+    try {
+      await Navigator.of(context).pushNamed(AppRoutes.segmentsOnly);
+    } finally {
+      _segmentsOnlyPageOpen = false;
+      _segmentsOnlyModeController.exitMode();
     }
   }
 

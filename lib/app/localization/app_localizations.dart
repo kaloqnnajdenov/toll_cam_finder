@@ -218,6 +218,16 @@ class AppLocalizations {
       'segmentVisible':
           'Segment {displayId} is visible again. Cameras and warnings restored.',
       'segments': 'Segments',
+      'segmentsOnlyModeTitle': 'Segments-only mode',
+      'segmentsOnlyModeButton': 'Segments-only mode',
+      'segmentsOnlyModeManualMessage':
+          'You are viewing segments-only mode. Use this screen to monitor your segment metrics without the map. Tap the back button to return to the map.',
+      'segmentsOnlyModeOsmBlockedMessage':
+          "Don't worry, we are still observing for segments and average speed, but as this is a free app, we rely on free map providers, which are currently experiencing a shortage. We are sorry for the inconvenience and we are working on the issue.",
+      'segmentsOnlyModeOfflineMessage':
+          "You appear to be offline. We'll keep monitoring segments and your average speed, but the map requires an internet connection. Check your connection and come back when you're online again.",
+      'segmentsOnlyModeReminder':
+          'Segments and averages continue to update while this view is open.',
       'selectLanguage': 'Select language',
       'shareSegmentPubliclyAction': 'Share segment publicly',
       'showSegmentOnMapAction': 'Show segment on map',
@@ -410,6 +420,16 @@ class AppLocalizations {
 'segmentProgressStartMeters': '{distance} м до началото на сегмента',
 'segmentProgressStartNearby': 'Началото на сегмента е близо',
 'segments': 'Сегменти',
+'segmentsOnlyModeTitle': 'Режим само сегменти',
+'segmentsOnlyModeButton': 'Режим само сегменти',
+'segmentsOnlyModeManualMessage':
+'В момента използвате режим само сегменти. Използвайте този екран, за да следите показателите без картата. Натиснете бутона назад, за да се върнете към картата.',
+'segmentsOnlyModeOsmBlockedMessage':
+'Не се притеснявайте, все още наблюдаваме сегментите и средната скорост, но тъй като приложението е безплатно, разчитаме на безплатни доставчици на карти, които в момента изпитват затруднения. Извиняваме се за неудобството и работим по отстраняването на проблема.',
+'segmentsOnlyModeOfflineMessage':
+'Изглежда сте офлайн. Продължаваме да следим сегментите и средната ви скорост, но картата изисква интернет връзка. Проверете връзката си и се върнете, когато сте отново онлайн.',
+'segmentsOnlyModeReminder':
+'Сегментите и средната скорост продължават да се обновяват, докато този екран е отворен.',
 'selectLanguage': 'Избери език',
 'signInToSharePubliclyBody':
 'Трябва да си влязъл в акаунта си, за да изпратиш публичен сегмент. Искаш ли да влезеш или вместо това да запазиш сегмента локално?',
@@ -523,6 +543,16 @@ class AppLocalizations {
   String get appTitle => _value('appTitle');
   String get sync => _value('sync');
   String get segments => _value('segments');
+  String get segmentsOnlyModeTitle => _value('segmentsOnlyModeTitle');
+  String get segmentsOnlyModeButton => _value('segmentsOnlyModeButton');
+  String get segmentsOnlyModeManualMessage =>
+      _value('segmentsOnlyModeManualMessage');
+  String get segmentsOnlyModeOsmBlockedMessage =>
+      _value('segmentsOnlyModeOsmBlockedMessage');
+  String get segmentsOnlyModeOfflineMessage =>
+      _value('segmentsOnlyModeOfflineMessage');
+  String get segmentsOnlyModeReminder =>
+      _value('segmentsOnlyModeReminder');
   String get language => _value('language');
   String get profile => _value('profile');
   String get selectLanguage => _value('selectLanguage');

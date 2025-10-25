@@ -3,6 +3,7 @@ import 'package:toll_cam_finder/features/auth/presentation/pages/login_page.dart
 import 'package:toll_cam_finder/features/auth/presentation/pages/profile_page.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/sign_up_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map_page.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/segments_only_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/create_segment_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/segments_page.dart';
 
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String segments = '/segments';
   static const String localSegments = '/segments/local';
   static const String createSegment = '/segments/create';
+  static const String segmentsOnly = '/segments-only';
 
   static Map<String, WidgetBuilder> get routes => {
     map: (_) => const MapPage(),
@@ -24,5 +26,6 @@ class AppRoutes {
     segments: (_) => const SegmentsPage(),
     localSegments: (_) => const LocalSegmentsPage(),
     createSegment: (_) => const CreateSegmentPage(),
+    segmentsOnly: (_) => const SegmentsOnlyPage(),
   };
 }
