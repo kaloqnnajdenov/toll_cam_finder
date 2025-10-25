@@ -40,6 +40,7 @@ class LocalSegmentsService {
     required String startCoordinates,
     required String endCoordinates,
     double? speedLimitKph,
+    String? routeGeoJson,
   }) async {
     final draft = prepareDraft(
       name: name,
@@ -48,6 +49,7 @@ class LocalSegmentsService {
       startCoordinates: startCoordinates,
       endCoordinates: endCoordinates,
       speedLimitKph: speedLimitKph,
+      routeGeoJson: routeGeoJson,
     );
 
     await saveDraft(draft);
@@ -64,6 +66,7 @@ class LocalSegmentsService {
     required String endCoordinates,
     bool isPublic = false,
     double? speedLimitKph,
+    String? routeGeoJson,
   }) {
     final normalizedName = name.trim().isEmpty
         ? AppMessages.personalSegmentDefaultName
@@ -87,6 +90,7 @@ class LocalSegmentsService {
       endCoordinates: normalizedEnd,
       isPublic: isPublic,
       speedLimitKph: speedLimitKph,
+      routeGeoJson: routeGeoJson,
     );
   }
 
@@ -488,6 +492,7 @@ class SegmentDraft {
     required this.endCoordinates,
     this.isPublic = false,
     this.speedLimitKph,
+    this.routeGeoJson,
   });
 
   final String name;
@@ -498,4 +503,5 @@ class SegmentDraft {
   final String endCoordinates;
   final bool isPublic;
   final double? speedLimitKph;
+  final String? routeGeoJson;
 }

@@ -35,6 +35,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   bool _persistDraftOnDispose = true;
   bool _isNavigatingToLogin = false;
+  String? _routeGeoJson;
 
   @override
   void initState() {
@@ -165,6 +166,9 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                               child: SegmentPickerMap(
                                 startController: _startController,
                                 endController: _endController,
+                                onRouteGeoJsonChanged: (value) {
+                                  _routeGeoJson = value;
+                                },
                               ),
                             ),
                           ],
@@ -494,6 +498,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         startCoordinates: _startController.text,
         endCoordinates: _endController.text,
         isPublic: isPublic,
+        routeGeoJson: _routeGeoJson,
       );
     } on LocalSegmentsServiceException catch (error) {
       _showSnackBar(error.message);
@@ -534,6 +539,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedEndDisplayName = null;
     _cachedStartCoordinates = null;
     _cachedEndCoordinates = null;
+    _routeGeoJson = null;
   }
 
   void _cacheDraftInputs() {
