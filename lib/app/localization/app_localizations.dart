@@ -19,6 +19,7 @@ class AppLocalizations {
       'averageSpeedResetTooltip': 'Reset Avg',
       'averageSpeedStartTooltip': 'Start Avg',
       'cancelAction': 'Cancel',
+      'okAction': 'OK',
       'chooseSegmentVisibilityQuestion':
           'Do you want the segment to be publically visible?',
       'comingSoon': 'Coming soon',
@@ -264,6 +265,8 @@ class AppLocalizations {
       'syncRemovedMany': '{count} segments removed',
       'syncRemovedOne': '{count} segment removed',
       'syncTotalSegmentsSummary': '{count} total segments available.',
+      'syncRequiresInternetConnection':
+          'Synchronizing toll segments requires an internet connection.',
       'startEndCoordinatesRequired': 'Start and end coordinates are required.',
       'submitSegmentForPublicReviewSubtitle':
           'Submit this segment for public review.',
@@ -356,6 +359,8 @@ class AppLocalizations {
       'createSegmentMissingFieldEndCoordinates': 'крайни координати',
       'createSegmentMissingFieldsDelimiter': ', ',
       'createSegmentMissingFieldsConjunction': 'и',
+      'cancelAction': 'Отказ',
+      'okAction': 'Добре',
       'deleteAction': 'Изтрий',
       'deleteSegmentAction': 'Изтрий сегмента',
       'deleteSegmentConfirmationTitle': 'Изтриване на сегмента',
@@ -486,8 +491,10 @@ class AppLocalizations {
 'syncNoChangesDetected': 'Няма открити промени.',
 'syncRemovedMany': '{count} сегмента изтрити',
 'syncRemovedOne': '{count} сегмент изтрит',
-'syncTotalSegmentsSummary': 'Общо налични сегменти: {count}.',
+      'syncTotalSegmentsSummary': 'Общо налични сегменти: {count}.',
       'sync': 'Синхронизирай',
+      'syncRequiresInternetConnection':
+          'Синхронизирането на сегменти изисква интернет връзка.',
       'audioModeTitle': 'Режим на аудио насоките',
       'audioModeFullGuidance':
           'Всички аудио насоки (в приложението и на заден план)',
