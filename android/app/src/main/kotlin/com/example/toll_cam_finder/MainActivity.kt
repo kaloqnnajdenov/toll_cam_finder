@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import android.net.Uri
 import androidx.core.app.NotificationManagerCompat
@@ -21,16 +22,26 @@ class MainActivity : FlutterActivity() {
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
         private const val FOREGROUND_CHANNEL_ID = "geolocator_channel_01"
         private const val FOREGROUND_NOTIFICATION_ID = 75415
+        private const val ACTION_EXIT_APP = "com.example.toll_cam_finder.action.EXIT_APP"
     }
 
     private var pendingNotificationResult: MethodChannel.Result? = null
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             NOTIFICATION_CHANNEL,
         ).setMethodCallHandler(::handleMethodCall)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handleNotificationAction(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationAction(intent)
     }
 
     private fun handleMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -151,6 +162,11 @@ class MainActivity : FlutterActivity() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
 
         createLaunchPendingIntent()?.let { builder.setContentIntent(it) }
+        builder.addAction(
+            smallIcon,
+            getString(R.string.notification_exit_action),
+            createExitPendingIntent(),
+        )
 
         NotificationManagerCompat.from(applicationContext).notify(
             FOREGROUND_NOTIFICATION_ID,
@@ -170,5 +186,39 @@ class MainActivity : FlutterActivity() {
         }
 
         return PendingIntent.getActivity(this, 0, launchIntent, flags)
+    }
+
+    private fun createExitPendingIntent(): PendingIntent {
+        val exitIntent = Intent(applicationContext, MainActivity::class.java).apply {
+            action = ACTION_EXIT_APP
+            flags =
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        var flags = PendingIntent.FLAG_UPDATE_CURRENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = flags or PendingIntent.FLAG_IMMUTABLE
+        }
+
+        return PendingIntent.getActivity(this, 1, exitIntent, flags)
+    }
+
+    private fun handleNotificationAction(intent: Intent?) {
+        if (intent?.action != ACTION_EXIT_APP) {
+            return
+        }
+
+        NotificationManagerCompat.from(this).cancel(FOREGROUND_NOTIFICATION_ID)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        } else {
+            finish()
+        }
+
+        // Ensure subsequent launches do not immediately re-trigger the exit action.
+        intent.action = null
     }
 }
