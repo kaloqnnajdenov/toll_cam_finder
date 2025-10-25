@@ -378,14 +378,3 @@ class _ActiveSegmentSnapshot {
   final double? segmentSpeedLimitKph;
 }
 
-class _ActiveSegmentSnapshot {
-  const _ActiveSegmentSnapshot({
-    required this.segmentId,
-    required this.forceKeepUntilEnd,
-    required this.enteredAt,
-  });
-
-  final String segmentId;
-  final bool forceKeepUntilEnd;
-  final DateTime enteredAt;
-}
