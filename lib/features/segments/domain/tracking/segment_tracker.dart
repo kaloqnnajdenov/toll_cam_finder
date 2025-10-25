@@ -32,6 +32,7 @@ class SegmentTracker {
   static const int _looseMissThreshold = 6;
   static const int _maxCandidateMisses = 4;
   static const double _looseExitMultiplier = 2.5;
+  static const Duration _reloadKeepAliveDuration = Duration(seconds: 15);
 
   final SegmentIndexService _index;
 
@@ -53,7 +54,7 @@ class SegmentTracker {
   String? get activeSegmentId => _active?.geometry.id;
 
   Future<bool> initialise({required String assetPath}) async {
-    _resetTrackingState();
+    _resetTrackingState(preserveActive: false);
     if (!_index.isReady) {
       await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     }
@@ -65,7 +66,7 @@ class SegmentTracker {
   }
 
   Future<bool> reload({required String assetPath}) async {
-    _resetTrackingState();
+    _resetTrackingState(preserveActive: true);
     await _index.tryLoadFromDefaultAsset(assetPath: assetPath);
     _isReady = _index.isReady;
     if (!_isReady) {
@@ -91,13 +92,22 @@ class SegmentTracker {
     final SegmentGeometry? exitedGeometry = _lastExitedGeometry;
     _lastExitedGeometry = null;
 
+    final SegmentGeometry? activeGeometry = _active?.geometry;
+    final _ActiveSegmentSnapshot? snapshot = _pendingRestore;
+    final String? activeSegmentId =
+        activeGeometry?.id ?? snapshot?.segmentId;
+    final double? activeSegmentSpeedLimit =
+        activeGeometry?.speedLimitKph ?? snapshot?.segmentSpeedLimitKph;
+    final double? activeSegmentLength =
+        activeGeometry?.lengthMeters ?? snapshot?.segmentLengthMeters;
+
     if (!_isReady) {
       return SegmentTrackerEvent(
         startedSegment: false,
         endedSegment: false,
-        activeSegmentId: _active?.geometry.id,
-        activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
-        activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+        activeSegmentId: activeSegmentId,
+        activeSegmentSpeedLimitKph: activeSegmentSpeedLimit,
+        activeSegmentLengthMeters: activeSegmentLength,
         completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
         debugData: _latestDebugData,
       );
@@ -152,12 +162,17 @@ class SegmentTracker {
     
     final transition = _updateActiveSegment(matches);
 
+    final SegmentGeometry? refreshedGeometry = _active?.geometry;
+    final _ActiveSegmentSnapshot? refreshedSnapshot = _pendingRestore;
+
     return SegmentTrackerEvent(
       startedSegment: transition.started,
       endedSegment: transition.ended,
-      activeSegmentId: _active?.geometry.id,
-      activeSegmentSpeedLimitKph: _active?.geometry.speedLimitKph,
-      activeSegmentLengthMeters: _active?.geometry.lengthMeters,
+      activeSegmentId: refreshedGeometry?.id ?? refreshedSnapshot?.segmentId,
+      activeSegmentSpeedLimitKph:
+          refreshedGeometry?.speedLimitKph ?? refreshedSnapshot?.segmentSpeedLimitKph,
+      activeSegmentLengthMeters:
+          refreshedGeometry?.lengthMeters ?? refreshedSnapshot?.segmentLengthMeters,
       completedSegmentLengthMeters: exitedGeometry?.lengthMeters,
       debugData: _latestDebugData,
     );
@@ -165,23 +180,31 @@ class SegmentTracker {
 
   void dispose() {}
 
-  void _resetTrackingState() {
-    if (_active != null) {
+  void _resetTrackingState({required bool preserveActive}) {
+    if (preserveActive && _active != null) {
+      _active!
+        ..consecutiveMisses = 0
+        ..extendKeepAlive(_reloadKeepAliveDuration);
       _pendingRestore = _ActiveSegmentSnapshot(
         segmentId: _active!.geometry.id,
         forceKeepUntilEnd: _active!.forceKeepUntilEnd,
         enteredAt: _active!.enteredAt,
+        keepAliveUntil: _active!.keepAliveUntil,
+        segmentLengthMeters: _active!.geometry.lengthMeters,
+        segmentSpeedLimitKph: _active!.geometry.speedLimitKph,
       );
       if (kDebugMode) {
-        debugPrint('[SEG] preserving segment ${_active!.geometry.id} for reload');
+        debugPrint(
+          '[SEG] suspending segment ${_active!.geometry.id} for reload',
+        );
       }
     } else {
       _pendingRestore = null;
+      _active = null;
+      _lastExitedGeometry = null;
     }
 
-    _active = null;
     _isReady = false;
-    _lastExitedGeometry = null;
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
@@ -199,6 +222,7 @@ class SegmentTracker {
     }
 
     final active = _active!;
+    final DateTime now = DateTime.now();
     SegmentMatch? current;
     for (final match in matches) {
       if (match.geometry.id == active.geometry.id) {
@@ -208,6 +232,10 @@ class SegmentTracker {
     }
 
     if (current == null) {
+      if (active.hasKeepAlive(now)) {
+        return const _SegmentTransition();
+      }
+
       active.consecutiveMisses++;
       if (active.consecutiveMisses >= _maxCandidateMisses) {
         _clearActiveSegment(reason: 'no candidates');
@@ -217,6 +245,9 @@ class SegmentTracker {
     }
 
     active.lastMatch = current;
+    active.path = current.path;
+    active.forceKeepUntilEnd = active.forceKeepUntilEnd || !current.isDetailed;
+    active.clearKeepAlive();
 
     if (current.endHit) {
       _clearActiveSegment(reason: 'end geofence');
@@ -267,6 +298,7 @@ class SegmentTracker {
 
     _active = active;
     _pendingRestore = null;
+    active.clearKeepAlive();
 
     if (kDebugMode) {
       debugPrint(
@@ -282,6 +314,7 @@ class SegmentTracker {
     }
     if (_active != null) {
       _lastExitedGeometry = _active!.geometry;
+      _active!.clearKeepAlive();
     }
     _active = null;
     _pendingRestore = null;
@@ -309,9 +342,11 @@ class SegmentTracker {
       _active = _ActiveSegmentState(
         geometry: match.geometry,
         path: match.path,
-        forceKeepUntilEnd: snapshot.forceKeepUntilEnd,
+        forceKeepUntilEnd: snapshot.forceKeepUntilEnd || !match.isDetailed,
         enteredAt: snapshot.enteredAt,
       )..lastMatch = match;
+
+      _active!.restoreKeepAlive(snapshot.keepAliveUntil);
 
       _pendingRestore = null;
 
@@ -323,6 +358,24 @@ class SegmentTracker {
 
     return false;
   }
+}
+
+class _ActiveSegmentSnapshot {
+  const _ActiveSegmentSnapshot({
+    required this.segmentId,
+    required this.forceKeepUntilEnd,
+    required this.enteredAt,
+    this.keepAliveUntil,
+    this.segmentLengthMeters,
+    this.segmentSpeedLimitKph,
+  });
+
+  final String segmentId;
+  final bool forceKeepUntilEnd;
+  final DateTime enteredAt;
+  final DateTime? keepAliveUntil;
+  final double? segmentLengthMeters;
+  final double? segmentSpeedLimitKph;
 }
 
 class _ActiveSegmentSnapshot {
