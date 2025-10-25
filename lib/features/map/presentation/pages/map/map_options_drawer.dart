@@ -310,7 +310,27 @@ extension _MapPageDrawer on _MapPageState {
     }
 
     if (result.message != null) {
-      messenger.showSnackBar(SnackBar(content: Text(result.message!)));
+      if (!result.isSuccess &&
+          result.message == AppMessages.syncRequiresInternetConnection) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) {
+            final localizations = AppLocalizations.of(context);
+            return AlertDialog(
+              title: Text(localizations.sync),
+              content: Text(AppMessages.syncRequiresInternetConnection),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(AppMessages.okAction),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(result.message!)));
+      }
     }
 
     if (!result.isSuccess) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
@@ -67,6 +68,11 @@ class TollSegmentsSyncService {
       return diff;
     } on TollSegmentsSyncException {
       rethrow;
+    } on SocketException catch (error) {
+      throw TollSegmentsSyncException(
+        AppMessages.syncRequiresInternetConnection,
+        cause: error,
+      );
     } on PostgrestException catch (error) {
       throw TollSegmentsSyncException(
         AppMessages.failedToDownloadTollSegments(error.message),
