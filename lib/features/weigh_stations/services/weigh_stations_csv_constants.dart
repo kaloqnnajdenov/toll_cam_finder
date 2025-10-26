@@ -3,8 +3,6 @@ class WeighStationsCsvSchema {
 
   static const List<String> header = <String>[
     'ID',
-    'name',
-    'road',
     'coordinates',
   ];
 

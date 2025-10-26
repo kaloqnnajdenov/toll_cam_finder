@@ -33,8 +33,6 @@ class WeighStationsRepository {
         .map((cell) => '$cell'.trim().toLowerCase())
         .toList();
     final idIndex = header.indexOf('id');
-    final nameIndex = header.indexOf('name');
-    final roadIndex = header.indexOf('road');
     final coordIndex = header.indexOf('coordinates');
     final stations = <WeighStationInfo>[];
 
@@ -43,8 +41,6 @@ class WeighStationsRepository {
         continue;
       }
       final id = _stringAt(row, idIndex);
-      final name = _stringAt(row, nameIndex);
-      final road = _stringAt(row, roadIndex);
       final coordinates = _stringAt(row, coordIndex);
       if (id.isEmpty && coordinates.isEmpty) {
         continue;
@@ -57,8 +53,6 @@ class WeighStationsRepository {
       stations.add(
         WeighStationInfo(
           id: id,
-          name: name,
-          road: road,
           coordinates: coordinates,
           isLocalOnly: isLocalOnly,
         ),
@@ -69,10 +63,6 @@ class WeighStationsRepository {
       final idComparison = a.displayId.compareTo(b.displayId);
       if (idComparison != 0) {
         return idComparison;
-      }
-      final nameComparison = a.name.compareTo(b.name);
-      if (nameComparison != 0) {
-        return nameComparison;
       }
       return a.coordinates.compareTo(b.coordinates);
     });

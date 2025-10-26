@@ -20,14 +20,10 @@ class RemoteWeighStationsService {
   static const String _approvedStatus = 'approved';
   static const String _addedByUserColumn = 'added_by_user';
   static const String _coordinatesColumn = 'coordinates';
-  static const String _nameColumn = 'name';
-  static const String _roadColumn = 'road';
   static const String _idColumn = 'id';
   static const int _smallIntMax = 32767;
 
   Future<void> submitForModeration({
-    required String name,
-    required String road,
     required String coordinates,
     required String addedByUserId,
   }) async {
@@ -51,8 +47,6 @@ class RemoteWeighStationsService {
         try {
           await client.from(tableName).insert(<String, dynamic>{
             'id': pendingId,
-            _nameColumn: name,
-            _roadColumn: road,
             _coordinatesColumn: coordinates,
             _moderationStatusColumn: _pendingStatus,
             _addedByUserColumn: addedByUserId,
@@ -98,7 +92,6 @@ class RemoteWeighStationsService {
 
   Future<bool> hasPendingSubmission({
     required String addedByUserId,
-    required String name,
     required String coordinates,
   }) async {
     final client = _client;
@@ -115,7 +108,6 @@ class RemoteWeighStationsService {
           .match(<String, Object>{
         _moderationStatusColumn: _pendingStatus,
         _addedByUserColumn: addedByUserId,
-        _nameColumn: name,
         _coordinatesColumn: coordinates,
       }).limit(1);
 
@@ -141,7 +133,6 @@ class RemoteWeighStationsService {
 
   Future<bool> deleteSubmission({
     required String addedByUserId,
-    required String name,
     required String coordinates,
   }) async {
     final client = _client;
@@ -157,7 +148,6 @@ class RemoteWeighStationsService {
           .delete()
           .match(<String, Object>{
         _addedByUserColumn: addedByUserId,
-        _nameColumn: name,
         _coordinatesColumn: coordinates,
       }).select('$_idColumn');
 

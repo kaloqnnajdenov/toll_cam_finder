@@ -69,10 +69,6 @@ class AppLocalizations {
       'createWeighStation': 'Add weigh station',
       'createWeighStationInstructions':
           'Tap the map to place the weigh station marker. Long-press and drag to fine-tune the location.',
-      'weighStationNameLabel': 'Station name',
-      'weighStationNameHint': 'Optional name',
-      'weighStationRoadInputLabel': 'Road',
-      'weighStationRoadHint': 'A1, E80…',
       'weighStationCoordinatesInputLabel': 'Coordinates',
       'weighStationCoordinatesHint': '41.8626802,26.0873785',
       'saveWeighStation': 'Save weigh station',
@@ -84,8 +80,7 @@ class AppLocalizations {
           'Failed to submit the weigh station for moderation.',
       'weighStationSubmittedForReview':
           'Weigh station submitted for review.',
-      'weighStationUnnamed': 'Weigh station {id}',
-      'weighStationRoadLabel': 'Road: {road}',
+      'weighStationIdentifier': 'Weigh station {id}',
       'weighStationCoordinatesLabel': 'Coordinates: {coordinates}',
       'weighStationLocalBadge': 'Local only',
       'weighStationMapHintPlace':
@@ -414,10 +409,6 @@ class AppLocalizations {
       'createWeighStation': 'Добави кантар',
       'createWeighStationInstructions':
           'Докоснете картата, за да поставите маркера за кантара. Задръжте и плъзнете, за да коригирате позицията.',
-      'weighStationNameLabel': 'Име на кантара',
-      'weighStationNameHint': 'Незадължително име',
-      'weighStationRoadInputLabel': 'Път',
-      'weighStationRoadHint': 'A1, E80…',
       'weighStationCoordinatesInputLabel': 'Координати',
       'weighStationCoordinatesHint': '41.8626802,26.0873785',
       'saveWeighStation': 'Запази кантара',
@@ -433,8 +424,7 @@ class AppLocalizations {
           'Неуспешно изпращане на кантара за модерация.',
       'weighStationSubmittedForReview':
           'Кантарът е изпратен за преглед.',
-      'weighStationUnnamed': 'Кантар {id}',
-      'weighStationRoadLabel': 'Път: {road}',
+      'weighStationIdentifier': 'Кантар {id}',
       'weighStationCoordinatesLabel': 'Координати: {coordinates}',
       'weighStationLocalBadge': 'Само локален',
       'weighStationMapHintPlace':
@@ -646,11 +636,6 @@ class AppLocalizations {
   String get createWeighStation => _value('createWeighStation');
   String get createWeighStationInstructions =>
       _value('createWeighStationInstructions');
-  String get weighStationNameLabel => _value('weighStationNameLabel');
-  String get weighStationNameHint => _value('weighStationNameHint');
-  String get weighStationRoadInputLabel =>
-      _value('weighStationRoadInputLabel');
-  String get weighStationRoadHint => _value('weighStationRoadHint');
   String get weighStationCoordinatesInputLabel =>
       _value('weighStationCoordinatesInputLabel');
   String get weighStationCoordinatesHint =>
@@ -665,10 +650,8 @@ class AppLocalizations {
       _value('failedToSubmitWeighStation');
   String get weighStationSubmittedForReview =>
       _value('weighStationSubmittedForReview');
-  String weighStationUnnamed(String id) =>
-      translate('weighStationUnnamed', {'id': id});
-  String weighStationRoadLabel(String road) =>
-      translate('weighStationRoadLabel', {'road': road});
+  String weighStationIdentifier(String id) =>
+      translate('weighStationIdentifier', {'id': id});
   String weighStationCoordinatesLabel(String coordinates) => translate(
         'weighStationCoordinatesLabel',
         {'coordinates': coordinates},

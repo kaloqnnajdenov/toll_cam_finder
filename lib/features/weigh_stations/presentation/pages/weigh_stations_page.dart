@@ -76,16 +76,12 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
                   child: ListTile(
                     leading: const Icon(Icons.scale_outlined),
                     title: Text(
-                      station.name.isNotEmpty
-                          ? station.name
-                          : localizations.weighStationUnnamed(station.displayId),
+                      localizations.weighStationIdentifier(station.displayId),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (station.road.isNotEmpty)
-                          Text(localizations.weighStationRoadLabel(station.road)),
                         Text(localizations.weighStationCoordinatesLabel(station.coordinates)),
                         if (station.isLocalOnly)
                           Padding(
