@@ -87,6 +87,11 @@ class AppLocalizations {
           'Tap anywhere on the map to place the weigh station.',
       'weighStationMapHintDrag':
           'Long-press and drag the marker to adjust the weigh station.',
+      'weighStationFeedbackTitle': 'Weigh station feedback',
+      'weighStationUpvoteAction': 'Upvote',
+      'weighStationDownvoteAction': 'Downvote',
+      'weighStationUpvoteCount': 'Upvotes: {count}',
+      'weighStationDownvoteCount': 'Downvotes: {count}',
       'deleteWeighStationAction': 'Delete weigh station',
       'deleteWeighStationConfirmationTitle': 'Delete weigh station',
       'confirmDeleteWeighStation':
@@ -441,6 +446,11 @@ class AppLocalizations {
           'Докоснете картата, за да поставите кантара.',
       'weighStationMapHintDrag':
           'Задръжте и плъзнете маркера, за да коригирате кантара.',
+      'weighStationFeedbackTitle': 'Обратна връзка за кантара',
+      'weighStationUpvoteAction': 'Положителен вот',
+      'weighStationDownvoteAction': 'Отрицателен вот',
+      'weighStationUpvoteCount': 'Положителни гласове: {count}',
+      'weighStationDownvoteCount': 'Отрицателни гласове: {count}',
       'deleteWeighStationAction': 'Изтрий кантара',
       'deleteWeighStationConfirmationTitle': 'Изтриване на кантара',
       'confirmDeleteWeighStation':
@@ -679,6 +689,18 @@ class AppLocalizations {
   String get weighStationLocalBadge => _value('weighStationLocalBadge');
   String get weighStationMapHintPlace => _value('weighStationMapHintPlace');
   String get weighStationMapHintDrag => _value('weighStationMapHintDrag');
+  String get weighStationFeedbackTitle => _value('weighStationFeedbackTitle');
+  String get weighStationUpvoteAction => _value('weighStationUpvoteAction');
+  String get weighStationDownvoteAction =>
+      _value('weighStationDownvoteAction');
+  String weighStationUpvoteCount(int count) => translate(
+        'weighStationUpvoteCount',
+        {'count': '$count'},
+      );
+  String weighStationDownvoteCount(int count) => translate(
+        'weighStationDownvoteCount',
+        {'count': '$count'},
+      );
   String get saveSegment => _value('saveSegment');
   String get noSegmentsAvailable => _value('noSegmentsAvailable');
   String get noLocalSegments => _value('noLocalSegments');

@@ -127,6 +127,16 @@ class MapSegmentsService {
 
   WeighStationsState get weighStationsState => _weighStationController.state;
 
+  WeighStationVotes registerWeighStationVote({
+    required String stationId,
+    required bool isUpvote,
+  }) {
+    return _weighStationController.registerVote(
+      stationId: stationId,
+      isUpvote: isUpvote,
+    );
+  }
+
   NearestWeighStation? nearestWeighStation(LatLng point) =>
       _weighStationController.nearestStation(point);
 
