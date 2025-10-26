@@ -28,7 +28,7 @@ class RemoteSegmentsService {
   static const String _roadColumn = 'road';
   static const String _startColumn = 'Start';
   static const String _endColumn = 'End';
-  static const String _routeGeoJsonColumn = 'route_geojson';
+  static const String _geoJsonColumn = 'geojson';
 
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(
@@ -66,7 +66,7 @@ class RemoteSegmentsService {
             _addedByUserColumn: addedByUserId,
           };
           if (draft.routeGeoJson != null && draft.routeGeoJson!.isNotEmpty) {
-            payload[_routeGeoJsonColumn] = draft.routeGeoJson;
+            payload[_geoJsonColumn] = draft.routeGeoJson;
           }
           await client.from(tableName).insert(payload);
           break;
