@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
@@ -62,6 +64,8 @@ class LocalWeighStationsService {
       rows.add(WeighStationsCsvSchema.header);
     } else if (!_isHeaderRow(rows.first)) {
       rows.insert(0, WeighStationsCsvSchema.header);
+    } else if (rows.first.length != WeighStationsCsvSchema.header.length) {
+      rows[0] = WeighStationsCsvSchema.header;
     }
 
     final remoteRows = await WeighStationsDataStore.instance.ensureRemoteRows();
@@ -76,10 +80,7 @@ class LocalWeighStationsService {
       remoteIds: remoteIds,
     );
 
-    rows.add(<String>[
-      localId,
-      draft.coordinates,
-    ]);
+    rows.add(_buildLocalRow(localId: localId, coordinates: draft.coordinates));
 
     final csv = const ListToCsvConverter(
       fieldDelimiter: ';',
@@ -109,10 +110,11 @@ class LocalWeighStationsService {
   }
 
   bool _isHeaderRow(List<dynamic> row) {
-    if (row.length < WeighStationsCsvSchema.header.length) {
+    if (row.isEmpty) {
       return false;
     }
-    for (var i = 0; i < WeighStationsCsvSchema.header.length; i++) {
+    final maxIndex = math.min(row.length, WeighStationsCsvSchema.header.length);
+    for (var i = 0; i < maxIndex; i++) {
       if ('${row[i]}'.trim().toLowerCase() !=
           WeighStationsCsvSchema.header[i].trim().toLowerCase()) {
         return false;
@@ -203,6 +205,34 @@ class LocalWeighStationsService {
 
     await _fileSystem.writeAsString(csvPath, '$csv\n');
     return true;
+  }
+
+  List<String> _buildLocalRow({
+    required String localId,
+    required String coordinates,
+  }) {
+    final row = List<String>.filled(WeighStationsCsvSchema.header.length, '');
+    final idIndex =
+        WeighStationsCsvSchema.header.indexOf(WeighStationsCsvSchema.columnId);
+    if (idIndex >= 0) {
+      row[idIndex] = localId;
+    }
+    final coordinatesIndex = WeighStationsCsvSchema.header
+        .indexOf(WeighStationsCsvSchema.columnCoordinates);
+    if (coordinatesIndex >= 0) {
+      row[coordinatesIndex] = coordinates;
+    }
+    final upvotesIndex = WeighStationsCsvSchema.header
+        .indexOf(WeighStationsCsvSchema.columnUpvotes);
+    if (upvotesIndex >= 0) {
+      row[upvotesIndex] = '0';
+    }
+    final downvotesIndex = WeighStationsCsvSchema.header
+        .indexOf(WeighStationsCsvSchema.columnDownvotes);
+    if (downvotesIndex >= 0) {
+      row[downvotesIndex] = '0';
+    }
+    return row;
   }
 }
 

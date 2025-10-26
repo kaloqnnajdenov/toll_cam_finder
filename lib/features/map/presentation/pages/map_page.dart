@@ -37,6 +37,7 @@ import 'package:toll_cam_finder/features/segments/domain/tracking/segment_guidan
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
+import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 import 'package:toll_cam_finder/shared/services/location_service.dart';
@@ -782,7 +783,12 @@ class _MapPageState extends State<MapPage>
         bounds = null;
       }
     }
+    final auth = context.read<AuthController>();
     await _segmentsService.loadWeighStations(bounds: bounds);
+    await _segmentsService.refreshWeighStationVotes(
+      client: auth.client,
+      userId: auth.currentUserId,
+    );
     if (!mounted) return;
     _weighStationAlertService.reset();
     _updateVisibleWeighStations();
@@ -836,10 +842,13 @@ class _MapPageState extends State<MapPage>
           stationId: station.id,
           initialVotes: initialVotes,
           onVote: (isUpvote) {
+            final auth = sheetContext.read<AuthController>();
             final WeighStationVoteResult updated =
                 _segmentsService.registerWeighStationVote(
               stationId: station.id,
               isUpvote: isUpvote,
+              client: auth.client,
+              userId: auth.currentUserId,
             );
             if (mounted) {
               setState(() {});

@@ -310,11 +310,28 @@ class WeighStationsSyncService {
     final name = normalized['name'] ?? '';
     final road = normalized['road'] ?? '';
     final coordinates = normalized['coordinates'] ?? '';
+    final upvotes = _normalizeVoteCount(normalized['upvotes']);
+    final downvotes = _normalizeVoteCount(normalized['downvotes']);
 
-    return <String>[id, name, road, coordinates];
+    return <String>[id, name, road, coordinates, upvotes, downvotes];
   }
 
   String _normalize(String value) => value.trim().toLowerCase();
+
+  String _normalizeVoteCount(String? value) {
+    if (value == null) {
+      return '0';
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '0';
+    }
+    final parsed = int.tryParse(trimmed);
+    if (parsed == null) {
+      return '0';
+    }
+    return parsed.toString();
+  }
 
   String _toSnakeCase(String value) {
     final buffer = StringBuffer();

@@ -16,10 +16,9 @@ class WeighStationsDataStore {
   List<List<String>>? get remoteRows => _remoteRows;
 
   void updateRemoteRows(List<List<String>> rows) {
-    _remoteRows = List<List<String>>.from(
-      rows.map((row) => List<String>.from(row)),
-      growable: false,
-    );
+    _remoteRows = rows
+        .map((row) => _normalizeRow(row))
+        .toList(growable: false);
   }
 
   Future<List<List<String>>> ensureRemoteRows({
@@ -49,8 +48,8 @@ class WeighStationsDataStore {
 
     final csvRows = <List<String>>[]
       ..add(WeighStationsCsvSchema.header)
-      ..addAll(remoteRows)
-      ..addAll(localRows);
+      ..addAll(remoteRows.map(_normalizeRow))
+      ..addAll(localRows.map(_normalizeRow));
 
     final csv = const ListToCsvConverter(
       fieldDelimiter: ';',
@@ -100,7 +99,7 @@ class WeighStationsDataStore {
       rows.add(normalized);
     }
 
-    return rows;
+    return rows.map(_normalizeRow).toList(growable: false);
   }
 
   Future<List<List<String>>> _maybeLoadLocalRows({
@@ -160,10 +159,50 @@ class WeighStationsDataStore {
         continue;
       }
 
-      rows.add(normalized);
+      rows.add(_normalizeRow(normalized));
     }
 
-    _remoteRows = rows;
-    return rows;
+    _remoteRows = rows.map(_normalizeRow).toList(growable: false);
+    return _remoteRows!;
+  }
+
+  List<String> _normalizeRow(List<String> row) {
+    final normalized = List<String>.from(row);
+    final expectedLength = WeighStationsCsvSchema.header.length;
+    if (normalized.length > expectedLength) {
+      normalized.removeRange(expectedLength, normalized.length);
+    } else {
+      while (normalized.length < expectedLength) {
+        normalized.add('');
+      }
+    }
+
+    final upvotesIndex =
+        WeighStationsCsvSchema.header.indexOf(WeighStationsCsvSchema.columnUpvotes);
+    if (upvotesIndex >= 0) {
+      normalized[upvotesIndex] =
+          _normalizeVoteValue(normalized[upvotesIndex]);
+    }
+
+    final downvotesIndex =
+        WeighStationsCsvSchema.header.indexOf(WeighStationsCsvSchema.columnDownvotes);
+    if (downvotesIndex >= 0) {
+      normalized[downvotesIndex] =
+          _normalizeVoteValue(normalized[downvotesIndex]);
+    }
+
+    return normalized;
+  }
+
+  String _normalizeVoteValue(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '0';
+    }
+    final parsed = int.tryParse(trimmed);
+    if (parsed == null) {
+      return '0';
+    }
+    return parsed.toString();
   }
 }

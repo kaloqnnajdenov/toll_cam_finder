@@ -34,6 +34,10 @@ class WeighStationsRepository {
         .toList();
     final idIndex = header.indexOf('id');
     final coordIndex = header.indexOf('coordinates');
+    final nameIndex = header.indexOf('name');
+    final roadIndex = header.indexOf('road');
+    final upvotesIndex = header.indexOf('upvotes');
+    final downvotesIndex = header.indexOf('downvotes');
     final stations = <WeighStationInfo>[];
 
     for (final row in rows.skip(1)) {
@@ -42,6 +46,10 @@ class WeighStationsRepository {
       }
       final id = _stringAt(row, idIndex);
       final coordinates = _stringAt(row, coordIndex);
+      final name = _stringAt(row, nameIndex);
+      final road = _stringAt(row, roadIndex);
+      final upvotes = _intAt(row, upvotesIndex);
+      final downvotes = _intAt(row, downvotesIndex);
       if (id.isEmpty && coordinates.isEmpty) {
         continue;
       }
@@ -54,6 +62,10 @@ class WeighStationsRepository {
         WeighStationInfo(
           id: id,
           coordinates: coordinates,
+          name: name,
+          road: road,
+          upvotes: upvotes,
+          downvotes: downvotes,
           isLocalOnly: isLocalOnly,
         ),
       );
@@ -87,5 +99,13 @@ class WeighStationsRepository {
       return '';
     }
     return '${row[index]}'.trim();
+  }
+
+  int _intAt(List<dynamic> row, int index) {
+    final raw = _stringAt(row, index);
+    if (raw.isEmpty) {
+      return 0;
+    }
+    return int.tryParse(raw) ?? 0;
   }
 }
