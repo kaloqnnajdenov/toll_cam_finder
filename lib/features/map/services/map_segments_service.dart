@@ -216,16 +216,18 @@ class MapSegmentsService {
       );
     }
 
+    SegmentTrackerEvent? seedEvent;
+    bool reloaded = false;
+
     try {
       final syncResult = await _syncService.sync(client: client);
-      final bool reloaded = await _segmentTracker.reload(
+      reloaded = await _segmentTracker.reload(
         assetPath: AppConstants.pathToTollSegments,
       );
       _segmentTracker.updateIgnoredSegments(ignoredSegmentIds);
       await loadCameras(excludedSegmentIds: ignoredSegmentIds);
       await loadWeighStations();
 
-      SegmentTrackerEvent? seedEvent;
       if (reloaded && userLatLng != null) {
         seedEvent = _segmentTracker.handleLocationUpdate(
           current: userLatLng,
@@ -233,6 +235,7 @@ class MapSegmentsService {
       }
 
       await _weighStationsSyncService.sync(client: client);
+      await loadWeighStations();
 
       final message = _syncMessageService.buildSuccessMessage(syncResult);
       return SegmentsSyncResult(
@@ -247,6 +250,13 @@ class MapSegmentsService {
         message: error.message,
         seedEvent: null,
         reloaded: false,
+      );
+    } on WeighStationsSyncException catch (error) {
+      return SegmentsSyncResult(
+        status: SyncResultStatus.failure,
+        message: error.message,
+        seedEvent: null,
+        reloaded: reloaded,
       );
     } catch (error, stackTrace) {
       debugPrint('MapSegmentsService: unexpected sync error: $error\n$stackTrace');
