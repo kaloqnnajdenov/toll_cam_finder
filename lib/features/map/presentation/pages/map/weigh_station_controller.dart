@@ -31,6 +31,16 @@ class WeighStationVotes {
   }
 }
 
+class WeighStationVoteResult {
+  const WeighStationVoteResult({
+    required this.votes,
+    required this.userVote,
+  });
+
+  final WeighStationVotes votes;
+  final bool? userVote;
+}
+
 class WeighStationsState {
   const WeighStationsState({
     required this.error,
@@ -140,21 +150,61 @@ class WeighStationController {
     return nearest;
   }
 
-  WeighStationVotes registerVote({
+  WeighStationVoteResult registerVote({
     required String stationId,
     required bool isUpvote,
   }) {
-    if (_userVotes.containsKey(stationId)) {
-      return _votes[stationId] ?? const WeighStationVotes();
-    }
-    final WeighStationVotes current =
+    final WeighStationVotes currentVotes =
         _votes[stationId] ?? const WeighStationVotes();
-    final WeighStationVotes updated = isUpvote
-        ? current.copyWith(upvotes: current.upvotes + 1)
-        : current.copyWith(downvotes: current.downvotes + 1);
-    _votes[stationId] = updated;
-    _userVotes[stationId] = isUpvote;
-    return updated;
+    final bool? existingVote = _userVotes[stationId];
+
+    WeighStationVotes updatedVotes = currentVotes;
+    bool? updatedUserVote = existingVote;
+
+    if (existingVote == null) {
+      updatedVotes = isUpvote
+          ? currentVotes.copyWith(upvotes: currentVotes.upvotes + 1)
+          : currentVotes.copyWith(downvotes: currentVotes.downvotes + 1);
+      _userVotes[stationId] = isUpvote;
+      updatedUserVote = isUpvote;
+    } else if (existingVote == isUpvote) {
+      if (isUpvote) {
+        final int newUpvotes =
+            currentVotes.upvotes > 0 ? currentVotes.upvotes - 1 : 0;
+        updatedVotes = currentVotes.copyWith(upvotes: newUpvotes);
+      } else {
+        final int newDownvotes =
+            currentVotes.downvotes > 0 ? currentVotes.downvotes - 1 : 0;
+        updatedVotes = currentVotes.copyWith(downvotes: newDownvotes);
+      }
+      _userVotes.remove(stationId);
+      updatedUserVote = null;
+    } else {
+      if (isUpvote) {
+        final int newDownvotes =
+            currentVotes.downvotes > 0 ? currentVotes.downvotes - 1 : 0;
+        updatedVotes = currentVotes.copyWith(
+          upvotes: currentVotes.upvotes + 1,
+          downvotes: newDownvotes,
+        );
+      } else {
+        final int newUpvotes =
+            currentVotes.upvotes > 0 ? currentVotes.upvotes - 1 : 0;
+        updatedVotes = currentVotes.copyWith(
+          upvotes: newUpvotes,
+          downvotes: currentVotes.downvotes + 1,
+        );
+      }
+      _userVotes[stationId] = isUpvote;
+      updatedUserVote = isUpvote;
+    }
+
+    _votes[stationId] = updatedVotes;
+
+    return WeighStationVoteResult(
+      votes: updatedVotes,
+      userVote: updatedUserVote,
+    );
   }
 
   void _syncVotesWithStations() {
