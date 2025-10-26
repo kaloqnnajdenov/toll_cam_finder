@@ -219,17 +219,17 @@ class AppLocalizations {
       'segmentVisible':
           'Segment {displayId} is visible again. Cameras and warnings restored.',
       'segments': 'Segments',
-      'segmentsOnlyModeTitle': 'Segments-only mode',
-      'segmentsOnlyModeButton': 'Segments-only mode',
+      'segmentsOnlyModeTitle': 'Simple mode',
+      'segmentsOnlyModeButton': 'Simple mode',
       'segmentsOnlyModeManualMessage':
-          'You are viewing segments-only mode. Use this screen to monitor your segment metrics without the map. Tap the back button to return to the map.',
+          "You're in simple mode. Use this screen to track your segment metrics without the map. Tap the back button to return to the map.",
       'segmentsOnlyModeOsmBlockedMessage':
-          "Don't worry, we are still observing for segments and average speed, but as this is a free app, we rely on free map providers, which are currently experiencing a shortage. We are sorry for the inconvenience and we are working on the issue.",
+          "Simple mode is still tracking segments and average speed, but our free map provider is temporarily unavailable. We're sorry for the inconvenience and are working on a fix.",
       'segmentsOnlyModeOfflineMessage':
-          "You appear to be offline. We'll keep monitoring segments and your average speed, but the map requires an internet connection. Check your connection and come back when you're online again.",
+          "You're offline. We'll keep tracking segments and your average speed, but the map needs an internet connection. Check your connection and come back when you're online again.",
       'segmentsOnlyModeContinueButton': 'Continue to map',
       'segmentsOnlyModeReminder':
-          'Segments and averages continue to update while this view is open.',
+          'Segments and averages continue updating while simple mode is open.',
       'selectLanguage': 'Select language',
       'shareSegmentPubliclyAction': 'Share segment publicly',
       'showSegmentOnMapAction': 'Show segment on map',
@@ -426,17 +426,17 @@ class AppLocalizations {
 'segmentProgressStartMeters': '{distance} м до началото на сегмента',
 'segmentProgressStartNearby': 'Началото на сегмента е близо',
 'segments': 'Сегменти',
-'segmentsOnlyModeTitle': 'Режим само сегменти',
-'segmentsOnlyModeButton': 'Режим само сегменти',
+'segmentsOnlyModeTitle': 'Опростен режим',
+'segmentsOnlyModeButton': 'Опростен режим',
 'segmentsOnlyModeManualMessage':
-'В момента използвате режим само сегменти. Използвайте този екран, за да следите показателите без картата. Натиснете бутона назад, за да се върнете към картата.',
+'В момента използваш опростен режим. Използвай този екран, за да следиш показателите за сегментите без картата. Натисни бутона назад, за да се върнеш към картата.',
 'segmentsOnlyModeOsmBlockedMessage':
-'Не се притеснявайте, все още наблюдаваме сегментите и средната скорост, но тъй като приложението е безплатно, разчитаме на безплатни доставчици на карти, които в момента изпитват затруднения. Извиняваме се за неудобството и работим по отстраняването на проблема.',
+'Не се притеснявай, опростен режим продължава да наблюдава сегментите и средната скорост, но тъй като приложението е безплатно, разчитаме на безплатни доставчици на карти, които в момента имат затруднения. Извиняваме се за неудобството и работим по отстраняването му.',
 'segmentsOnlyModeOfflineMessage':
-'Изглежда сте офлайн. Продължаваме да следим сегментите и средната ви скорост, но картата изисква интернет връзка. Проверете връзката си и се върнете, когато сте отново онлайн.',
+'Изглежда си офлайн. Ще продължим да следим сегментите и средната ти скорост, но картата изисква интернет връзка. Провери връзката си и се върни, когато отново имаш достъп.',
 'segmentsOnlyModeContinueButton': 'Продължи към картата',
 'segmentsOnlyModeReminder':
-'Сегментите и средната скорост продължават да се обновяват, докато този екран е отворен.',
+'Сегментите и средната скорост продължават да се обновяват, докато опростен режим е отворен.',
 'selectLanguage': 'Избери език',
 'signInToSharePubliclyBody':
 'Трябва да си влязъл в акаунта си, за да изпратиш публичен сегмент. Искаш ли да влезеш или вместо това да запазиш сегмента локално?',

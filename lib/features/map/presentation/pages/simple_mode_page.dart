@@ -11,8 +11,8 @@ import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 
-class SegmentsOnlyPage extends StatelessWidget {
-  const SegmentsOnlyPage({super.key});
+class SimpleModePage extends StatelessWidget {
+  const SimpleModePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +60,7 @@ class SegmentsOnlyPage extends StatelessWidget {
             ),
           ],
         ),
-        endDrawer: const _SegmentsOnlyOptionsDrawer(),
+        endDrawer: const _SimpleModeOptionsDrawer(),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -127,8 +127,8 @@ class SegmentsOnlyPage extends StatelessWidget {
   }
 }
 
-class _SegmentsOnlyOptionsDrawer extends StatelessWidget {
-  const _SegmentsOnlyOptionsDrawer();
+class _SimpleModeOptionsDrawer extends StatelessWidget {
+  const _SimpleModeOptionsDrawer();
 
   @override
   Widget build(BuildContext context) {
