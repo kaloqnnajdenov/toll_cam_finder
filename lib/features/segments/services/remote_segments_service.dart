@@ -30,6 +30,8 @@ class RemoteSegmentsService {
   static const String _endColumn = 'End';
   static const String _routeGeoJsonColumn = 'geojson';
 
+  bool? _supportsModerationColumn;
+
   /// Uploads the supplied [draft] to Supabase, marking it as pending moderation.
   Future<void> submitForModeration(
     SegmentDraft draft, {
@@ -48,7 +50,10 @@ class RemoteSegmentsService {
       );
     }
 
-    var pendingId = await _computeNextRemoteId(client);
+    final capabilities = await _computeNextRemoteId(client);
+
+    var pendingId = capabilities.nextId;
+    var includeModerationColumn = capabilities.supportsModerationColumn;
 
     try {
       while (true) {
@@ -62,15 +67,24 @@ class RemoteSegmentsService {
             'Start': draft.startCoordinates,
             'End': draft.endCoordinates,
             'speed_limit_kph': draft.speedLimitKph,
-            _moderationStatusColumn: _pendingStatus,
             _addedByUserColumn: addedByUserId,
           };
+          if (includeModerationColumn) {
+            payload[_moderationStatusColumn] = _pendingStatus;
+          }
           if (draft.routeGeoJson != null && draft.routeGeoJson!.isNotEmpty) {
             payload[_routeGeoJsonColumn] = draft.routeGeoJson;
           }
           await client.from(tableName).insert(payload);
           break;
         } on PostgrestException catch (error) {
+          if (includeModerationColumn &&
+              _isMissingColumnError(error, _moderationStatusColumn)) {
+            includeModerationColumn = false;
+            _supportsModerationColumn = false;
+            continue;
+          }
+
           if (_isIdConflict(error)) {
             pendingId += 1;
             if (pendingId > _smallIntMax) {
@@ -124,6 +138,9 @@ class RemoteSegmentsService {
     }
 
     try {
+      if (_supportsModerationColumn == false) {
+        return false;
+      }
       final List<dynamic> rows = await client
           .from(tableName)
           .select('$_idColumn')
@@ -172,6 +189,9 @@ class RemoteSegmentsService {
     }
 
     try {
+      if (_supportsModerationColumn == false) {
+        return false;
+      }
       final List<dynamic> deleted = await client
           .from(tableName)
           .delete()
@@ -263,26 +283,63 @@ class RemoteSegmentsService {
     }
   }
 
-  Future<int> _computeNextRemoteId(SupabaseClient client) async {
-    final List<dynamic> rows = await client
-        .from(tableName)
-        .select('$_idColumn')
-        .inFilter(_moderationStatusColumn, const <String>[_pendingStatus, _approvedStatus])
-        .order(_idColumn, ascending: false)
-        .limit(1);
+  Future<_RemoteTableCapabilities> _computeNextRemoteId(
+    SupabaseClient client,
+  ) async {
+    try {
+      final List<dynamic> rows = await client
+          .from(tableName)
+          .select('$_idColumn')
+          .inFilter(
+            _moderationStatusColumn,
+            const <String>[_pendingStatus, _approvedStatus],
+          )
+          .order(_idColumn, ascending: false)
+          .limit(1);
 
-    final maxId = rows.isEmpty
-        ? null
-        : _parseId((rows.first as Map<String, dynamic>)[_idColumn]);
-    final nextId = (maxId ?? 0) + 1;
+      final maxId = rows.isEmpty
+          ? null
+          : _parseId((rows.first as Map<String, dynamic>)[_idColumn]);
+      final nextId = (maxId ?? 0) + 1;
 
-    if (nextId > _smallIntMax) {
-      throw  RemoteSegmentsServiceException(
-        AppMessages.unableToAssignNewSegmentId,
+      if (nextId > _smallIntMax) {
+        throw  RemoteSegmentsServiceException(
+          AppMessages.unableToAssignNewSegmentId,
+        );
+      }
+
+      _supportsModerationColumn = true;
+      return _RemoteTableCapabilities(
+        nextId: nextId,
+        supportsModerationColumn: true,
       );
-    }
+    } on PostgrestException catch (error) {
+      if (_isMissingColumnError(error, _moderationStatusColumn)) {
+        final List<dynamic> rows = await client
+            .from(tableName)
+            .select('$_idColumn')
+            .order(_idColumn, ascending: false)
+            .limit(1);
 
-    return nextId;
+        final maxId = rows.isEmpty
+            ? null
+            : _parseId((rows.first as Map<String, dynamic>)[_idColumn]);
+        final nextId = (maxId ?? 0) + 1;
+
+        if (nextId > _smallIntMax) {
+          throw  RemoteSegmentsServiceException(
+            AppMessages.unableToAssignNewSegmentId,
+          );
+        }
+
+        _supportsModerationColumn = false;
+        return _RemoteTableCapabilities(
+          nextId: nextId,
+          supportsModerationColumn: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   bool _isIdConflict(PostgrestException error) {
@@ -329,6 +386,38 @@ class RemoteSegmentsService {
       AppMessages.nonNumericSegmentIdEncountered,
     );
   }
+
+  bool _isMissingColumnError(PostgrestException error, String column) {
+    final code = error.code?.toUpperCase();
+    if (code == '42703') {
+      return true;
+    }
+
+    final normalizedColumn = column.toLowerCase();
+    final normalizedMessage = (error.message ?? '').toLowerCase();
+    if (normalizedMessage.contains('column') &&
+        normalizedMessage.contains(normalizedColumn)) {
+      return true;
+    }
+
+    final details = (error.details?.toString() ?? '').toLowerCase();
+    if (details.contains('column') && details.contains(normalizedColumn)) {
+      return true;
+    }
+
+    final hint = (error.hint?.toString() ?? '').toLowerCase();
+    return hint.contains('column') && hint.contains(normalizedColumn);
+  }
+}
+
+class _RemoteTableCapabilities {
+  const _RemoteTableCapabilities({
+    required this.nextId,
+    required this.supportsModerationColumn,
+  });
+
+  final int nextId;
+  final bool supportsModerationColumn;
 }
 
 /// Error raised when submitting a segment for moderation fails.
