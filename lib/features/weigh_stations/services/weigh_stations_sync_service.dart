@@ -258,18 +258,42 @@ class WeighStationsSyncService {
       );
     }
 
-    final remoteIds = remoteRows.map((row) => row.first).toSet();
+    final remoteIds = <String>{};
+    final remoteCoordinates = <String>{};
+    final coordinatesIndex = WeighStationsCsvSchema.header
+        .indexOf(WeighStationsCsvSchema.columnCoordinates);
+
+    for (final row in remoteRows) {
+      if (row.isEmpty) {
+        continue;
+      }
+      remoteIds.add(row.first.trim());
+      if (coordinatesIndex < 0 || coordinatesIndex >= row.length) {
+        continue;
+      }
+      final normalizedCoordinates = _normalizeCoordinates(row[coordinatesIndex]);
+      if (normalizedCoordinates.isNotEmpty) {
+        remoteCoordinates.add(normalizedCoordinates);
+      }
+    }
+
     final remaining = <List<String>>[];
     var approved = 0;
     for (final row in localRows) {
       if (row.isEmpty) {
         continue;
       }
-      final id = row.first;
+      final id = row.first.trim();
       if (!id.startsWith(WeighStationsCsvSchema.localWeighStationIdPrefix)) {
         continue;
       }
-      if (remoteIds.contains(id)) {
+      final hasRemoteIdMatch = remoteIds.contains(id);
+      final hasRemoteCoordinateMatch = coordinatesIndex >= 0 &&
+          coordinatesIndex < row.length &&
+          remoteCoordinates.contains(
+            _normalizeCoordinates(row[coordinatesIndex]),
+          );
+      if (hasRemoteIdMatch || hasRemoteCoordinateMatch) {
         approved += 1;
         continue;
       }
@@ -317,6 +341,14 @@ class WeighStationsSyncService {
   }
 
   String _normalize(String value) => value.trim().toLowerCase();
+
+  String _normalizeCoordinates(String value) {
+    final normalized = value.trim();
+    if (normalized.isEmpty) {
+      return '';
+    }
+    return normalized.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+  }
 
   String _normalizeVoteCount(String? value) {
     if (value == null) {
