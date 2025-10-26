@@ -91,6 +91,7 @@ class AppLocalizations {
       'weighStationDownvoteAction': 'Downvote',
       'weighStationUpvoteCount': 'Upvotes: {count}',
       'weighStationDownvoteCount': 'Downvotes: {count}',
+      'weighStationApproachAlert': 'Approaching weigh station.',
       'deleteWeighStationAction': 'Delete weigh station',
       'deleteWeighStationConfirmationTitle': 'Delete weigh station',
       'confirmDeleteWeighStation':
@@ -465,6 +466,7 @@ class AppLocalizations {
       'weighStationDownvoteAction': 'Отрицателен вот',
       'weighStationUpvoteCount': 'Положителни гласове: {count}',
       'weighStationDownvoteCount': 'Отрицателни гласове: {count}',
+      'weighStationApproachAlert': 'Приближавате кантар.',
       'deleteWeighStationAction': 'Изтрий кантара',
       'deleteWeighStationConfirmationTitle': 'Изтриване на кантара',
       'confirmDeleteWeighStation':
@@ -724,6 +726,8 @@ class AppLocalizations {
         'weighStationDownvoteCount',
         {'count': '$count'},
       );
+  String get weighStationApproachAlert =>
+      _value('weighStationApproachAlert');
   String get saveSegment => _value('saveSegment');
   String get noSegmentsAvailable => _value('noSegmentsAvailable');
   String get noLocalSegments => _value('noLocalSegments');
