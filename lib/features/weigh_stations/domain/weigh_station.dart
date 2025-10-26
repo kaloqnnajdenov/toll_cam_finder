@@ -3,15 +3,11 @@ import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_
 class WeighStationInfo {
   const WeighStationInfo({
     required this.id,
-    required this.name,
-    required this.road,
     required this.coordinates,
     this.isLocalOnly = false,
   });
 
   final String id;
-  final String name;
-  final String road;
   final String coordinates;
   final bool isLocalOnly;
 

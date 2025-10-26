@@ -16,8 +16,6 @@ class CreateWeighStationPage extends StatefulWidget {
 }
 
 class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _roadController = TextEditingController();
   final TextEditingController _coordinatesController = TextEditingController();
 
   final LocalWeighStationsService _localService = LocalWeighStationsService();
@@ -25,8 +23,6 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _roadController.dispose();
     _coordinatesController.dispose();
     super.dispose();
   }
@@ -55,24 +51,6 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
                 coordinatesController: _coordinatesController,
               ),
               const SizedBox(height: 24),
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: localizations.weighStationNameLabel,
-                  hintText: localizations.weighStationNameHint,
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _roadController,
-                decoration: InputDecoration(
-                  labelText: localizations.weighStationRoadInputLabel,
-                  hintText: localizations.weighStationRoadHint,
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
               TextField(
                 controller: _coordinatesController,
                 decoration: InputDecoration(
@@ -129,8 +107,6 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
     WeighStationDraft draft;
     try {
       draft = _localService.prepareDraft(
-        name: _nameController.text,
-        road: _roadController.text,
         coordinates: _coordinatesController.text,
       );
     } on LocalWeighStationsServiceException catch (error) {
@@ -155,8 +131,6 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
     final remoteService = RemoteWeighStationsService(client: auth.client);
     try {
       await remoteService.submitForModeration(
-        name: draft.name,
-        road: draft.road,
         coordinates: draft.coordinates,
         addedByUserId: userId,
       );

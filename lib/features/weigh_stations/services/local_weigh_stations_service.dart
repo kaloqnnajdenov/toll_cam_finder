@@ -21,25 +21,17 @@ class LocalWeighStationsService {
   final WeighStationsPathResolver? _pathResolver;
 
   Future<void> saveStation({
-    required String name,
-    required String road,
     required String coordinates,
   }) async {
     final draft = prepareDraft(
-      name: name,
-      road: road,
       coordinates: coordinates,
     );
     await saveDraft(draft);
   }
 
   WeighStationDraft prepareDraft({
-    required String name,
-    required String road,
     required String coordinates,
   }) {
-    final normalizedName = name.trim();
-    final normalizedRoad = road.trim();
     final normalizedCoordinates = coordinates.trim();
 
     if (normalizedCoordinates.isEmpty) {
@@ -49,8 +41,6 @@ class LocalWeighStationsService {
     }
 
     return WeighStationDraft(
-      name: normalizedName,
-      road: normalizedRoad,
       coordinates: normalizedCoordinates,
     );
   }
@@ -88,8 +78,6 @@ class LocalWeighStationsService {
 
     rows.add(<String>[
       localId,
-      draft.name,
-      draft.road,
       draft.coordinates,
     ]);
 
@@ -158,13 +146,9 @@ class LocalWeighStationsService {
 
 class WeighStationDraft {
   const WeighStationDraft({
-    required this.name,
-    required this.road,
     required this.coordinates,
   });
 
-  final String name;
-  final String road;
   final String coordinates;
 }
 
