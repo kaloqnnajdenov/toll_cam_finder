@@ -14,16 +14,35 @@ class WeighStationMarker {
   final LatLng position;
 }
 
+class WeighStationVotes {
+  const WeighStationVotes({
+    this.upvotes = 0,
+    this.downvotes = 0,
+  });
+
+  final int upvotes;
+  final int downvotes;
+
+  WeighStationVotes copyWith({int? upvotes, int? downvotes}) {
+    return WeighStationVotes(
+      upvotes: upvotes ?? this.upvotes,
+      downvotes: downvotes ?? this.downvotes,
+    );
+  }
+}
+
 class WeighStationsState {
   const WeighStationsState({
     required this.error,
     required this.isLoading,
     required this.visibleStations,
+    required this.votes,
   });
 
   final String? error;
   final bool isLoading;
   final List<WeighStationMarker> visibleStations;
+  final Map<String, WeighStationVotes> votes;
 }
 
 class NearestWeighStation {
@@ -45,6 +64,7 @@ class WeighStationController {
   final Distance _distance = const Distance();
   List<WeighStationMarker> _allStations = const [];
   List<WeighStationMarker> _visibleStations = const [];
+  final Map<String, WeighStationVotes> _votes = <String, WeighStationVotes>{};
   String? _error;
   bool _isLoading = false;
 
@@ -52,6 +72,7 @@ class WeighStationController {
         error: _error,
         isLoading: _isLoading,
         visibleStations: _visibleStations,
+        votes: Map.unmodifiable(_votes),
       );
 
   Future<void> loadFromAsset(
@@ -72,12 +93,14 @@ class WeighStationController {
           })
           .whereType<WeighStationMarker>()
           .toList(growable: false);
+      _syncVotesWithStations();
       updateVisible(bounds: bounds);
     } catch (error, stackTrace) {
       debugPrint('WeighStationController: failed to load stations: $error\n$stackTrace');
       _error = error.toString();
       _allStations = const [];
       _visibleStations = const [];
+      _votes.clear();
     } finally {
       _isLoading = false;
     }
@@ -110,6 +133,30 @@ class WeighStationController {
       }
     }
     return nearest;
+  }
+
+  WeighStationVotes registerVote({
+    required String stationId,
+    required bool isUpvote,
+  }) {
+    final WeighStationVotes current =
+        _votes[stationId] ?? const WeighStationVotes();
+    final WeighStationVotes updated = isUpvote
+        ? current.copyWith(upvotes: current.upvotes + 1)
+        : current.copyWith(downvotes: current.downvotes + 1);
+    _votes[stationId] = updated;
+    return updated;
+  }
+
+  void _syncVotesWithStations() {
+    final Map<String, WeighStationVotes> synchronized =
+        <String, WeighStationVotes>{};
+    for (final station in _allStations) {
+      synchronized[station.id] = _votes[station.id] ?? const WeighStationVotes();
+    }
+    _votes
+      ..clear()
+      ..addAll(synchronized);
   }
 
   LatLng? _parseCoordinates(String raw) {

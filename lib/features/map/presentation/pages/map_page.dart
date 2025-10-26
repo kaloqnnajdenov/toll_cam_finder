@@ -50,6 +50,7 @@ import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
 import 'map/widgets/speed_limit_sign.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_stations_overlay.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_station_feedback_sheet.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 
@@ -817,6 +818,37 @@ class _MapPageState extends State<MapPage>
     setState(() {});
   }
 
+  void _onWeighStationLongPress(WeighStationMarker station) {
+    if (!mounted) {
+      return;
+    }
+
+    final WeighStationVotes initialVotes =
+        _segmentsService.weighStationsState.votes[station.id] ??
+            const WeighStationVotes();
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return WeighStationFeedbackSheet(
+          stationId: station.id,
+          initialVotes: initialVotes,
+          onVote: (isUpvote) {
+            final WeighStationVotes updated =
+                _segmentsService.registerWeighStationVote(
+              stationId: station.id,
+              isUpvote: isUpvote,
+            );
+            if (mounted) {
+              setState(() {});
+            }
+            return updated;
+          },
+        );
+      },
+    );
+  }
+
   void _updateVisibleSegments() {
     LatLngBounds? bounds;
     if (_mapReady) {
@@ -1025,6 +1057,7 @@ class _MapPageState extends State<MapPage>
     final currentSegment = context.watch<CurrentSegmentController>();
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
+    final weighStationsState = _segmentsService.weighStationsState;
     final mediaQuery = MediaQuery.of(context);
     final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
 
@@ -1061,8 +1094,8 @@ class _MapPageState extends State<MapPage>
                 endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
               ),
             WeighStationsOverlay(
-              visibleStations:
-                  _segmentsService.weighStationsState.visibleStations,
+              visibleStations: weighStationsState.visibleStations,
+              onMarkerLongPress: _onWeighStationLongPress,
             ),
             TollCamerasOverlay(cameras: cameraState),
           ],

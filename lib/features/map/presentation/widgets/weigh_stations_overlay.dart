@@ -7,9 +7,11 @@ class WeighStationsOverlay extends StatelessWidget {
   const WeighStationsOverlay({
     super.key,
     required this.visibleStations,
+    this.onMarkerLongPress,
   });
 
   final List<WeighStationMarker> visibleStations;
+  final ValueChanged<WeighStationMarker>? onMarkerLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +27,20 @@ class WeighStationsOverlay extends StatelessWidget {
               width: 36,
               height: 36,
               alignment: Alignment.center,
-              child: Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.deepPurple,
-                ),
-                child: const Icon(
-                  Icons.scale,
-                  color: Colors.white,
-                  size: 20,
+              child: GestureDetector(
+                onLongPress: onMarkerLongPress == null
+                    ? null
+                    : () => onMarkerLongPress!(station),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.deepPurple,
+                  ),
+                  child: const Icon(
+                    Icons.scale,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
