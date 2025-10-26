@@ -50,8 +50,6 @@ class WeighStationsSyncService {
   final WeighStationsFileSystem _fileSystem;
   final WeighStationsPathResolver? _localPathResolver;
 
-  static const String _moderationStatusColumn = 'moderation_status';
-  static const String _approvedStatus = 'approved';
   static const String _addedByUserColumn = 'added_by_user';
 
   Future<WeighStationsSyncResult> sync({
@@ -115,7 +113,7 @@ class WeighStationsSyncService {
 
     for (final candidate in _candidateTableNames) {
       try {
-        final response = await _selectApprovedRows(client, candidate);
+        final response = await _selectRemoteRows(client, candidate);
 
         if (candidate != tableName) {
           debugPrint(
@@ -151,38 +149,22 @@ class WeighStationsSyncService {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _selectApprovedRows(
+  Future<List<Map<String, dynamic>>> _selectRemoteRows(
     SupabaseClient client,
     String table,
   ) async {
-    try {
-      final List<dynamic> response = await client
-          .from(table)
-          .select('*')
-          .eq(_moderationStatusColumn, _approvedStatus);
+    final List<dynamic> response = await client.from(table).select('*');
 
-      return response
-          .cast<Map<String, dynamic>>()
-          .map(
-            (record) => Map<String, dynamic>.from(record)
-              ..removeWhere(
-                (key, value) =>
-                    _normalize(key) == _normalize(_addedByUserColumn),
-              ),
-          )
-          .toList(growable: false);
-    } on PostgrestException catch (error) {
-      if (_isMissingColumnError(error, _moderationStatusColumn)) {
-        throw WeighStationsSyncException(
-          AppMessages.tableMissingModerationColumn(
-            table,
-            _moderationStatusColumn,
-          ),
-          cause: error,
-        );
-      }
-      rethrow;
-    }
+    return response
+        .cast<Map<String, dynamic>>()
+        .map(
+          (record) => Map<String, dynamic>.from(record)
+            ..removeWhere(
+              (key, value) =>
+                  _normalize(key) == _normalize(_addedByUserColumn),
+            ),
+        )
+        .toList(growable: false);
   }
 
   Iterable<String> get _candidateTableNames {
@@ -206,17 +188,6 @@ class WeighStationsSyncService {
     return message.contains('does not exist') ||
         message.contains('not exist') ||
         message.contains('unknown table');
-  }
-
-  bool _isMissingColumnError(PostgrestException error, String column) {
-    final code = error.code?.toUpperCase();
-    if (code == '42703') {
-      return true;
-    }
-
-    final normalizedMessage = error.message.toLowerCase();
-    return normalizedMessage.contains('column') &&
-        normalizedMessage.contains(column.toLowerCase());
   }
 
   Future<String> _resolveLocalCsvPath() async {

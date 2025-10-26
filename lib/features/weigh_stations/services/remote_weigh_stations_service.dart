@@ -15,28 +15,25 @@ class RemoteWeighStationsService {
   final SupabaseClient? _client;
   final String tableName;
 
-  static const String _moderationStatusColumn = 'moderation_status';
-  static const String _pendingStatus = 'pending';
-  static const String _approvedStatus = 'approved';
   static const String _addedByUserColumn = 'added_by_user';
   static const String _coordinatesColumn = 'coordinates';
   static const String _idColumn = 'id';
   static const int _smallIntMax = 32767;
 
-  Future<void> submitForModeration({
+  Future<void> publish({
     required String coordinates,
     required String addedByUserId,
   }) async {
     final client = _client;
     if (client == null) {
       throw RemoteWeighStationsServiceException(
-        AppMessages.supabaseNotConfiguredForModeration,
+        AppMessages.supabaseNotConfiguredForWeighStationPublishing,
       );
     }
 
     if (addedByUserId.trim().isEmpty) {
       throw RemoteWeighStationsServiceException(
-        AppMessages.userRequiredForPublicModeration,
+        AppMessages.userRequiredForWeighStationPublishing,
       );
     }
 
@@ -48,7 +45,6 @@ class RemoteWeighStationsService {
           await client.from(tableName).insert(<String, dynamic>{
             'id': pendingId,
             _coordinatesColumn: coordinates,
-            _moderationStatusColumn: _pendingStatus,
             _addedByUserColumn: addedByUserId,
           });
           break;
@@ -68,14 +64,12 @@ class RemoteWeighStationsService {
       }
     } on SocketException catch (error) {
       throw RemoteWeighStationsServiceException(
-        AppMessages.noConnectionUnableToSubmitForModeration,
+        AppMessages.noConnectionUnableToPublishWeighStation,
         cause: error,
       );
     } on PostgrestException catch (error) {
       throw RemoteWeighStationsServiceException(
-        AppMessages.failedToSubmitSegmentForModerationWithReason(
-          error.message,
-        ),
+        AppMessages.failedToPublishWeighStationWithReason(error.message),
         cause: error,
       );
     } catch (error, stackTrace) {
@@ -83,88 +77,7 @@ class RemoteWeighStationsService {
         rethrow;
       }
       throw RemoteWeighStationsServiceException(
-        AppMessages.unexpectedErrorSubmittingForModeration,
-        cause: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<bool> hasPendingSubmission({
-    required String addedByUserId,
-    required String coordinates,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.supabaseNotConfiguredForPublicSubmissions,
-      );
-    }
-
-    try {
-      final List<dynamic> rows = await client
-          .from(tableName)
-          .select('$_idColumn')
-          .match(<String, Object>{
-        _moderationStatusColumn: _pendingStatus,
-        _addedByUserColumn: addedByUserId,
-        _coordinatesColumn: coordinates,
-      }).limit(1);
-
-      return rows.isNotEmpty;
-    } on SocketException catch (error) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.noConnectionUnableToManageSubmissions,
-        cause: error,
-      );
-    } on PostgrestException catch (error) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.failedToCheckSubmissionStatusWithReason(error.message),
-        cause: error,
-      );
-    } catch (error, stackTrace) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.unexpectedErrorCheckingSubmissionStatus,
-        cause: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<bool> deleteSubmission({
-    required String addedByUserId,
-    required String coordinates,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.supabaseNotConfiguredForPublicSubmissions,
-      );
-    }
-
-    try {
-      final List<dynamic> deleted = await client
-          .from(tableName)
-          .delete()
-          .match(<String, Object>{
-        _addedByUserColumn: addedByUserId,
-        _coordinatesColumn: coordinates,
-      }).select('$_idColumn');
-
-      return deleted.isNotEmpty;
-    } on SocketException catch (error) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.noConnectionUnableToManageSubmissions,
-        cause: error,
-      );
-    } on PostgrestException catch (error) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.failedToCancelSubmissionWithReason(error.message),
-        cause: error,
-      );
-    } catch (error, stackTrace) {
-      throw RemoteWeighStationsServiceException(
-        AppMessages.unexpectedErrorCancellingSubmission,
+        AppMessages.unexpectedErrorPublishingWeighStation,
         cause: error,
         stackTrace: stackTrace,
       );

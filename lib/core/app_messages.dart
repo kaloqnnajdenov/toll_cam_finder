@@ -228,8 +228,8 @@ class AppMessages {
       _l.translate('failedToSaveWeighStationLocally');
   static String get failedToSubmitWeighStation =>
       _l.translate('failedToSubmitWeighStation');
-  static String get weighStationSubmittedForReview =>
-      _l.translate('weighStationSubmittedForReview');
+  static String get weighStationPublished =>
+      _l.translate('weighStationPublished');
   static String get createSegmentEndLabel =>
       _l.translate('createSegmentEndLabel');
   static String get createSegmentEndNameHint =>
@@ -290,6 +290,16 @@ class AppMessages {
       _l.translate('supabaseNotConfiguredForPublicSubmissions');
   static String get userRequiredForPublicModeration =>
       _l.translate('userRequiredForPublicModeration');
+  static String get supabaseNotConfiguredForWeighStationPublishing =>
+      _l.translate('supabaseNotConfiguredForWeighStationPublishing');
+  static String get userRequiredForWeighStationPublishing =>
+      _l.translate('userRequiredForWeighStationPublishing');
+  static String get noConnectionUnableToPublishWeighStation =>
+      _l.translate('noConnectionUnableToPublishWeighStation');
+  static String failedToPublishWeighStationWithReason(String reason) =>
+      _l.translate('failedToPublishWeighStationWithReason', {'reason': reason});
+  static String get unexpectedErrorPublishingWeighStation =>
+      _l.translate('unexpectedErrorPublishingWeighStation');
   static String get noConnectionUnableToSubmitForModeration =>
       _l.translate('noConnectionUnableToSubmitForModeration');
   static String get noConnectionUnableToManageSubmissions =>
