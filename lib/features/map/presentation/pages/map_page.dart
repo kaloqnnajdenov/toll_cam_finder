@@ -44,10 +44,14 @@ import 'package:toll_cam_finder/shared/services/notification_permission_service.
 import 'package:toll_cam_finder/shared/services/permission_service.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
+import 'map/weigh_station_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
 import 'map/widgets/segment_overlays.dart';
 import 'map/widgets/speed_limit_sign.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_stations_overlay.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -74,6 +78,8 @@ class _MapPageState extends State<MapPage>
       ForegroundNotificationService(segmentUiService: _segmentUiService);
   final UpcomingSegmentCueService _upcomingSegmentCueService =
       UpcomingSegmentCueService();
+  final WeighStationAlertService _weighStationAlertService =
+      WeighStationAlertService();
   final CameraPollingService _cameraPollingService =
       const CameraPollingService();
   final MapSyncMessageService _syncMessageService =
@@ -107,6 +113,7 @@ class _MapPageState extends State<MapPage>
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final Distance _distanceCalculator = const Distance();
   final TollCameraController _cameraController = TollCameraController();
+  final WeighStationController _weighStationController = WeighStationController();
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
@@ -129,6 +136,8 @@ class _MapPageState extends State<MapPage>
   double? _speedKmh;
   bool _isSyncing = false;
   final TollSegmentsSyncService _syncService = TollSegmentsSyncService();
+  final WeighStationsSyncService _weighStationsSyncService =
+      WeighStationsSyncService();
   DateTime? _nextCameraCheckAt;
 
   double? _userHeading;
@@ -164,12 +173,17 @@ class _MapPageState extends State<MapPage>
       segmentTracker: _segmentTracker,
       cameraController: _cameraController,
       cameraPollingService: _cameraPollingService,
+      weighStationController: _weighStationController,
+      weighStationsSyncService: _weighStationsSyncService,
       syncService: _syncService,
       syncMessageService: _syncMessageService,
     );
 
     _metadataLoadFuture = _loadSegmentsMetadata();
-    unawaited(_metadataLoadFuture!.then((_) => _loadCameras()));
+    unawaited(_metadataLoadFuture!.then((_) async {
+      await _loadCameras();
+      await _loadWeighStations();
+    }));
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     unawaited(_initLocation());
@@ -187,6 +201,7 @@ class _MapPageState extends State<MapPage>
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
     unawaited(_upcomingSegmentCueService.dispose());
+    unawaited(_weighStationAlertService.dispose());
     _osmSpeedLimitService.dispose();
     _audioController.removeListener(_updateAudioPolicy);
     _offlineRedirectTimer?.cancel();
@@ -296,6 +311,7 @@ class _MapPageState extends State<MapPage>
     _audioPolicy = newPolicy;
     _segmentGuidanceController.updateAudioPolicy(newPolicy);
     _upcomingSegmentCueService.updateAudioPolicy(newPolicy);
+    _weighStationAlertService.updateAudioPolicy(newPolicy);
   }
 
   void _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason reason) {
@@ -418,6 +434,11 @@ class _MapPageState extends State<MapPage>
     );
     _moveBlueDot(next);
     _maybeFetchSpeedLimit(next);
+    final nearestWeigh = _segmentsService.nearestWeighStation(next);
+    _weighStationAlertService.updateDistance(
+      stationId: nearestWeigh?.marker.id,
+      distanceMeters: nearestWeigh?.distanceMeters,
+    );
     if (_segmentsService.shouldProcessSegmentUpdate(
       now: now,
       nextCameraCheckAt: _nextCameraCheckAt,
@@ -579,6 +600,7 @@ class _MapPageState extends State<MapPage>
     _currentSegmentController.reset();
     _nextCameraCheckAt = null;
     _upcomingSegmentCueService.reset();
+    _weighStationAlertService.reset();
     _lastNotificationStatus = null;
     _updateSegmentsOnlyMetrics();
     unawaited(_segmentGuidanceController.reset());
@@ -628,6 +650,7 @@ class _MapPageState extends State<MapPage>
 
     _updateVisibleCameras();
     _updateVisibleSegments();
+    _updateVisibleWeighStations();
   }
 
   // ------------------ reset view button ------------------
@@ -642,6 +665,7 @@ class _MapPageState extends State<MapPage>
     }
     _updateVisibleCameras();
     _updateVisibleSegments();
+    _updateVisibleWeighStations();
   }
 
   void _onResetView() {
@@ -745,6 +769,22 @@ class _MapPageState extends State<MapPage>
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
     _updateVisibleSegments();
+    _updateVisibleWeighStations();
+  }
+
+  Future<void> _loadWeighStations() async {
+    LatLngBounds? bounds;
+    if (_mapReady) {
+      try {
+        bounds = _mapController.camera.visibleBounds;
+      } catch (_) {
+        bounds = null;
+      }
+    }
+    await _segmentsService.loadWeighStations(bounds: bounds);
+    if (!mounted) return;
+    _weighStationAlertService.reset();
+    _updateVisibleWeighStations();
   }
 
   void _updateVisibleCameras() {
@@ -761,6 +801,20 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _cameraController.updateVisible(bounds: bounds);
     });
+  }
+
+  void _updateVisibleWeighStations() {
+    LatLngBounds? bounds;
+    if (_mapReady) {
+      try {
+        bounds = _mapController.camera.visibleBounds;
+      } catch (_) {
+        bounds = null;
+      }
+    }
+    _segmentsService.updateVisibleWeighStations(bounds: bounds);
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _updateVisibleSegments() {
@@ -1006,6 +1060,10 @@ class _MapPageState extends State<MapPage>
                 startGeofenceRadius: currentSegment.debugData.startGeofenceRadius,
                 endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
               ),
+            WeighStationsOverlay(
+              visibleStations:
+                  _segmentsService.weighStationsState.visibleStations,
+            ),
             TollCamerasOverlay(cameras: cameraState),
           ],
         ),

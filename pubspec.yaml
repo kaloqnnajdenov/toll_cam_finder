@@ -37,6 +37,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/toll_segments.csv
+    - assets/data/weigh_stations.csv
     - assets/data/ding_sound.mp3
 
 flutter_launcher_icons:

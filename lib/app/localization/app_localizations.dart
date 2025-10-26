@@ -65,6 +65,33 @@ class AppLocalizations {
       'createSegmentStartCoordinatesLabel': 'Start coordinates',
       'createSegmentStartLabel': 'Start',
       'createSegmentStartNameHint': 'Start name',
+      'weighStations': 'Weigh stations',
+      'createWeighStation': 'Add weigh station',
+      'createWeighStationInstructions':
+          'Tap the map to place the weigh station marker. Long-press and drag to fine-tune the location.',
+      'weighStationNameLabel': 'Station name',
+      'weighStationNameHint': 'Optional name',
+      'weighStationRoadInputLabel': 'Road',
+      'weighStationRoadHint': 'A1, E80…',
+      'weighStationCoordinatesInputLabel': 'Coordinates',
+      'weighStationCoordinatesHint': '41.8626802,26.0873785',
+      'saveWeighStation': 'Save weigh station',
+      'failedToLoadWeighStations': 'Failed to load weigh stations.',
+      'noWeighStationsAvailable': 'No weigh stations available.',
+      'failedToSaveWeighStationLocally':
+          'Failed to save the weigh station locally.',
+      'failedToSubmitWeighStation':
+          'Failed to submit the weigh station for moderation.',
+      'weighStationSubmittedForReview':
+          'Weigh station submitted for review.',
+      'weighStationUnnamed': 'Weigh station {id}',
+      'weighStationRoadLabel': 'Road: {road}',
+      'weighStationCoordinatesLabel': 'Coordinates: {coordinates}',
+      'weighStationLocalBadge': 'Local only',
+      'weighStationMapHintPlace':
+          'Tap anywhere on the map to place the weigh station.',
+      'weighStationMapHintDrag':
+          'Long-press and drag the marker to adjust the weigh station.',
       'csvMissingStartEndColumns': 'CSV must contain "Start" and "End" columns',
       'deleteAction': 'Delete',
       'deleteSegmentAction': 'Delete segment',
@@ -77,6 +104,8 @@ class AppLocalizations {
           'Failed to access the segments metadata file.',
       'failedToAccessTollSegmentsFile':
           'Failed to access the toll segments file: {reason}',
+      'failedToAccessWeighStationsFile':
+          'Failed to access the weigh stations file: {reason}',
       'failedToCancelPublicReview':
           'Failed to cancel the public review for this segment.',
       'failedToCancelSubmissionWithReason':
@@ -90,6 +119,8 @@ class AppLocalizations {
           'Failed to determine the local toll segments storage path.',
       'failedToDownloadTollSegments':
           'Failed to download toll segments: {reason}',
+      'failedToDownloadWeighStations':
+          'Failed to download weigh stations: {reason}',
       'failedToLoadCameras': 'Failed to load cameras: {error}',
       'failedToLoadSegmentPreferences':
           'Failed to load segment preferences: {errorMessage}',
@@ -378,8 +409,39 @@ class AppLocalizations {
 'createSegmentStartCoordinatesHint': '41.8626802,26.0873785',
 'createSegmentStartCoordinatesLabel': 'Начални координати',
 'createSegmentStartLabel': 'Начало',
-'createSegmentStartNameHint': 'Име на началото',
-'emailLabel': 'Имейл адрес',
+      'createSegmentStartNameHint': 'Име на началото',
+      'weighStations': 'Кантари',
+      'createWeighStation': 'Добави кантар',
+      'createWeighStationInstructions':
+          'Докоснете картата, за да поставите маркера за кантара. Задръжте и плъзнете, за да коригирате позицията.',
+      'weighStationNameLabel': 'Име на кантара',
+      'weighStationNameHint': 'Незадължително име',
+      'weighStationRoadInputLabel': 'Път',
+      'weighStationRoadHint': 'A1, E80…',
+      'weighStationCoordinatesInputLabel': 'Координати',
+      'weighStationCoordinatesHint': '41.8626802,26.0873785',
+      'saveWeighStation': 'Запази кантара',
+      'failedToLoadWeighStations': 'Неуспешно зареждане на кантари.',
+      'failedToAccessWeighStationsFile':
+          'Неуспешен достъп до файла с кантарите: {reason}',
+      'failedToDownloadWeighStations':
+          'Неуспешно изтегляне на кантари: {reason}',
+      'noWeighStationsAvailable': 'Няма налични кантари.',
+      'failedToSaveWeighStationLocally':
+          'Неуспешно запазване на кантара локално.',
+      'failedToSubmitWeighStation':
+          'Неуспешно изпращане на кантара за модерация.',
+      'weighStationSubmittedForReview':
+          'Кантарът е изпратен за преглед.',
+      'weighStationUnnamed': 'Кантар {id}',
+      'weighStationRoadLabel': 'Път: {road}',
+      'weighStationCoordinatesLabel': 'Координати: {coordinates}',
+      'weighStationLocalBadge': 'Само локален',
+      'weighStationMapHintPlace':
+          'Докоснете картата, за да поставите кантара.',
+      'weighStationMapHintDrag':
+          'Задръжте и плъзнете маркера, за да коригирате кантара.',
+      'emailLabel': 'Имейл адрес',
 'fullNameLabel': 'Пълно име',
 'joinTollCam': 'Присъедини се към TollCam',
 'language': 'Език',
@@ -580,6 +642,40 @@ class AppLocalizations {
   String get logOut => _value('logOut');
   String get localSegments => _value('localSegments');
   String get createSegment => _value('createSegment');
+  String get weighStations => _value('weighStations');
+  String get createWeighStation => _value('createWeighStation');
+  String get createWeighStationInstructions =>
+      _value('createWeighStationInstructions');
+  String get weighStationNameLabel => _value('weighStationNameLabel');
+  String get weighStationNameHint => _value('weighStationNameHint');
+  String get weighStationRoadInputLabel =>
+      _value('weighStationRoadInputLabel');
+  String get weighStationRoadHint => _value('weighStationRoadHint');
+  String get weighStationCoordinatesInputLabel =>
+      _value('weighStationCoordinatesInputLabel');
+  String get weighStationCoordinatesHint =>
+      _value('weighStationCoordinatesHint');
+  String get saveWeighStation => _value('saveWeighStation');
+  String get failedToLoadWeighStations => _value('failedToLoadWeighStations');
+  String get noWeighStationsAvailable =>
+      _value('noWeighStationsAvailable');
+  String get failedToSaveWeighStationLocally =>
+      _value('failedToSaveWeighStationLocally');
+  String get failedToSubmitWeighStation =>
+      _value('failedToSubmitWeighStation');
+  String get weighStationSubmittedForReview =>
+      _value('weighStationSubmittedForReview');
+  String weighStationUnnamed(String id) =>
+      translate('weighStationUnnamed', {'id': id});
+  String weighStationRoadLabel(String road) =>
+      translate('weighStationRoadLabel', {'road': road});
+  String weighStationCoordinatesLabel(String coordinates) => translate(
+        'weighStationCoordinatesLabel',
+        {'coordinates': coordinates},
+      );
+  String get weighStationLocalBadge => _value('weighStationLocalBadge');
+  String get weighStationMapHintPlace => _value('weighStationMapHintPlace');
+  String get weighStationMapHintDrag => _value('weighStationMapHintDrag');
   String get saveSegment => _value('saveSegment');
   String get noSegmentsAvailable => _value('noSegmentsAvailable');
   String get noLocalSegments => _value('noLocalSegments');

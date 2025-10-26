@@ -127,6 +127,9 @@ class AppConstants {
   /// Asset path for the toll-road segments dataset (CSV format).
   static const String pathToTollSegments = 'assets/data/toll_segments.csv';
 
+  /// Asset path for the weigh-station dataset (CSV format).
+  static const String pathToWeighStations = 'assets/data/weigh_stations.csv';
+
   /// Asset path to the toll segments dataset. Camera markers are derived from
   /// the start and end points of each segment in this CSV file.
   static const String camerasAsset = pathToTollSegments;
