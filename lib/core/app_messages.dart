@@ -135,6 +135,20 @@ class AppMessages {
       _l.translate('deleteSegmentConfirmationTitle');
   static String confirmDeleteSegment(String displayId) =>
       _l.translate('confirmDeleteSegment', {'displayId': displayId});
+  static String get deleteWeighStationAction =>
+      _l.translate('deleteWeighStationAction');
+  static String get deleteWeighStationConfirmationTitle =>
+      _l.translate('deleteWeighStationConfirmationTitle');
+  static String confirmDeleteWeighStation(String displayId) =>
+      _l.translate('confirmDeleteWeighStation', {'id': displayId});
+  static String weighStationDeleted(String displayId) =>
+      _l.translate('weighStationDeleted', {'id': displayId});
+  static String get failedToDeleteWeighStation =>
+      _l.translate('failedToDeleteWeighStation');
+  static String get onlyLocalWeighStationsCanBeDeleted =>
+      _l.translate('onlyLocalWeighStationsCanBeDeleted');
+  static String get deletingLocalWeighStationsNotSupportedOnWeb =>
+      _l.translate('deletingLocalWeighStationsNotSupportedOnWeb');
   static String get unableToDetermineLoggedInAccountRetry =>
       _l.translate('unableToDetermineLoggedInAccountRetry');
   static String get chooseSegmentVisibilityQuestion =>

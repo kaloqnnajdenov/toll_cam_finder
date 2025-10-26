@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station.dart';
+import 'package:toll_cam_finder/features/weigh_stations/presentation/widgets/weigh_station_action_dialogs.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/local_weigh_stations_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_repository.dart';
 
 class WeighStationsPage extends StatefulWidget {
@@ -16,6 +19,7 @@ class WeighStationsPage extends StatefulWidget {
 
 class _WeighStationsPageState extends State<WeighStationsPage> {
   final WeighStationsRepository _repository = WeighStationsRepository();
+  final LocalWeighStationsService _localService = LocalWeighStationsService();
   late Future<List<WeighStationInfo>> _stationsFuture;
   bool _stationsUpdated = false;
 
@@ -96,6 +100,7 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
                           ),
                       ],
                     ),
+                    onLongPress: () => _onWeighStationLongPress(station),
                   ),
                 );
               },
@@ -140,5 +145,72 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
     setState(() {
       _stationsFuture = _repository.loadStations();
     });
+  }
+
+  Future<void> _onWeighStationLongPress(WeighStationInfo station) async {
+    final action = await showWeighStationActionsSheet(context, station);
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case WeighStationAction.delete:
+        await _confirmAndDeleteWeighStation(station);
+        break;
+    }
+  }
+
+  Future<void> _confirmAndDeleteWeighStation(
+    WeighStationInfo station,
+  ) async {
+    final confirmed = await showDeleteWeighStationConfirmationDialog(
+      context,
+      station,
+    );
+    if (!mounted || !confirmed) {
+      return;
+    }
+
+    await _deleteWeighStation(station);
+  }
+
+  Future<void> _deleteWeighStation(WeighStationInfo station) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final deleted = await _localService.deleteLocalStation(station.id);
+      if (!mounted) {
+        return;
+      }
+
+      if (!deleted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(AppMessages.failedToDeleteWeighStation)),
+        );
+        return;
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppMessages.weighStationDeleted(station.displayId)),
+        ),
+      );
+      _stationsUpdated = true;
+      setState(() {
+        _stationsFuture = _repository.loadStations();
+      });
+    } on LocalWeighStationsServiceException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppMessages.failedToDeleteWeighStation)),
+      );
+    }
   }
 }

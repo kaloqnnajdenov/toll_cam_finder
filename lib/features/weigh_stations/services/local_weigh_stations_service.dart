@@ -142,6 +142,68 @@ class LocalWeighStationsService {
     }
     return '$prefix$candidate';
   }
+
+  Future<bool> deleteLocalStation(String id) async {
+    if (kIsWeb) {
+      throw LocalWeighStationsServiceException(
+        AppMessages.deletingLocalWeighStationsNotSupportedOnWeb,
+      );
+    }
+
+    if (!id.startsWith(WeighStationsCsvSchema.localWeighStationIdPrefix)) {
+      throw LocalWeighStationsServiceException(
+        AppMessages.onlyLocalWeighStationsCanBeDeleted,
+      );
+    }
+
+    final csvPath = await resolveWeighStationsDataPath(
+      overrideResolver: _pathResolver,
+    );
+
+    if (!await _fileSystem.exists(csvPath)) {
+      return false;
+    }
+
+    final rows = await _readExistingRows(csvPath);
+    if (rows.isEmpty) {
+      return false;
+    }
+
+    final updatedRows = <List<String>>[];
+    var removed = false;
+
+    for (final row in rows) {
+      if (_isHeaderRow(row)) {
+        updatedRows.add(row);
+        continue;
+      }
+
+      if (row.isNotEmpty && row.first == id) {
+        removed = true;
+        continue;
+      }
+
+      updatedRows.add(row);
+    }
+
+    if (!removed) {
+      return false;
+    }
+
+    if (updatedRows.isEmpty) {
+      await _fileSystem.writeAsString(csvPath, '');
+      return true;
+    }
+
+    final csv = const ListToCsvConverter(
+      fieldDelimiter: ';',
+      textDelimiter: '"',
+      textEndDelimiter: '"',
+    ).convert(updatedRows);
+
+    await _fileSystem.writeAsString(csvPath, '$csv\n');
+    return true;
+  }
 }
 
 class WeighStationDraft {
