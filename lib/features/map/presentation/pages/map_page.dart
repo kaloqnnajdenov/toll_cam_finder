@@ -89,6 +89,7 @@ class _MapPageState extends State<MapPage>
   final Connectivity _connectivity = Connectivity();
   late final MapSegmentsService _segmentsService;
   late final GuidanceAudioController _audioController;
+  late final LanguageController _languageController;
   late final SegmentsOnlyModeController _segmentsOnlyModeController;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
@@ -167,9 +168,11 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
     _segmentGuidanceController = SegmentGuidanceController();
     _audioController = context.read<GuidanceAudioController>();
+    _languageController = context.read<LanguageController>();
     _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
     unawaited(_initConnectivityMonitoring());
     _audioController.addListener(_updateAudioPolicy);
+    _languageController.addListener(_handleLanguageChange);
     _segmentsService = MapSegmentsService(
       metadataService: _metadataService,
       segmentTracker: _segmentTracker,
@@ -186,6 +189,8 @@ class _MapPageState extends State<MapPage>
       await _loadCameras();
       await _loadWeighStations();
     }));
+
+    _handleLanguageChange();
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
     unawaited(_initLocation());
@@ -206,6 +211,7 @@ class _MapPageState extends State<MapPage>
     unawaited(_weighStationAlertService.dispose());
     _osmSpeedLimitService.dispose();
     _audioController.removeListener(_updateAudioPolicy);
+    _languageController.removeListener(_handleLanguageChange);
     _offlineRedirectTimer?.cancel();
     _osmUnavailableRedirectTimer?.cancel();
     _segmentsOnlyModeController.exitMode();
@@ -301,6 +307,13 @@ class _MapPageState extends State<MapPage>
           useForegroundNotification: _useForegroundLocationService,
         )
         .listen(_handlePositionUpdate);
+  }
+
+  void _handleLanguageChange() {
+    final String languageCode = _languageController.locale.languageCode;
+    _segmentGuidanceController.updateLanguage(languageCode);
+    _upcomingSegmentCueService.updateLanguage(languageCode);
+    _weighStationAlertService.updateLanguage(languageCode);
   }
 
   void _updateAudioPolicy() {

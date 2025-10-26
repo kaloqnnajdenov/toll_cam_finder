@@ -139,6 +139,24 @@ class AppConstants {
   /// monitored area.
   static const String upcomingSegmentSoundAsset = 'data/ding_sound.mp3';
 
+  /// Voice prompt that announces an upcoming segment (Bulgarian locale).
+  static const String approachingSegmentVoiceAsset =
+      'data/approaching_segment.mp3';
+
+  /// Voice prompt that confirms a segment entry (Bulgarian locale).
+  static const String segmentEnteredVoiceAsset = 'data/entered_segmen.mp3';
+
+  /// Voice prompt that announces an upcoming segment end (Bulgarian locale).
+  static const String segmentEndingSoonVoiceAsset =
+      'data/segment_ends_in800.mp3';
+
+  /// Voice prompt that confirms a segment exit (Bulgarian locale).
+  static const String segmentEndedVoiceAsset = 'data/segment_ended.mp3';
+
+  /// Voice prompt that announces an upcoming weigh control (Bulgarian locale).
+  static const String approachingWeighControlVoiceAsset =
+      'data/approaching_weigh_control.mp3';
+
   
   /// The animation controller starts with, and falls back to, a 500 ms duration for
   /// each interpolation run. Increasing that duration makes movements appear slower
