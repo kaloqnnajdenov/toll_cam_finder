@@ -66,9 +66,13 @@ class _WeighStationFeedbackSheetState
     final ColorScheme colorScheme = theme.colorScheme;
     final bool isUpvoted = _userVote == true;
     final bool isDownvoted = _userVote == false;
-    final ButtonStyle selectedStyle = ElevatedButton.styleFrom(
-      backgroundColor: colorScheme.secondaryContainer,
-      foregroundColor: colorScheme.onSecondaryContainer,
+    final ButtonStyle upvoteSelectedStyle = ElevatedButton.styleFrom(
+      backgroundColor: colorScheme.secondary,
+      foregroundColor: colorScheme.onSecondary,
+    );
+    final ButtonStyle downvoteSelectedStyle = ElevatedButton.styleFrom(
+      backgroundColor: colorScheme.error,
+      foregroundColor: colorScheme.onError,
     );
 
     return SafeArea(
@@ -116,7 +120,7 @@ class _WeighStationFeedbackSheetState
                         _isProcessing ? null : () => _handleVote(true),
                     icon: const Icon(Icons.thumb_up),
                     label: Text(localizations.weighStationUpvoteAction),
-                    style: isUpvoted ? selectedStyle : null,
+                    style: isUpvoted ? upvoteSelectedStyle : null,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -126,7 +130,7 @@ class _WeighStationFeedbackSheetState
                         _isProcessing ? null : () => _handleVote(false),
                     icon: const Icon(Icons.thumb_down),
                     label: Text(localizations.weighStationDownvoteAction),
-                    style: isDownvoted ? selectedStyle : null,
+                    style: isDownvoted ? downvoteSelectedStyle : null,
                   ),
                 ),
               ],
