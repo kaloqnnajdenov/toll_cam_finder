@@ -282,9 +282,12 @@ extension _MapPageDrawer on _MapPageState {
   }
 
   Future<void> _refreshSegmentsData() async {
+    final auth = context.read<AuthController>();
     final result = await _segmentsService.refreshSegmentsData(
       showMetadataErrors: true,
       userLatLng: _userLatLng,
+      client: auth.client,
+      currentUserId: auth.currentUserId,
     );
 
     _segmentsMetadata = result.metadata;
@@ -328,6 +331,7 @@ extension _MapPageDrawer on _MapPageState {
         client: auth.client,
         ignoredSegmentIds: _segmentsMetadata.deactivatedSegmentIds,
         userLatLng: _userLatLng,
+        currentUserId: auth.currentUserId,
       );
     } finally {
       if (mounted) {

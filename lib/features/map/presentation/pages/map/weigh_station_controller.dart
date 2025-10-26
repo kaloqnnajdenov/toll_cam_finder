@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_repository.dart';
 
 class WeighStationMarker {
@@ -12,33 +13,6 @@ class WeighStationMarker {
 
   final String id;
   final LatLng position;
-}
-
-class WeighStationVotes {
-  const WeighStationVotes({
-    this.upvotes = 0,
-    this.downvotes = 0,
-  });
-
-  final int upvotes;
-  final int downvotes;
-
-  WeighStationVotes copyWith({int? upvotes, int? downvotes}) {
-    return WeighStationVotes(
-      upvotes: upvotes ?? this.upvotes,
-      downvotes: downvotes ?? this.downvotes,
-    );
-  }
-}
-
-class WeighStationVoteResult {
-  const WeighStationVoteResult({
-    required this.votes,
-    required this.userVote,
-  });
-
-  final WeighStationVotes votes;
-  final bool? userVote;
 }
 
 class WeighStationsState {
@@ -97,16 +71,26 @@ class WeighStationController {
     _error = null;
     try {
       final stations = await _repository.loadStations(assetPath: assetPath);
-      _allStations = stations
-          .map((station) {
-            final position = _parseCoordinates(station.coordinates);
-            if (position == null) {
-              return null;
-            }
-            return WeighStationMarker(id: station.id, position: position);
-          })
-          .whereType<WeighStationMarker>()
-          .toList(growable: false);
+
+      final markers = <WeighStationMarker>[];
+      final votesByStation = <String, WeighStationVotes>{};
+
+      for (final station in stations) {
+        final position = _parseCoordinates(station.coordinates);
+        if (position == null) {
+          continue;
+        }
+        markers.add(WeighStationMarker(id: station.id, position: position));
+        votesByStation[station.id] = WeighStationVotes(
+          upvotes: station.upvotes,
+          downvotes: station.downvotes,
+        );
+      }
+
+      _allStations = markers;
+      _votes
+        ..clear()
+        ..addAll(votesByStation);
       _syncVotesWithStations();
       updateVisible(bounds: bounds);
     } catch (error, stackTrace) {
@@ -205,6 +189,19 @@ class WeighStationController {
       votes: updatedVotes,
       userVote: updatedUserVote,
     );
+  }
+
+  void applyRemoteVotes({
+    required Map<String, WeighStationVotes> votes,
+    required Map<String, bool> userVotes,
+  }) {
+    _votes
+      ..clear()
+      ..addAll(votes);
+    _userVotes
+      ..clear()
+      ..addAll(userVotes);
+    _syncVotesWithStations();
   }
 
   void _syncVotesWithStations() {

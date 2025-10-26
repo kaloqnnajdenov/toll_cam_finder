@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,6 +14,8 @@ import 'package:toll_cam_finder/features/map/services/map_sync_message_service.d
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
+import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/remote_weigh_station_votes_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 
 class SegmentsMetadataLoadResult {
@@ -66,6 +70,7 @@ class MapSegmentsService {
     required CameraPollingService cameraPollingService,
     required WeighStationController weighStationController,
     required WeighStationsSyncService weighStationsSyncService,
+    RemoteWeighStationVotesService? weighStationVotesService,
     required TollSegmentsSyncService syncService,
     required MapSyncMessageService syncMessageService,
   })  : _metadataService = metadataService,
@@ -75,6 +80,8 @@ class MapSegmentsService {
         _cameraPollingService = cameraPollingService,
         _syncService = syncService,
         _weighStationsSyncService = weighStationsSyncService,
+        _weighStationVotesService =
+            weighStationVotesService ?? RemoteWeighStationVotesService(),
         _syncMessageService = syncMessageService;
 
   final SegmentsMetadataService _metadataService;
@@ -84,6 +91,7 @@ class MapSegmentsService {
   final CameraPollingService _cameraPollingService;
   final TollSegmentsSyncService _syncService;
   final WeighStationsSyncService _weighStationsSyncService;
+  final RemoteWeighStationVotesService _weighStationVotesService;
   final MapSyncMessageService _syncMessageService;
 
   Future<SegmentsMetadataLoadResult> loadSegmentsMetadata({
@@ -130,11 +138,22 @@ class MapSegmentsService {
   WeighStationVoteResult registerWeighStationVote({
     required String stationId,
     required bool isUpvote,
+    SupabaseClient? client,
+    String? userId,
   }) {
-    return _weighStationController.registerVote(
+    final result = _weighStationController.registerVote(
       stationId: stationId,
       isUpvote: isUpvote,
     );
+    if (client != null && userId != null && userId.trim().isNotEmpty) {
+      unawaited(_submitWeighStationVote(
+        client: client,
+        stationId: stationId,
+        userId: userId,
+        userVote: result.userVote,
+      ));
+    }
+    return result;
   }
 
   NearestWeighStation? nearestWeighStation(LatLng point) =>
@@ -171,6 +190,8 @@ class MapSegmentsService {
   Future<SegmentsRefreshResult> refreshSegmentsData({
     required bool showMetadataErrors,
     required LatLng? userLatLng,
+    SupabaseClient? client,
+    String? currentUserId,
   }) async {
     final metadataResult =
         await loadSegmentsMetadata(showErrors: showMetadataErrors);
@@ -186,6 +207,10 @@ class MapSegmentsService {
       excludedSegmentIds: metadataResult.metadata.deactivatedSegmentIds,
     );
     await loadWeighStations();
+    await refreshWeighStationVotes(
+      client: client,
+      userId: currentUserId,
+    );
 
     SegmentTrackerEvent? seedEvent;
     if (reloaded && userLatLng != null) {
@@ -206,6 +231,7 @@ class MapSegmentsService {
     required SupabaseClient? client,
     required Set<String> ignoredSegmentIds,
     required LatLng? userLatLng,
+    String? currentUserId,
   }) async {
     if (client == null) {
       return SegmentsSyncResult(
@@ -236,6 +262,10 @@ class MapSegmentsService {
 
       await _weighStationsSyncService.sync(client: client);
       await loadWeighStations();
+      await refreshWeighStationVotes(
+        client: client,
+        userId: currentUserId,
+      );
 
       final message = _syncMessageService.buildSuccessMessage(syncResult);
       return SegmentsSyncResult(
@@ -265,6 +295,62 @@ class MapSegmentsService {
         message: AppMessages.unexpectedSyncError,
         seedEvent: null,
         reloaded: false,
+      );
+    }
+  }
+
+  Future<void> refreshWeighStationVotes({
+    required SupabaseClient? client,
+    required String? userId,
+  }) async {
+    if (client == null) {
+      return;
+    }
+
+    try {
+      final snapshot = await _weighStationVotesService.fetchVotes(
+        client: client,
+        currentUserId: userId,
+      );
+      _weighStationController.applyRemoteVotes(
+        votes: snapshot.votes,
+        userVotes: snapshot.userVotes,
+      );
+    } on RemoteWeighStationVotesException catch (error) {
+      debugPrint(
+        'MapSegmentsService: failed to download weigh station votes '
+        '(${error.message}).',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'MapSegmentsService: unexpected error downloading weigh station votes: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _submitWeighStationVote({
+    required SupabaseClient client,
+    required String stationId,
+    required String userId,
+    required bool? userVote,
+  }) async {
+    try {
+      await _weighStationVotesService.applyVote(
+        client: client,
+        stationId: stationId,
+        userId: userId,
+        vote: userVote,
+      );
+    } on RemoteWeighStationVotesException catch (error) {
+      debugPrint(
+        'MapSegmentsService: failed to submit weigh station vote '
+        '(${error.message}).',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'MapSegmentsService: unexpected error submitting weigh station vote: '
+        '$error\n$stackTrace',
       );
     }
   }

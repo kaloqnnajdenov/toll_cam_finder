@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/weigh_station_controller.dart';
+import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
 
 typedef WeighStationVoteHandler = WeighStationVoteResult Function(bool isUpvote);
 
