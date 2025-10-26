@@ -49,11 +49,13 @@ class WeighStationAlertService {
   }
 
   void updateLanguage(String languageCode) {
-    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    final String normalized = languageCode.toLowerCase();
+    final bool useBulgarian = normalized == 'bg' || normalized.startsWith('bg-');
     if (_useBulgarianVoice == useBulgarian) {
       return;
     }
     _useBulgarianVoice = useBulgarian;
+    unawaited(_updateTtsLanguage());
   }
 
   void updateDistance({
@@ -146,6 +148,8 @@ class WeighStationAlertService {
     } catch (_) {
       // best effort
     }
+
+    await _updateTtsLanguage();
   }
 
   Future<void> _playVoiceAsset(String asset) async {
@@ -163,6 +167,15 @@ class WeighStationAlertService {
     }
     try {
       await _tts.speak(message);
+    } catch (_) {
+      // best effort
+    }
+  }
+
+  Future<void> _updateTtsLanguage() async {
+    final String locale = _useBulgarianVoice ? 'bg-BG' : 'en-US';
+    try {
+      await _tts.setLanguage(locale);
     } catch (_) {
       // best effort
     }

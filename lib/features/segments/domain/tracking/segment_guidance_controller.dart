@@ -93,11 +93,13 @@ class SegmentGuidanceController {
   }
 
   void updateLanguage(String languageCode) {
-    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    final String normalized = languageCode.toLowerCase();
+    final bool useBulgarian = normalized == 'bg' || normalized.startsWith('bg-');
     if (_useBulgarianVoice == useBulgarian) {
       return;
     }
     _useBulgarianVoice = useBulgarian;
+    unawaited(_updateTtsLanguage());
   }
 
   Future<SegmentGuidanceResult?> handleUpdate({
@@ -255,6 +257,8 @@ class SegmentGuidanceController {
     } catch (_) {
       // Ignored: best-effort configuration.
     }
+
+    await _updateTtsLanguage();
   }
 
   Future<void> _handleSegmentEntry({double? limitKph}) async {
@@ -581,5 +585,14 @@ class SegmentGuidanceController {
       return;
     }
     await _tts.speak(message);
+  }
+
+  Future<void> _updateTtsLanguage() async {
+    final String locale = _useBulgarianVoice ? 'bg-BG' : 'en-US';
+    try {
+      await _tts.setLanguage(locale);
+    } catch (_) {
+      // best effort
+    }
   }
 }
