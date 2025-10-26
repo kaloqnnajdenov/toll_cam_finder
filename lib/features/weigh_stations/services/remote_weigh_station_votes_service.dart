@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_csv_constants.dart';
 
 class WeighStationVotesSnapshot {
   const WeighStationVotesSnapshot({
@@ -16,14 +17,14 @@ class WeighStationVotesSnapshot {
 
 class RemoteWeighStationVotesService {
   RemoteWeighStationVotesService({
-    this.tableName = 'Weigh_Station_Votes',
+    this.tableName = 'Weigh_Stations',
   });
 
   final String tableName;
 
-  static const String _stationIdColumn = 'station_id';
-  static const String _userIdColumn = 'user_id';
-  static const String _isUpvoteColumn = 'is_upvote';
+  static const String _idColumn = 'id';
+  static const String _upvotesColumn = 'upvotes';
+  static const String _downvotesColumn = 'downvotes';
 
   Future<WeighStationVotesSnapshot> fetchVotes({
     required SupabaseClient client,
@@ -32,7 +33,7 @@ class RemoteWeighStationVotesService {
     try {
       final List<dynamic> response = await client
           .from(tableName)
-          .select('$_stationIdColumn,$_userIdColumn,$_is_upvoteColumn');
+          .select('$_idColumn,$_upvotesColumn,$_downvotesColumn');
 
       final votes = <String, WeighStationVotes>{};
       final userVotes = <String, bool>{};
@@ -41,24 +42,17 @@ class RemoteWeighStationVotesService {
         if (entry is! Map<String, dynamic>) {
           continue;
         }
-        final stationId = '${entry[_stationIdColumn] ?? ''}'.trim();
+        final stationId = '${entry[_idColumn] ?? ''}'.trim();
         if (stationId.isEmpty) {
           continue;
         }
-        final bool? isUpvote = _parseVote(entry[_isUpvoteColumn]);
-        if (isUpvote == null) {
-          continue;
-        }
+        final int upvotes = _parseCount(entry[_upvotesColumn]);
+        final int downvotes = _parseCount(entry[_downvotesColumn]);
 
-        final existing = votes[stationId] ?? const WeighStationVotes();
-        votes[stationId] = isUpvote
-            ? existing.copyWith(upvotes: existing.upvotes + 1)
-            : existing.copyWith(downvotes: existing.downvotes + 1);
-
-        final userId = entry[_userIdColumn]?.toString();
-        if (currentUserId != null && currentUserId == userId) {
-          userVotes[stationId] = isUpvote;
-        }
+        votes[stationId] = WeighStationVotes(
+          upvotes: upvotes,
+          downvotes: downvotes,
+        );
       }
 
       return WeighStationVotesSnapshot(votes: votes, userVotes: userVotes);
@@ -84,32 +78,26 @@ class RemoteWeighStationVotesService {
   Future<void> applyVote({
     required SupabaseClient client,
     required String stationId,
-    required String userId,
-    required bool? vote,
+    required WeighStationVotes votes,
   }) async {
     try {
-      if (vote == null) {
-        await client
-            .from(tableName)
-            .delete()
-            .match(<String, String>{
-          _stationIdColumn: stationId,
-          _userIdColumn: userId,
-        });
+      final String normalizedId = stationId.trim();
+      if (normalizedId.startsWith(
+        WeighStationsCsvSchema.localWeighStationIdPrefix,
+      )) {
         return;
       }
-
-      await client.from(tableName).upsert(
-        <String, dynamic>{
-          _stationIdColumn: stationId,
-          _userIdColumn: userId,
-          _isUpvoteColumn: vote,
-        },
-        onConflict: '$_stationIdColumn,$_userIdColumn',
-      );
+      final dynamic matchValue = int.tryParse(normalizedId) ?? normalizedId;
+      await client
+          .from(tableName)
+          .update(<String, dynamic>{
+            _upvotesColumn: votes.upvotes,
+            _downvotesColumn: votes.downvotes,
+          })
+          .eq(_idColumn, matchValue);
     } on SocketException catch (error) {
       throw RemoteWeighStationVotesException(
-        'Network error while submitting weigh station vote.',
+        'Network error while updating weigh station votes.',
         cause: error,
       );
     } on PostgrestException catch (error) {
@@ -119,33 +107,28 @@ class RemoteWeighStationVotesService {
       );
     } catch (error, stackTrace) {
       throw RemoteWeighStationVotesException(
-        'Unexpected error while submitting weigh station vote.',
+        'Unexpected error while updating weigh station votes.',
         cause: error,
         stackTrace: stackTrace,
       );
     }
   }
 
-  bool? _parseVote(dynamic value) {
-    if (value is bool) {
+  int _parseCount(dynamic value) {
+    if (value is int) {
       return value;
     }
     if (value is num) {
-      return value != 0;
+      return value.toInt();
     }
     if (value is String) {
-      final normalized = value.trim().toLowerCase();
+      final normalized = value.trim();
       if (normalized.isEmpty) {
-        return null;
+        return 0;
       }
-      if (normalized == 'true' || normalized == 't' || normalized == '1') {
-        return true;
-      }
-      if (normalized == 'false' || normalized == 'f' || normalized == '0') {
-        return false;
-      }
+      return int.tryParse(normalized) ?? 0;
     }
-    return null;
+    return 0;
   }
 }
 
