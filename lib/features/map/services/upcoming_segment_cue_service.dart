@@ -15,6 +15,7 @@ class UpcomingSegmentCueService {
   final AudioPlayer _player;
   String? _segmentId;
   bool _hasPlayed = false;
+  bool _useBulgarianVoice = false;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
     allowAlertTones: true,
@@ -26,10 +27,22 @@ class UpcomingSegmentCueService {
       return;
     }
     final bool hadAlertAccess = _audioPolicy.allowAlertTones;
+    final bool hadSpeechAccess = _audioPolicy.allowSpeech;
     _audioPolicy = policy;
     if (!policy.allowAlertTones && hadAlertAccess) {
       unawaited(_player.stop());
     }
+    if (_useBulgarianVoice && !policy.allowSpeech && hadSpeechAccess) {
+      unawaited(_player.stop());
+    }
+  }
+
+  void updateLanguage(String languageCode) {
+    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    if (_useBulgarianVoice == useBulgarian) {
+      return;
+    }
+    _useBulgarianVoice = useBulgarian;
   }
 
   void updateCue(SegmentDebugPath upcoming) {
@@ -46,11 +59,21 @@ class UpcomingSegmentCueService {
       return;
     }
 
-    if (distance >= 1 && !_hasPlayed && _audioPolicy.allowAlertTones) {
+    final bool canPlayVoice =
+        _useBulgarianVoice ? _audioPolicy.allowSpeech : _audioPolicy.allowAlertTones;
+    if (distance >= 1 && !_hasPlayed && canPlayVoice) {
       _hasPlayed = true;
-      unawaited(
-        _player.play(AssetSource(AppConstants.upcomingSegmentSoundAsset)),
-      );
+      final String asset = _useBulgarianVoice
+          ? AppConstants.approachingSegmentVoiceAsset
+          : AppConstants.upcomingSegmentSoundAsset;
+      unawaited(() async {
+        try {
+          await _player.stop();
+        } catch (_) {
+          // best effort
+        }
+        await _player.play(AssetSource(asset));
+      }());
     }
   }
 

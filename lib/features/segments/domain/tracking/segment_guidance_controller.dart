@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
@@ -48,6 +49,7 @@ class SegmentGuidanceController {
   static const double _initialSpeechSuppressionDistanceMeters = 200.0;
   static const String _toneAsset = 'data/ding_sound.mp3';
   bool _suppressGuidanceAudio = false;
+  bool _useBulgarianVoice = false;
   double? _furthestDistanceFromStart;
 
   final FlutterTts _tts;
@@ -80,11 +82,22 @@ class SegmentGuidanceController {
 
     if (!policy.allowSpeech && hadSpeech) {
       unawaited(_tts.stop());
+      if (_useBulgarianVoice) {
+        unawaited(_tonePlayer.stop());
+      }
     }
     if ((!policy.allowAlertTones && hadAlerts) ||
         (!policy.allowBoundaryTones && hadBoundary)) {
       unawaited(_tonePlayer.stop());
     }
+  }
+
+  void updateLanguage(String languageCode) {
+    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    if (_useBulgarianVoice == useBulgarian) {
+      return;
+    }
+    _useBulgarianVoice = useBulgarian;
   }
 
   Future<SegmentGuidanceResult?> handleUpdate({
@@ -257,6 +270,11 @@ class SegmentGuidanceController {
     _suppressGuidanceAudio = true;
     _furthestDistanceFromStart = null;
 
+    if (_useBulgarianVoice) {
+      await _playVoicePrompt(AppConstants.segmentEnteredVoiceAsset);
+      return;
+    }
+
     await _playChime(times: 2, isBoundary: true);
 
     final String limitText = (limitKph != null && limitKph.isFinite)
@@ -271,6 +289,11 @@ class SegmentGuidanceController {
         ? _currentLimitKph
         : null;
     final bool hasAverage = averageKph.isFinite;
+
+    if (_useBulgarianVoice) {
+      await _playVoicePrompt(AppConstants.segmentEndedVoiceAsset);
+      return;
+    }
 
     await _playChime(isBoundary: true);
 
@@ -362,6 +385,11 @@ class SegmentGuidanceController {
     }
 
     _approachAnnounced = true;
+
+    if (_useBulgarianVoice) {
+      await _playVoicePrompt(AppConstants.segmentEndingSoonVoiceAsset);
+      return true;
+    }
 
     final double? limit =
         (_currentLimitKph != null && _currentLimitKph!.isFinite)
@@ -506,6 +534,27 @@ class SegmentGuidanceController {
       return 0;
     }
     return value;
+  }
+
+  Future<void> _playVoicePrompt(String asset) async {
+    if (!_audioPolicy.allowSpeech) {
+      return;
+    }
+    try {
+      await _tts.stop();
+    } catch (_) {
+      // best effort
+    }
+    try {
+      await _tonePlayer.stop();
+    } catch (_) {
+      // best effort
+    }
+    try {
+      await _tonePlayer.play(AssetSource(asset));
+    } catch (_) {
+      // best effort
+    }
   }
 
   Future<void> _playChime({

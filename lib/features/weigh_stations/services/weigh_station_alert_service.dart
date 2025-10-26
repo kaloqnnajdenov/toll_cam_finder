@@ -21,6 +21,7 @@ class WeighStationAlertService {
   String? _currentStationId;
   bool _hasPlayed = false;
   bool _hasSpoken = false;
+  bool _useBulgarianVoice = false;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
     allowAlertTones: true,
@@ -41,7 +42,18 @@ class WeighStationAlertService {
     }
     if (hadSpeech && !policy.allowSpeech) {
       unawaited(_tts.stop());
+      if (_useBulgarianVoice) {
+        unawaited(_player.stop());
+      }
     }
+  }
+
+  void updateLanguage(String languageCode) {
+    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    if (_useBulgarianVoice == useBulgarian) {
+      return;
+    }
+    _useBulgarianVoice = useBulgarian;
   }
 
   void updateDistance({
@@ -67,6 +79,16 @@ class WeighStationAlertService {
     }
 
     final bool isCloseEnough = distanceMeters >= 1;
+
+    if (_useBulgarianVoice) {
+      if (!_hasSpoken && isCloseEnough && _audioPolicy.allowSpeech) {
+        _hasSpoken = true;
+        unawaited(
+          _playVoiceAsset(AppConstants.approachingWeighControlVoiceAsset),
+        );
+      }
+      return;
+    }
 
     if (!_hasPlayed && isCloseEnough && _audioPolicy.allowAlertTones) {
       _hasPlayed = true;
@@ -121,6 +143,15 @@ class WeighStationAlertService {
         ],
         IosTextToSpeechAudioMode.voicePrompt,
       );
+    } catch (_) {
+      // best effort
+    }
+  }
+
+  Future<void> _playVoiceAsset(String asset) async {
+    try {
+      await _player.stop();
+      await _player.play(AssetSource(asset));
     } catch (_) {
       // best effort
     }
