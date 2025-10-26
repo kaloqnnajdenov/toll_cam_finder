@@ -440,6 +440,7 @@ class _MapPageState extends State<MapPage>
     _weighStationAlertService.updateDistance(
       stationId: nearestWeigh?.marker.id,
       distanceMeters: nearestWeigh?.distanceMeters,
+      approachMessage: AppLocalizations.of(context).weighStationApproachAlert,
     );
     if (_segmentsService.shouldProcessSegmentUpdate(
       now: now,
