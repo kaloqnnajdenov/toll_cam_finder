@@ -37,12 +37,14 @@ class WeighStationsState {
     required this.isLoading,
     required this.visibleStations,
     required this.votes,
+    required this.userVotes,
   });
 
   final String? error;
   final bool isLoading;
   final List<WeighStationMarker> visibleStations;
   final Map<String, WeighStationVotes> votes;
+  final Map<String, bool> userVotes;
 }
 
 class NearestWeighStation {
@@ -65,6 +67,7 @@ class WeighStationController {
   List<WeighStationMarker> _allStations = const [];
   List<WeighStationMarker> _visibleStations = const [];
   final Map<String, WeighStationVotes> _votes = <String, WeighStationVotes>{};
+  final Map<String, bool> _userVotes = <String, bool>{};
   String? _error;
   bool _isLoading = false;
 
@@ -73,6 +76,7 @@ class WeighStationController {
         isLoading: _isLoading,
         visibleStations: _visibleStations,
         votes: Map.unmodifiable(_votes),
+        userVotes: Map.unmodifiable(_userVotes),
       );
 
   Future<void> loadFromAsset(
@@ -101,6 +105,7 @@ class WeighStationController {
       _allStations = const [];
       _visibleStations = const [];
       _votes.clear();
+      _userVotes.clear();
     } finally {
       _isLoading = false;
     }
@@ -139,24 +144,37 @@ class WeighStationController {
     required String stationId,
     required bool isUpvote,
   }) {
+    if (_userVotes.containsKey(stationId)) {
+      return _votes[stationId] ?? const WeighStationVotes();
+    }
     final WeighStationVotes current =
         _votes[stationId] ?? const WeighStationVotes();
     final WeighStationVotes updated = isUpvote
         ? current.copyWith(upvotes: current.upvotes + 1)
         : current.copyWith(downvotes: current.downvotes + 1);
     _votes[stationId] = updated;
+    _userVotes[stationId] = isUpvote;
     return updated;
   }
 
   void _syncVotesWithStations() {
-    final Map<String, WeighStationVotes> synchronized =
+    final Map<String, WeighStationVotes> synchronizedVotes =
         <String, WeighStationVotes>{};
+    final Map<String, bool> synchronizedUserVotes = <String, bool>{};
     for (final station in _allStations) {
-      synchronized[station.id] = _votes[station.id] ?? const WeighStationVotes();
+      synchronizedVotes[station.id] =
+          _votes[station.id] ?? const WeighStationVotes();
+      final bool? existingVote = _userVotes[station.id];
+      if (existingVote != null) {
+        synchronizedUserVotes[station.id] = existingVote;
+      }
     }
     _votes
       ..clear()
-      ..addAll(synchronized);
+      ..addAll(synchronizedVotes);
+    _userVotes
+      ..clear()
+      ..addAll(synchronizedUserVotes);
   }
 
   LatLng? _parseCoordinates(String raw) {

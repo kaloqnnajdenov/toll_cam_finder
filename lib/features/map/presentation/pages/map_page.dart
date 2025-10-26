@@ -826,6 +826,8 @@ class _MapPageState extends State<MapPage>
     final WeighStationVotes initialVotes =
         _segmentsService.weighStationsState.votes[station.id] ??
             const WeighStationVotes();
+    final bool hasVoted =
+        _segmentsService.weighStationsState.userVotes.containsKey(station.id);
 
     showModalBottomSheet<void>(
       context: context,
@@ -844,6 +846,7 @@ class _MapPageState extends State<MapPage>
             }
             return updated;
           },
+          hasVoted: hasVoted,
         );
       },
     );

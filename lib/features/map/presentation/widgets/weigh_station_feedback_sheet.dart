@@ -11,11 +11,13 @@ class WeighStationFeedbackSheet extends StatefulWidget {
     required this.stationId,
     required this.initialVotes,
     required this.onVote,
+    required this.hasVoted,
   });
 
   final String stationId;
   final WeighStationVotes initialVotes;
   final WeighStationVoteHandler onVote;
+  final bool hasVoted;
 
   @override
   State<WeighStationFeedbackSheet> createState() =>
@@ -26,15 +28,17 @@ class _WeighStationFeedbackSheetState
     extends State<WeighStationFeedbackSheet> {
   late WeighStationVotes _votes;
   bool _isProcessing = false;
+  late bool _hasVoted;
 
   @override
   void initState() {
     super.initState();
     _votes = widget.initialVotes;
+    _hasVoted = widget.hasVoted;
   }
 
   void _handleVote(bool isUpvote) {
-    if (_isProcessing) {
+    if (_isProcessing || _hasVoted) {
       return;
     }
 
@@ -51,6 +55,7 @@ class _WeighStationFeedbackSheetState
     setState(() {
       _votes = updated;
       _isProcessing = false;
+      _hasVoted = true;
     });
   }
 
@@ -100,8 +105,9 @@ class _WeighStationFeedbackSheetState
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed:
-                        _isProcessing ? null : () => _handleVote(true),
+                    onPressed: _isProcessing || _hasVoted
+                        ? null
+                        : () => _handleVote(true),
                     icon: const Icon(Icons.thumb_up),
                     label: Text(localizations.weighStationUpvoteAction),
                   ),
@@ -109,8 +115,9 @@ class _WeighStationFeedbackSheetState
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed:
-                        _isProcessing ? null : () => _handleVote(false),
+                    onPressed: _isProcessing || _hasVoted
+                        ? null
+                        : () => _handleVote(false),
                     icon: const Icon(Icons.thumb_down),
                     label: Text(localizations.weighStationDownvoteAction),
                   ),
