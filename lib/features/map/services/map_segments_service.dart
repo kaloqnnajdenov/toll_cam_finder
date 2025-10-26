@@ -127,7 +127,7 @@ class MapSegmentsService {
 
   WeighStationsState get weighStationsState => _weighStationController.state;
 
-  WeighStationVotes registerWeighStationVote({
+  WeighStationVoteResult registerWeighStationVote({
     required String stationId,
     required bool isUpvote,
   }) {
