@@ -120,7 +120,7 @@ class _MapPageState extends State<MapPage>
   LatLng? _lastSpeedLimitQueryLocation;
   DateTime? _lastSpeedLimitQueryAt;
   String? _osmSpeedLimitKph;
-  bool _segmentsOnlyPageOpen = false;
+  bool _simpleModePageOpen = false;
   Timer? _offlineRedirectTimer;
   Timer? _osmUnavailableRedirectTimer;
   bool _hasConnectivity = true;
@@ -270,8 +270,8 @@ class _MapPageState extends State<MapPage>
       if (_segmentsOnlyModeController.reason ==
           SegmentsOnlyModeReason.offline) {
         _segmentsOnlyModeController.exitMode();
-        if (_segmentsOnlyPageOpen) {
-          unawaited(_closeSegmentsOnlyPageIfOpen());
+        if (_simpleModePageOpen) {
+          unawaited(_closeSimpleModePageIfOpen());
         }
       }
     }
@@ -316,7 +316,7 @@ class _MapPageState extends State<MapPage>
       if (_segmentsOnlyModeController.reason != reason) {
         return;
       }
-      unawaited(_openSegmentsOnlyPage(reason));
+      unawaited(_openSimpleModePage(reason));
     });
 
     _setRedirectTimer(reason, timer);
@@ -518,8 +518,8 @@ class _MapPageState extends State<MapPage>
       if (_segmentsOnlyModeController.reason ==
           SegmentsOnlyModeReason.osmUnavailable) {
         _segmentsOnlyModeController.exitMode();
-        if (_segmentsOnlyPageOpen) {
-          unawaited(_closeSegmentsOnlyPageIfOpen());
+        if (_simpleModePageOpen) {
+          unawaited(_closeSimpleModePageIfOpen());
         }
       }
     } catch (_) {
@@ -917,26 +917,26 @@ class _MapPageState extends State<MapPage>
     );
   }
 
-  Future<void> _openSegmentsOnlyPage(
+  Future<void> _openSimpleModePage(
       SegmentsOnlyModeReason reason) async {
     _segmentsOnlyModeController.enterMode(reason);
-    if (_segmentsOnlyPageOpen || !mounted) {
+    if (_simpleModePageOpen || !mounted) {
       return;
     }
 
-    _segmentsOnlyPageOpen = true;
+    _simpleModePageOpen = true;
     try {
-      await Navigator.of(context).pushNamed(AppRoutes.segmentsOnly);
+      await Navigator.of(context).pushNamed(AppRoutes.simpleMode);
     } finally {
-      _segmentsOnlyPageOpen = false;
+      _simpleModePageOpen = false;
       if (_shouldExitSegmentsOnlyModeAfterNav(reason)) {
         _segmentsOnlyModeController.exitMode();
       }
     }
   }
 
-  Future<void> _closeSegmentsOnlyPageIfOpen() async {
-    if (!_segmentsOnlyPageOpen || !mounted) {
+  Future<void> _closeSimpleModePageIfOpen() async {
+    if (!_simpleModePageOpen || !mounted) {
       return;
     }
 
