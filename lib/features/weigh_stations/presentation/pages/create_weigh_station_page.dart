@@ -130,7 +130,7 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
 
     final remoteService = RemoteWeighStationsService(client: auth.client);
     try {
-      await remoteService.submitForModeration(
+      await remoteService.publish(
         coordinates: draft.coordinates,
         addedByUserId: userId,
       );
@@ -154,7 +154,7 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppMessages.weighStationSubmittedForReview),
+        content: Text(AppMessages.weighStationPublished),
       ),
     );
 

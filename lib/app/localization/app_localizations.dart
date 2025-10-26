@@ -77,9 +77,8 @@ class AppLocalizations {
       'failedToSaveWeighStationLocally':
           'Failed to save the weigh station locally.',
       'failedToSubmitWeighStation':
-          'Failed to submit the weigh station for moderation.',
-      'weighStationSubmittedForReview':
-          'Weigh station submitted for review.',
+          'Failed to publish the weigh station.',
+      'weighStationPublished': 'Weigh station published.',
       'weighStationIdentifier': 'Weigh station {id}',
       'weighStationCoordinatesLabel': 'Coordinates: {coordinates}',
       'weighStationLocalBadge': 'Local only',
@@ -144,6 +143,8 @@ class AppLocalizations {
           'Failed to submit the segment for moderation.',
       'failedToSubmitSegmentForModerationWithReason':
           'Failed to submit the segment for moderation: {reason}',
+      'failedToPublishWeighStationWithReason':
+          'Failed to publish the weigh station: {reason}',
       'failedToUpdateSegment':
           'Failed to update segment {displayId}: {errorMessage}',
       'failedToWriteSegmentsMetadataFile':
@@ -183,6 +184,8 @@ class AppLocalizations {
           'No internet connection. Unable to manage public submissions.',
       'noConnectionUnableToSubmitForModeration':
           'No internet connection. Unable to submit the segment for moderation.',
+      'noConnectionUnableToPublishWeighStation':
+          'No internet connection. Unable to publish the weigh station.',
       'noLocalSegments': 'No local segments saved yet.',
       'noSegmentsAvailable': 'No segments available.',
       'noTollSegmentRowsFound':
@@ -316,6 +319,8 @@ class AppLocalizations {
           'Submit this segment for public review.',
       'supabaseNotConfiguredForModeration':
           'Supabase is not configured. Unable to submit the segment for moderation.',
+      'supabaseNotConfiguredForWeighStationPublishing':
+          'Supabase is not configured. Unable to publish weigh stations.',
       'supabaseNotConfiguredForPublicSubmissions':
           'Supabase is not configured. Unable to manage public submissions.',
       'supabaseNotConfiguredForSync':
@@ -350,6 +355,8 @@ class AppLocalizations {
       'unexpectedErrorSigningOut': 'Unexpected error while signing out.',
       'unexpectedErrorSubmittingForModeration':
           'Unexpected error while submitting the segment for moderation.',
+      'unexpectedErrorPublishingWeighStation':
+          'Unexpected error while publishing the weigh station.',
       'unexpectedSyncError': 'Unexpected error while syncing toll segments.',
       'fileSystemOperationsNotSupported':
           'File system operations are not supported on this platform.',
@@ -358,6 +365,8 @@ class AppLocalizations {
       'unknownUserLabel': 'Unknown user',
       'userRequiredForPublicModeration':
           'A logged in user is required to submit a public segment for moderation.',
+      'userRequiredForWeighStationPublishing':
+          'A logged in user is required to publish weigh stations.',
       'welcomeTitle': 'Welcome',
       'withdrawPublicSubmissionMessage':
           'You have submitted this segment for review. Do you want to withdraw the submission?',
@@ -436,9 +445,14 @@ class AppLocalizations {
       'failedToSaveWeighStationLocally':
           'Неуспешно запазване на кантара локално.',
       'failedToSubmitWeighStation':
-          'Неуспешно изпращане на кантара за модерация.',
-      'weighStationSubmittedForReview':
-          'Кантарът е изпратен за преглед.',
+          'Неуспешно публикуване на кантара.',
+      'noConnectionUnableToPublishWeighStation':
+          'Няма интернет връзка. Кантарът не може да бъде публикуван.',
+      'failedToPublishWeighStationWithReason':
+          'Неуспешно публикуване на кантара: {reason}',
+      'unexpectedErrorPublishingWeighStation':
+          'Неочаквана грешка при публикуване на кантара.',
+      'weighStationPublished': 'Кантарът беше публикуван.',
       'weighStationIdentifier': 'Кантар {id}',
       'weighStationCoordinatesLabel': 'Координати: {coordinates}',
       'weighStationLocalBadge': 'Само локален',
@@ -583,6 +597,16 @@ class AppLocalizations {
       'sync': 'Синхронизирай',
       'syncRequiresInternetConnection':
           'Синхронизирането на сегменти изисква интернет връзка.',
+      'supabaseNotConfiguredForModeration':
+          'Supabase не е конфигуриран. Не могат да се изпращат сегменти за модерация.',
+      'supabaseNotConfiguredForWeighStationPublishing':
+          'Supabase не е конфигуриран. Не могат да се публикуват кантари.',
+      'supabaseNotConfiguredForPublicSubmissions':
+          'Supabase не е конфигуриран. Не могат да се управляват публични изпращания.',
+      'userRequiredForPublicModeration':
+          'Необходим е влязъл потребител, за да изпрати публичен сегмент за модерация.',
+      'userRequiredForWeighStationPublishing':
+          'Необходим е влязъл потребител, за да публикува кантар.',
       'audioModeTitle': 'Режим на аудио насоките',
       'audioModeFullGuidance':
           'Всички аудио насоки (в приложението и на заден план)',
@@ -678,8 +702,7 @@ class AppLocalizations {
       _value('failedToSaveWeighStationLocally');
   String get failedToSubmitWeighStation =>
       _value('failedToSubmitWeighStation');
-  String get weighStationSubmittedForReview =>
-      _value('weighStationSubmittedForReview');
+  String get weighStationPublished => _value('weighStationPublished');
   String weighStationIdentifier(String id) =>
       translate('weighStationIdentifier', {'id': id});
   String weighStationCoordinatesLabel(String coordinates) => translate(
