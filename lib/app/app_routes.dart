@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/login_page.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/profile_page.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/sign_up_page.dart';
+import 'package:toll_cam_finder/app/loading_page.dart';
+import 'package:toll_cam_finder/features/intro/presentation/pages/intro_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/segments_only_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/create_segment_page.dart';
@@ -9,6 +11,8 @@ import 'package:toll_cam_finder/features/segments/presentation/pages/segments_pa
 
 
 class AppRoutes {
+  static const String loading = '/loading';
+  static const String intro = '/intro';
   static const String map = '/';
   static const String login = '/login';
   static const String signUp = '/sign-up';
@@ -19,6 +23,8 @@ class AppRoutes {
   static const String segmentsOnly = '/segments-only';
 
   static Map<String, WidgetBuilder> get routes => {
+    loading: (_) => const LoadingPage(),
+    intro: (_) => const IntroPage(),
     map: (_) => const MapPage(),
     login: (_) => const LoginPage(),
     signUp: (_) => const SignUpPage(),

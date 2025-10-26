@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toll_cam_finder/app/app.dart';
 import 'package:toll_cam_finder/core/supabase_config.dart';
+import 'package:toll_cam_finder/features/intro/application/intro_controller.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
@@ -39,6 +40,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => CurrentSegmentController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => IntroController(),
         ),
         ChangeNotifierProvider(
           create: (_) => AuthController(client: supabaseClient),
