@@ -186,6 +186,10 @@ class AppMessages {
   static String get mapHintPlacePointB =>
       _l.translate('mapHintPlacePointB');
   static String get mapHintDragPoint => _l.translate('mapHintDragPoint');
+  static String get weighStationMapHintPlace =>
+      _l.translate('weighStationMapHintPlace');
+  static String get weighStationMapHintDrag =>
+      _l.translate('weighStationMapHintDrag');
   static String get createSegmentMapInstructionTitle =>
       _l.translate('createSegmentMapInstructionTitle');
   static String get createSegmentMapInstructionBody =>
@@ -206,6 +210,12 @@ class AppMessages {
       _l.translate('createSegmentStartLabel');
   static String get createSegmentStartNameHint =>
       _l.translate('createSegmentStartNameHint');
+  static String get failedToSaveWeighStationLocally =>
+      _l.translate('failedToSaveWeighStationLocally');
+  static String get failedToSubmitWeighStation =>
+      _l.translate('failedToSubmitWeighStation');
+  static String get weighStationSubmittedForReview =>
+      _l.translate('weighStationSubmittedForReview');
   static String get createSegmentEndLabel =>
       _l.translate('createSegmentEndLabel');
   static String get createSegmentEndNameHint =>
@@ -250,8 +260,12 @@ class AppMessages {
       _l.translate('failedToCancelSubmissionWithReason', {'reason': reason});
   static String failedToDownloadTollSegments(String reason) =>
       _l.translate('failedToDownloadTollSegments', {'reason': reason});
+  static String failedToDownloadWeighStations(String reason) =>
+      _l.translate('failedToDownloadWeighStations', {'reason': reason});
   static String failedToAccessTollSegmentsFile(String reason) =>
       _l.translate('failedToAccessTollSegmentsFile', {'reason': reason});
+  static String failedToAccessWeighStationsFile(String reason) =>
+      _l.translate('failedToAccessWeighStationsFile', {'reason': reason});
   static String get failedToDetermineTollSegmentsPath =>
       _l.translate('failedToDetermineTollSegmentsPath');
   static String get segmentMetadataUpdateUnavailable =>

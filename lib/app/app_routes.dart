@@ -6,6 +6,8 @@ import 'package:toll_cam_finder/features/map/presentation/pages/map_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/simple_mode_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/create_segment_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/segments_page.dart';
+import 'package:toll_cam_finder/features/weigh_stations/presentation/pages/create_weigh_station_page.dart';
+import 'package:toll_cam_finder/features/weigh_stations/presentation/pages/weigh_stations_page.dart';
 
 
 class AppRoutes {
@@ -16,6 +18,8 @@ class AppRoutes {
   static const String segments = '/segments';
   static const String localSegments = '/segments/local';
   static const String createSegment = '/segments/create';
+  static const String weighStations = '/weigh-stations';
+  static const String createWeighStation = '/weigh-stations/create';
   static const String simpleMode = '/simple';
 
   static Map<String, WidgetBuilder> get routes => {
@@ -26,6 +30,8 @@ class AppRoutes {
     segments: (_) => const SegmentsPage(),
     localSegments: (_) => const LocalSegmentsPage(),
     createSegment: (_) => const CreateSegmentPage(),
+    weighStations: (_) => const WeighStationsPage(),
+    createWeighStation: (_) => const CreateWeighStationPage(),
     simpleMode: (_) => const SimpleModePage(),
   };
 }

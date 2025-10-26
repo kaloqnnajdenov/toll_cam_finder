@@ -1,15 +1,18 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/toll_camera_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map/weigh_station_controller.dart';
 import 'package:toll_cam_finder/features/map/services/camera_polling_service.dart';
 import 'package:toll_cam_finder/features/map/services/map_sync_message_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 
 class SegmentsMetadataLoadResult {
   const SegmentsMetadataLoadResult({
@@ -61,20 +64,26 @@ class MapSegmentsService {
     required SegmentTracker segmentTracker,
     required TollCameraController cameraController,
     required CameraPollingService cameraPollingService,
+    required WeighStationController weighStationController,
+    required WeighStationsSyncService weighStationsSyncService,
     required TollSegmentsSyncService syncService,
     required MapSyncMessageService syncMessageService,
   })  : _metadataService = metadataService,
         _segmentTracker = segmentTracker,
         _cameraController = cameraController,
+        _weighStationController = weighStationController,
         _cameraPollingService = cameraPollingService,
         _syncService = syncService,
+        _weighStationsSyncService = weighStationsSyncService,
         _syncMessageService = syncMessageService;
 
   final SegmentsMetadataService _metadataService;
   final SegmentTracker _segmentTracker;
   final TollCameraController _cameraController;
+  final WeighStationController _weighStationController;
   final CameraPollingService _cameraPollingService;
   final TollSegmentsSyncService _syncService;
+  final WeighStationsSyncService _weighStationsSyncService;
   final MapSyncMessageService _syncMessageService;
 
   Future<SegmentsMetadataLoadResult> loadSegmentsMetadata({
@@ -104,6 +113,22 @@ class MapSegmentsService {
       excludedSegmentIds: excludedSegmentIds,
     );
   }
+
+  Future<void> loadWeighStations({LatLngBounds? bounds}) async {
+    await _weighStationController.loadFromAsset(
+      AppConstants.pathToWeighStations,
+      bounds: bounds,
+    );
+  }
+
+  void updateVisibleWeighStations({LatLngBounds? bounds}) {
+    _weighStationController.updateVisible(bounds: bounds);
+  }
+
+  WeighStationsState get weighStationsState => _weighStationController.state;
+
+  NearestWeighStation? nearestWeighStation(LatLng point) =>
+      _weighStationController.nearestStation(point);
 
   DateTime? calculateNextCameraCheck({required LatLng position}) {
     if (_segmentTracker.activeSegmentId != null) {
@@ -150,6 +175,7 @@ class MapSegmentsService {
     await loadCameras(
       excludedSegmentIds: metadataResult.metadata.deactivatedSegmentIds,
     );
+    await loadWeighStations();
 
     SegmentTrackerEvent? seedEvent;
     if (reloaded && userLatLng != null) {
@@ -187,6 +213,7 @@ class MapSegmentsService {
       );
       _segmentTracker.updateIgnoredSegments(ignoredSegmentIds);
       await loadCameras(excludedSegmentIds: ignoredSegmentIds);
+      await loadWeighStations();
 
       SegmentTrackerEvent? seedEvent;
       if (reloaded && userLatLng != null) {
@@ -194,6 +221,8 @@ class MapSegmentsService {
           current: userLatLng,
         );
       }
+
+      await _weighStationsSyncService.sync(client: client);
 
       final message = _syncMessageService.buildSuccessMessage(syncResult);
       return SegmentsSyncResult(

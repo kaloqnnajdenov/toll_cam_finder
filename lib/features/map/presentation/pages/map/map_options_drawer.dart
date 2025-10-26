@@ -42,6 +42,11 @@ extension _MapPageDrawer on _MapPageState {
               onTap: _onSegmentsSelected,
             ),
             ListTile(
+              leading: const Icon(Icons.scale_outlined),
+              title: Text(localizations.weighStations),
+              onTap: _onWeighStationsSelected,
+            ),
+            ListTile(
               leading: const Icon(Icons.speed_outlined),
               title: Text(localizations.segmentsOnlyModeButton),
               onTap: _onSimpleModeSelected,
@@ -231,6 +236,34 @@ extension _MapPageDrawer on _MapPageState {
     });
   }
 
+  void _onWeighStationsSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_openWeighStationsPage());
+    });
+  }
+
+  Future<void> _openWeighStationsPage() async {
+    final result = await Navigator.of(context).pushNamed(AppRoutes.weighStations);
+    if (!mounted || result != true) {
+      return;
+    }
+
+    LatLngBounds? bounds;
+    if (_mapReady) {
+      try {
+        bounds = _mapController.camera.visibleBounds;
+      } catch (_) {
+        bounds = null;
+      }
+    }
+
+    await _segmentsService.loadWeighStations(bounds: bounds);
+    if (!mounted) return;
+    _updateVisibleWeighStations();
+  }
+
   void _onSimpleModeSelected() {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -275,6 +308,7 @@ extension _MapPageDrawer on _MapPageState {
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
     _updateVisibleSegments();
+    _updateVisibleWeighStations();
     setState(() {});
   }
 
@@ -345,5 +379,6 @@ extension _MapPageDrawer on _MapPageState {
     _nextCameraCheckAt = null;
     _updateVisibleCameras();
     _updateVisibleSegments();
+    _updateVisibleWeighStations();
   }
 }
