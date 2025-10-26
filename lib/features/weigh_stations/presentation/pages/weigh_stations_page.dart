@@ -87,17 +87,6 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(localizations.weighStationCoordinatesLabel(station.coordinates)),
-                        if (station.isLocalOnly)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              localizations.weighStationLocalBadge,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(color: Theme.of(context).colorScheme.tertiary),
-                            ),
-                          ),
                       ],
                     ),
                     onLongPress: () => _onWeighStationLongPress(station),
