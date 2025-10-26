@@ -135,12 +135,14 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
         addedByUserId: userId,
       );
     } on RemoteWeighStationsServiceException catch (error) {
+      await _rollbackLocalSave(localId);
       _showSnackBar(error.message);
       setState(() {
         _isSaving = false;
       });
       return;
     } catch (_) {
+      await _rollbackLocalSave(localId);
       _showSnackBar(AppMessages.failedToSubmitWeighStation);
       setState(() {
         _isSaving = false;
@@ -166,5 +168,17 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _rollbackLocalSave(String? localId) async {
+    if (localId == null) {
+      return;
+    }
+
+    try {
+      await _localService.deleteLocalStation(localId);
+    } catch (_) {
+      // Best-effort rollback. Ignore failures.
+    }
   }
 }
