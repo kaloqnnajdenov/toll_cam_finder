@@ -87,6 +87,16 @@ class AppLocalizations {
           'Tap anywhere on the map to place the weigh station.',
       'weighStationMapHintDrag':
           'Long-press and drag the marker to adjust the weigh station.',
+      'deleteWeighStationAction': 'Delete weigh station',
+      'deleteWeighStationConfirmationTitle': 'Delete weigh station',
+      'confirmDeleteWeighStation':
+          'Are you sure you want to delete weigh station {id}?',
+      'weighStationDeleted': 'Weigh station {id} deleted.',
+      'failedToDeleteWeighStation': 'Failed to delete the weigh station.',
+      'onlyLocalWeighStationsCanBeDeleted':
+          'Only weigh stations saved locally can be deleted.',
+      'deletingLocalWeighStationsNotSupportedOnWeb':
+          'Deleting local weigh stations is not supported on the web.',
       'csvMissingStartEndColumns': 'CSV must contain "Start" and "End" columns',
       'deleteAction': 'Delete',
       'deleteSegmentAction': 'Delete segment',
@@ -431,6 +441,16 @@ class AppLocalizations {
           'Докоснете картата, за да поставите кантара.',
       'weighStationMapHintDrag':
           'Задръжте и плъзнете маркера, за да коригирате кантара.',
+      'deleteWeighStationAction': 'Изтрий кантара',
+      'deleteWeighStationConfirmationTitle': 'Изтриване на кантара',
+      'confirmDeleteWeighStation':
+          'Сигурни ли сте, че искате да изтриете кантар {id}?',
+      'weighStationDeleted': 'Кантар {id} беше изтрит.',
+      'failedToDeleteWeighStation': 'Неуспешно изтриване на кантара.',
+      'onlyLocalWeighStationsCanBeDeleted':
+          'Само локално запазени кантари могат да бъдат изтрити.',
+      'deletingLocalWeighStationsNotSupportedOnWeb':
+          'Изтриването на локални кантари не се поддържа в уеб.',
       'emailLabel': 'Имейл адрес',
 'fullNameLabel': 'Пълно име',
 'joinTollCam': 'Присъедини се към TollCam',
