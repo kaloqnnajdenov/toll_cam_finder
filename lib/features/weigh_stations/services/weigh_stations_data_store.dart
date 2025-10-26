@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -16,8 +18,29 @@ class WeighStationsDataStore {
   List<List<String>>? get remoteRows => _remoteRows;
 
   void updateRemoteRows(List<List<String>> rows) {
-    _remoteRows = rows
-        .map((row) => _normalizeRow(row))
+    final deduplicated = LinkedHashMap<String, List<String>>();
+    final rowsWithoutId = <List<String>>[];
+
+    for (final row in rows) {
+      final normalized = _normalizeRow(row);
+      if (normalized.isEmpty) {
+        continue;
+      }
+
+      final id = normalized.first.trim();
+      if (id.isEmpty) {
+        rowsWithoutId.add(normalized);
+        continue;
+      }
+
+      if (deduplicated.containsKey(id)) {
+        deduplicated.remove(id);
+      }
+
+      deduplicated[id] = normalized;
+    }
+
+    _remoteRows = <List<String>>[...deduplicated.values, ...rowsWithoutId]
         .toList(growable: false);
   }
 
