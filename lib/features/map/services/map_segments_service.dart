@@ -149,8 +149,7 @@ class MapSegmentsService {
       unawaited(_submitWeighStationVote(
         client: client,
         stationId: stationId,
-        userId: userId,
-        userVote: result.userVote,
+        votes: result.votes,
       ));
     }
     return result;
@@ -332,15 +331,13 @@ class MapSegmentsService {
   Future<void> _submitWeighStationVote({
     required SupabaseClient client,
     required String stationId,
-    required String userId,
-    required bool? userVote,
+    required WeighStationVotes votes,
   }) async {
     try {
       await _weighStationVotesService.applyVote(
         client: client,
         stationId: stationId,
-        userId: userId,
-        vote: userVote,
+        votes: votes,
       );
     } on RemoteWeighStationVotesException catch (error) {
       debugPrint(
