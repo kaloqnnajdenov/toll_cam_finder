@@ -48,6 +48,7 @@ class SegmentGuidanceController {
   static const Duration _aboveLimitGrace = Duration(seconds: 5);
   static const double _initialSpeechSuppressionDistanceMeters = 200.0;
   static const String _toneAsset = 'data/ding_sound.mp3';
+  static const Duration _exitAnnouncementGrace = Duration(seconds: 4);
   bool _suppressGuidanceAudio = false;
   bool _useBulgarianVoice = false;
   double? _furthestDistanceFromStart;
@@ -69,6 +70,8 @@ class SegmentGuidanceController {
   bool _aboveLimitAlerted = false;
   bool _wasOverLimit = false;
   bool _approachAnnounced = false;
+  _PendingExitAnnouncement? _pendingExitAnnouncement;
+  Timer? _exitAnnouncementTimer;
 
   void updateAudioPolicy(GuidanceAudioPolicy policy) {
     if (_audioPolicy == policy) {
@@ -212,6 +215,9 @@ class SegmentGuidanceController {
     _approachAnnounced = false;
     _suppressGuidanceAudio = false;
     _furthestDistanceFromStart = null;
+    _pendingExitAnnouncement = null;
+    _exitAnnouncementTimer?.cancel();
+    _exitAnnouncementTimer = null;
     if (stopTts) {
       await _tts.stop();
     }
@@ -274,6 +280,16 @@ class SegmentGuidanceController {
     _suppressGuidanceAudio = true;
     _furthestDistanceFromStart = null;
 
+    final _PendingExitAnnouncement? exitAnnouncement =
+        _takePendingExitAnnouncementForCombination();
+    if (exitAnnouncement != null) {
+      await _announceCombinedBoundary(
+        exitAnnouncement,
+        nextLimitKph: limitKph,
+      );
+      return;
+    }
+
     if (_useBulgarianVoice) {
       await _playVoicePrompt(AppConstants.segmentEnteredVoiceAsset);
       return;
@@ -294,23 +310,30 @@ class SegmentGuidanceController {
         : null;
     final bool hasAverage = averageKph.isFinite;
 
-    if (_useBulgarianVoice) {
-      await _playVoicePrompt(AppConstants.segmentEndedVoiceAsset);
-      return;
-    }
-
-    await _playChime(isBoundary: true);
-
-    final String limitText = limit != null
-        ? limit.toStringAsFixed(0)
-        : 'unknown';
-    final String averageText = hasAverage
-        ? averageKph.toStringAsFixed(0)
-        : 'unknown';
-
-    await _speak(
-      'Zone complete. Allowed average $limitText. Your average $averageText.',
+    _scheduleExitAnnouncement(
+      limitKph: limit,
+      averageKph: hasAverage ? averageKph : null,
     );
+  }
+
+  void _scheduleExitAnnouncement({
+    double? limitKph,
+    double? averageKph,
+  }) {
+    _pendingExitAnnouncement = _PendingExitAnnouncement(
+      createdAt: DateTime.now(),
+      useVoicePrompt: _useBulgarianVoice,
+      limitKph: limitKph,
+      averageKph: averageKph,
+    );
+    _exitAnnouncementTimer?.cancel();
+    _exitAnnouncementTimer = Timer(_exitAnnouncementGrace, () {
+      final _PendingExitAnnouncement? pending = _pendingExitAnnouncement;
+      _pendingExitAnnouncement = null;
+      if (pending != null) {
+        unawaited(_deliverExitAnnouncement(pending));
+      }
+    });
   }
 
   Future<bool> _checkCloseToLimit({
@@ -319,7 +342,7 @@ class SegmentGuidanceController {
   }) async {
     final double limit = _currentLimitKph!;
     final double threshold = limit * 0.95;
- if (!_closeToLimitNotified &&
+    if (!_closeToLimitNotified &&
         allowSpeech &&
         averageKph >= threshold &&
         averageKph < limit) {
@@ -337,7 +360,8 @@ class SegmentGuidanceController {
 
   Future<bool> _checkLimitBreaches({
     required DateTime now,
-    required double averageKph,    required bool allowSpeech,
+    required double averageKph,
+    required bool allowSpeech,
   }) async {
     final double limit = _currentLimitKph!;
     final double margin = 1.0;
@@ -376,7 +400,8 @@ class SegmentGuidanceController {
 
   Future<bool> _checkApproachingExit({
     required double? remainingMeters,
-    required double averageKph,    required bool allowSpeech,
+    required double averageKph,
+    required bool allowSpeech,
   }) async {
     if (_approachAnnounced || !allowSpeech) {
       return false;
@@ -595,4 +620,92 @@ class SegmentGuidanceController {
       // best effort
     }
   }
+
+  _PendingExitAnnouncement? _takePendingExitAnnouncementForCombination() {
+    final _PendingExitAnnouncement? pending = _pendingExitAnnouncement;
+    if (pending == null) {
+      return null;
+    }
+
+    if (DateTime.now().difference(pending.createdAt) > _exitAnnouncementGrace) {
+      return null;
+    }
+
+    _pendingExitAnnouncement = null;
+    _exitAnnouncementTimer?.cancel();
+    _exitAnnouncementTimer = null;
+    return pending;
+  }
+
+  Future<void> _announceCombinedBoundary(
+    _PendingExitAnnouncement exitAnnouncement, {
+    double? nextLimitKph,
+  }) async {
+    await _playChime(times: 2, isBoundary: true);
+
+    final bool isBulgarian = _useBulgarianVoice;
+    final String limitText =
+        _formatBoundaryValue(exitAnnouncement.limitKph, bulgarian: isBulgarian);
+    final String averageText =
+        _formatBoundaryValue(exitAnnouncement.averageKph, bulgarian: isBulgarian);
+    final String nextLimitText =
+        _formatBoundaryValue(nextLimitKph, bulgarian: isBulgarian);
+
+    if (isBulgarian) {
+      final String message =
+          'Предишната зона приключи. Позволена средна $limitText. Твоята средна $averageText. '
+          'Започва нова зона. Ограничението е $nextLimitText. Следим средната скорост.';
+      await _speak(message);
+      return;
+    }
+
+    final String message =
+        'Previous zone complete. Allowed average $limitText. Your average $averageText. '
+        'Next zone started. Limit $nextLimitText. Tracking average speed.';
+    await _speak(message);
+  }
+
+  Future<void> _deliverExitAnnouncement(
+    _PendingExitAnnouncement announcement,
+  ) async {
+    if (announcement.useVoicePrompt) {
+      await _playVoicePrompt(AppConstants.segmentEndedVoiceAsset);
+      return;
+    }
+
+    await _playChime(isBoundary: true);
+
+    final String limitText =
+        _formatBoundaryValue(announcement.limitKph, bulgarian: false);
+    final String averageText =
+        _formatBoundaryValue(announcement.averageKph, bulgarian: false);
+
+    await _speak(
+      'Zone complete. Allowed average $limitText. Your average $averageText.',
+    );
+  }
+
+  String _formatBoundaryValue(
+    double? value, {
+    required bool bulgarian,
+  }) {
+    if (value == null || !value.isFinite) {
+      return bulgarian ? 'неизвестно' : 'unknown';
+    }
+    return value.toStringAsFixed(0);
+  }
+}
+
+class _PendingExitAnnouncement {
+  const _PendingExitAnnouncement({
+    required this.createdAt,
+    required this.useVoicePrompt,
+    this.limitKph,
+    this.averageKph,
+  });
+
+  final DateTime createdAt;
+  final bool useVoicePrompt;
+  final double? limitKph;
+  final double? averageKph;
 }
