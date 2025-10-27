@@ -42,6 +42,7 @@ flutter:
     - assets/data/approaching_segment.mp3
     - assets/data/entered_segmen.mp3
     - assets/data/segment_ends_in800.mp3
+    - assets/data/segment_ends_in800_than_a_another_one.mp3
     - assets/data/segment_ended.mp3
     - assets/data/approaching_weigh_control.mp3
 

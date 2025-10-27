@@ -157,7 +157,12 @@ class AppConstants {
   static const String approachingWeighControlVoiceAsset =
       'data/approaching_weigh_control.mp3';
 
-  
+  /// Voice prompt used when the current segment ends and another one starts
+  /// immediately after it (Bulgarian locale).
+  static const String segmentEndingWithNextVoiceAsset =
+      'data/segment_ends_in800_than_a_another_one.mp3';
+
+
   /// The animation controller starts with, and falls back to, a 500 ms duration for
   /// each interpolation run. Increasing that duration makes movements appear slower
   /// and smoother, while decreasing it yields snappier—but potentially choppier—updates

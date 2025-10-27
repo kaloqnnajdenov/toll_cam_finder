@@ -36,8 +36,8 @@ class SegmentGuidanceResult {
 
 class SegmentGuidanceController {
   SegmentGuidanceController({FlutterTts? tts, AudioPlayer? tonePlayer})
-      : _tts = tts ?? FlutterTts(),
-        _tonePlayer = tonePlayer ?? AudioPlayer(playerId: 'segment-guidance') {
+    : _tts = tts ?? FlutterTts(),
+      _tonePlayer = tonePlayer ?? AudioPlayer(playerId: 'segment-guidance') {
     unawaited(_tts.awaitSpeakCompletion(true));
     unawaited(_configureTonePlayer());
     unawaited(_configureTextToSpeech());
@@ -97,7 +97,8 @@ class SegmentGuidanceController {
 
   void updateLanguage(String languageCode) {
     final String normalized = languageCode.toLowerCase();
-    final bool useBulgarian = normalized == 'bg' || normalized.startsWith('bg-');
+    final bool useBulgarian =
+        normalized == 'bg' || normalized.startsWith('bg-');
     if (_useBulgarianVoice == useBulgarian) {
       return;
     }
@@ -168,14 +169,23 @@ class SegmentGuidanceController {
         averageKph: averageKph,
         allowSpeech: allowSpeech,
       );
-      triggered |= await _checkLimitBreaches(now: now, averageKph: averageKph, allowSpeech: allowSpeech
+      triggered |= await _checkLimitBreaches(
+        now: now,
+        averageKph: averageKph,
+        allowSpeech: allowSpeech,
       );
     }
+
+    final bool hasImmediateNextSegment = _hasImmediateNextSegment(
+      event: event,
+      remainingMeters: remainingMeters,
+    );
 
     triggered |= await _checkApproachingExit(
       remainingMeters: remainingMeters,
       averageKph: averageKph,
       allowSpeech: allowSpeech,
+      hasImmediateNextSegment: hasImmediateNextSegment,
     );
 
     final bool shouldEmitQuietUpdate = _shouldEmitQuietUpdate(
@@ -256,7 +266,8 @@ class SegmentGuidanceController {
         <IosTextToSpeechAudioCategoryOptions>[
           IosTextToSpeechAudioCategoryOptions.mixWithOthers,
           IosTextToSpeechAudioCategoryOptions.duckOthers,
-          IosTextToSpeechAudioCategoryOptions.interruptSpokenAudioAndMixWithOthers,
+          IosTextToSpeechAudioCategoryOptions
+              .interruptSpokenAudioAndMixWithOthers,
         ],
         IosTextToSpeechAudioMode.voicePrompt,
       );
@@ -283,10 +294,7 @@ class SegmentGuidanceController {
     final _PendingExitAnnouncement? exitAnnouncement =
         _takePendingExitAnnouncementForCombination();
     if (exitAnnouncement != null) {
-      await _announceCombinedBoundary(
-        exitAnnouncement,
-        nextLimitKph: limitKph,
-      );
+      await _announceCombinedBoundary(exitAnnouncement, nextLimitKph: limitKph);
       return;
     }
 
@@ -316,10 +324,7 @@ class SegmentGuidanceController {
     );
   }
 
-  void _scheduleExitAnnouncement({
-    double? limitKph,
-    double? averageKph,
-  }) {
+  void _scheduleExitAnnouncement({double? limitKph, double? averageKph}) {
     _pendingExitAnnouncement = _PendingExitAnnouncement(
       createdAt: DateTime.now(),
       useVoicePrompt: _useBulgarianVoice,
@@ -369,7 +374,8 @@ class SegmentGuidanceController {
     if (averageKph > limit + margin) {
       _wasOverLimit = true;
       _aboveLimitSince ??= now;
-      if (!_aboveLimitAlerted &&          allowSpeech &&
+      if (!_aboveLimitAlerted &&
+          allowSpeech &&
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
@@ -402,6 +408,7 @@ class SegmentGuidanceController {
     required double? remainingMeters,
     required double averageKph,
     required bool allowSpeech,
+    required bool hasImmediateNextSegment,
   }) async {
     if (_approachAnnounced || !allowSpeech) {
       return false;
@@ -415,15 +422,47 @@ class SegmentGuidanceController {
 
     _approachAnnounced = true;
 
-    if (_useBulgarianVoice) {
-      await _playVoicePrompt(AppConstants.segmentEndingSoonVoiceAsset);
-      return true;
-    }
-
     final double? limit =
         (_currentLimitKph != null && _currentLimitKph!.isFinite)
         ? _currentLimitKph
         : null;
+
+    if (hasImmediateNextSegment) {
+      if (_useBulgarianVoice) {
+        await _playVoicePrompt(AppConstants.segmentEndingWithNextVoiceAsset);
+        return true;
+      }
+
+      final int rounded = (remainingMeters / 50).round() * 50;
+      final String distanceText = rounded >= 1000
+          ? '${(rounded / 1000).toStringAsFixed(1)} km'
+          : '$rounded m';
+      final StringBuffer message = StringBuffer(
+        'Current segment ending in $distanceText.',
+      );
+
+      if (limit != null) {
+        final String limitText = limit.toStringAsFixed(0);
+        if (averageKph > limit) {
+          final String avgText = averageKph.toStringAsFixed(0);
+          message
+            ..write(' Average speed is $avgText km/h')
+            ..write(', limit is $limitText km/h.');
+        } else {
+          message.write(' Allowed average is $limitText km/h.');
+        }
+      }
+
+      message.write(' The next segment starts when the current one ends.');
+
+      await _speak(message.toString());
+      return true;
+    }
+
+    if (_useBulgarianVoice) {
+      await _playVoicePrompt(AppConstants.segmentEndingSoonVoiceAsset);
+      return true;
+    }
 
     if (limit != null && averageKph > limit) {
       final int rounded = (remainingMeters / 50).round() * 50;
@@ -432,7 +471,9 @@ class SegmentGuidanceController {
           : '$rounded m';
       final String avgText = averageKph.toStringAsFixed(0);
       final String limitText = limit.toStringAsFixed(0);
-      await _speak('$distanceText to end. Average speed is $avgText, speed limit is $limitText.');
+      await _speak(
+        '$distanceText to end. Average speed is $avgText, speed limit is $limitText.',
+      );
     } else {
       await _playChime();
     }
@@ -459,6 +500,32 @@ class SegmentGuidanceController {
     final double delta = _lastRemainingMeters! - remainingMeters;
     return delta >= _quietDistanceMeters;
   }
+
+   bool _hasImmediateNextSegment({
+    required SegmentTrackerEvent event,
+    required double? remainingMeters,
+  }) {
+    final String? activeId = event.activeSegmentId;
+    if (activeId == null || remainingMeters == null) {
+      return false;
+    }
+
+    const double toleranceMeters = 120.0;
+    for (final SegmentDebugPath path in event.debugData.candidatePaths) {
+      if (path.id == activeId) {
+        continue;
+      }
+      final double startDistance = path.startDistanceMeters;
+      if (!startDistance.isFinite || startDistance < 0) {
+        continue;
+      }
+      if ((startDistance - remainingMeters).abs() <= toleranceMeters) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   SegmentGuidanceUiModel _buildUiModel({
     required double averageKph,
@@ -644,12 +711,18 @@ class SegmentGuidanceController {
     await _playChime(times: 2, isBoundary: true);
 
     final bool isBulgarian = _useBulgarianVoice;
-    final String limitText =
-        _formatBoundaryValue(exitAnnouncement.limitKph, bulgarian: isBulgarian);
-    final String averageText =
-        _formatBoundaryValue(exitAnnouncement.averageKph, bulgarian: isBulgarian);
-    final String nextLimitText =
-        _formatBoundaryValue(nextLimitKph, bulgarian: isBulgarian);
+    final String limitText = _formatBoundaryValue(
+      exitAnnouncement.limitKph,
+      bulgarian: isBulgarian,
+    );
+    final String averageText = _formatBoundaryValue(
+      exitAnnouncement.averageKph,
+      bulgarian: isBulgarian,
+    );
+    final String nextLimitText = _formatBoundaryValue(
+      nextLimitKph,
+      bulgarian: isBulgarian,
+    );
 
     if (isBulgarian) {
       final String message =
@@ -675,20 +748,21 @@ class SegmentGuidanceController {
 
     await _playChime(isBoundary: true);
 
-    final String limitText =
-        _formatBoundaryValue(announcement.limitKph, bulgarian: false);
-    final String averageText =
-        _formatBoundaryValue(announcement.averageKph, bulgarian: false);
+    final String limitText = _formatBoundaryValue(
+      announcement.limitKph,
+      bulgarian: false,
+    );
+    final String averageText = _formatBoundaryValue(
+      announcement.averageKph,
+      bulgarian: false,
+    );
 
     await _speak(
       'Zone complete. Allowed average $limitText. Your average $averageText.',
     );
   }
 
-  String _formatBoundaryValue(
-    double? value, {
-    required bool bulgarian,
-  }) {
+  String _formatBoundaryValue(double? value, {required bool bulgarian}) {
     if (value == null || !value.isFinite) {
       return bulgarian ? 'неизвестно' : 'unknown';
     }
