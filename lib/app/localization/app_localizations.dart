@@ -209,6 +209,10 @@ class AppLocalizations {
       'passwordsDoNotMatch': 'Passwords do not match',
       'profile': 'Profile',
       'profileSubtitle': 'Manage your TollCam account and preferences.',
+      'deleteProfileAction': 'Delete profile',
+      'deleteProfileTitle': 'Delete profile',
+      'deleteProfileConfirmation':
+          'Are you sure you want to delete your profile? This action cannot be undone.',
       'publicSharingUnavailable':
           'Public segment sharing is currently unavailable.',
       'publicSharingUnavailableShort': 'Public sharing is not available.',
@@ -354,6 +358,7 @@ class AppLocalizations {
       'unableToDetermineLoggedInAccountRetry':
           'Unable to determine the logged in account. Please sign in again.',
       'unableToLogOutTryAgain': 'Unable to log out. Please try again.',
+      'unableToDeleteAccount': 'Unable to delete your profile. Please try again.',
       'unableToWithdrawSubmission': 'Unable to withdraw the public submission.',
       'unexpectedErrorCancellingSubmission':
           'Unexpected error while cancelling the public submission.',
@@ -508,6 +513,10 @@ class AppLocalizations {
 'passwordLabel': 'Парола',
 'profile': 'Профил',
 'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',
+'deleteProfileAction': 'Изтрий профила',
+'deleteProfileTitle': 'Изтриване на профил',
+'deleteProfileConfirmation':
+'Сигурни ли сте, че искате да изтриете профила си? Това действие не може да бъде отменено.',
 'faceTravelDirection': 'По посока на движение',
 'northUp': 'Север нагоре',
 'recenter': 'Центрирай Екрана',
@@ -643,6 +652,12 @@ class AppLocalizations {
 'Изтриването на локални сегменти не се поддържа в уеб версията.',
 'fileSystemOperationsNotSupported':
 'Операциите с файловата система не се поддържат на тази платформа.',
+'unableToDetermineLoggedInAccount':
+'Неуспешно определяне на влезлия акаунт.',
+'unableToDetermineLoggedInAccountRetry':
+'Неуспешно определяне на влезлия акаунт. Моля, влез отново.',
+'unableToLogOutTryAgain': 'Неуспешен изход. Опитайте отново.',
+'unableToDeleteAccount': 'Профилът не може да бъде изтрит. Опитайте отново.',
 'unitKilometersShort': 'км',
 'unitMetersShort': 'м',
 'unknownUserLabel': 'Непознат потребител',
@@ -772,6 +787,10 @@ class AppLocalizations {
   String get confirmPasswordLabel => _value('confirmPasswordLabel');
   String get fullNameLabel => _value('fullNameLabel');
   String get profileSubtitle => _value('profileSubtitle');
+  String get deleteProfileAction => _value('deleteProfileAction');
+  String get deleteProfileTitle => _value('deleteProfileTitle');
+  String get deleteProfileConfirmation =>
+      _value('deleteProfileConfirmation');
   String get unknownUserLabel => _value('unknownUserLabel');
   String get averageSpeedStartTooltip => _value('averageSpeedStartTooltip');
   String get averageSpeedResetTooltip => _value('averageSpeedResetTooltip');
