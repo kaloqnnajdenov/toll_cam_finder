@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
@@ -357,13 +358,13 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
           title: Text(localizations.audioModeAbsoluteMuteConfirmationTitle),
           content: Text(localizations.audioModeAbsoluteMuteConfirmationBody),
           actions: [
-            TextButton(
+           TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(localizations.noAction),
+              child: Text(AppMessages.noAction),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(localizations.yesAction),
+              child: Text(AppMessages.yesAction),
             ),
           ],
         );
