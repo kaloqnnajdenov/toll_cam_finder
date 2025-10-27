@@ -1095,6 +1095,9 @@ class _MapPageState extends State<MapPage>
           options: MapOptions(
             initialCenter: _center,
             initialZoom: _currentZoom,
+            cameraConstraint: CameraConstraint.contain(
+              bounds: AppConstants.europeBounds,
+            ),
             onMapReady: _onMapReady,
           ),
           children: [
