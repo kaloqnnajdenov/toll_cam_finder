@@ -139,7 +139,7 @@ class LocalSegmentsService {
       draft.speedLimitKph != null
           ? draft.speedLimitKph!.toString()
           : '',
-      '',
+      draft.routeGeoJson?.trim() ?? '',
     ];
 
     rows.add(newRow);
@@ -204,6 +204,7 @@ class LocalSegmentsService {
       final speedLimit = row.length > 7 ? row[7].trim() : '';
       final speedLimitKph =
           speedLimit.isEmpty ? null : double.tryParse(speedLimit);
+      final routeGeoJson = row.length > 8 ? row[8].trim() : '';
 
       if (startCoordinates.isEmpty || endCoordinates.isEmpty) {
         throw LocalSegmentsServiceException(
@@ -229,6 +230,7 @@ class LocalSegmentsService {
         endCoordinates: endCoordinates,
         isPublic: true,
         speedLimitKph: speedLimitKph,
+        routeGeoJson: routeGeoJson.isNotEmpty ? routeGeoJson : null,
       );
     }
 
