@@ -301,6 +301,11 @@ class AppLocalizations {
       'segmentMetricsDistanceToEnd': 'To segment end',
       'segmentMetricsSafeSpeed': 'Safe to finish',
       'segmentMetricsStatusTracking': 'Tracking segment',
+      'segmentHandoverTitle': 'New zone started',
+      'segmentHandoverPreviousAverage': 'Prev avg {value} {unit}',
+      'segmentHandoverPreviousLimit': 'Prev limit {value} {unit}',
+      'segmentHandoverNextLimit': 'Next limit {value} {unit}',
+      'segmentHandoverUnknownValue': '--',
       'personalSegmentDefaultName': 'Personal segment',
       'syncAddedMany': '{count} segments added',
       'syncAddedOne': '{count} segment added',
@@ -585,6 +590,11 @@ class AppLocalizations {
 'segmentMetricsDistanceToEnd': 'До края',
 'segmentMetricsSafeSpeed': 'Безопасна скорост',
 'segmentMetricsStatusTracking': 'Следене на сегмента',
+'segmentHandoverTitle': 'Нова зона',
+'segmentHandoverPreviousAverage': 'Предишна средна {value} {unit}',
+'segmentHandoverPreviousLimit': 'Предишно ограничение {value} {unit}',
+'segmentHandoverNextLimit': 'Следващо ограничение {value} {unit}',
+'segmentHandoverUnknownValue': '--',
 'syncAddedMany': '{count} сегмента добавени',
 'syncAddedOne': '{count} сегмент добавен',
 'syncApprovedSummaryPlural':
@@ -756,6 +766,20 @@ class AppLocalizations {
   String get speedDialCurrentTitle => _value('speedDialCurrentTitle');
   String get speedDialAverageTitle => _value('speedDialAverageTitle');
   String get speedDialUnitKmh => _value('speedDialUnitKmh');
+  String get segmentHandoverTitle => _value('segmentHandoverTitle');
+  String segmentHandoverPreviousAverage(String value, String unit) => translate(
+        'segmentHandoverPreviousAverage',
+        {'value': value, 'unit': unit},
+      );
+  String segmentHandoverPreviousLimit(String value, String unit) => translate(
+        'segmentHandoverPreviousLimit',
+        {'value': value, 'unit': unit},
+      );
+  String segmentHandoverNextLimit(String value, String unit) => translate(
+        'segmentHandoverNextLimit',
+        {'value': value, 'unit': unit},
+      );
+  String get segmentHandoverUnknownValue => _value('segmentHandoverUnknownValue');
   String get speedDialNoActiveSegment => _value('speedDialNoActiveSegment');
 }
 

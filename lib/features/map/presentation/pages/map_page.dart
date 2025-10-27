@@ -48,6 +48,7 @@ import 'map/toll_camera_controller.dart';
 import 'map/weigh_station_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
+import 'map/widgets/segment_handover_banner.dart';
 import 'map/widgets/segment_overlays.dart';
 import 'map/widgets/speed_limit_sign.dart';
 import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_stations_overlay.dart';
@@ -1126,6 +1127,16 @@ class _MapPageState extends State<MapPage>
             TollCamerasOverlay(cameras: cameraState),
           ],
         ),
+        if (currentSegment.handoverStatus != null)
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SegmentHandoverBanner(
+                status: currentSegment.handoverStatus!,
+                margin: const EdgeInsets.only(top: 16),
+              ),
+            ),
+          ),
         SafeArea(
           child: Align(
             alignment: Alignment.topLeft,

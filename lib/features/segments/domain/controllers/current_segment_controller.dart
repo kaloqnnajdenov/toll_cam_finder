@@ -1,8 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
+
+class SegmentHandoverStatus {
+  const SegmentHandoverStatus({
+    this.previousAverageKph,
+    this.previousLimitKph,
+    this.nextLimitKph,
+    required this.createdAt,
+  });
+
+  final double? previousAverageKph;
+  final double? previousLimitKph;
+  final double? nextLimitKph;
+  final DateTime createdAt;
+}
+
+class _PendingExitSummary {
+  const _PendingExitSummary({
+    required this.createdAt,
+    this.averageKph,
+    this.limitKph,
+  });
+
+  final DateTime createdAt;
+  final double? averageKph;
+  final double? limitKph;
+}
 
 class CurrentSegmentController extends ChangeNotifier {
   CurrentSegmentController({
@@ -22,6 +50,12 @@ class CurrentSegmentController extends ChangeNotifier {
   String? _progressLabel;
   LatLng? _lastAverageSamplePosition;
   DateTime? _lastAverageSampleAt;
+  SegmentHandoverStatus? _handoverStatus;
+  _PendingExitSummary? _pendingExitSummary;
+  Timer? _handoverTimer;
+
+  static const Duration _handoverVisibility = Duration(seconds: 6);
+  static const Duration _handoverWindow = Duration(seconds: 4);
 
   AverageSpeedController get averageController => _averageController;
   SegmentTrackerEvent? get lastEvent => _lastEvent;
@@ -34,6 +68,7 @@ class CurrentSegmentController extends ChangeNotifier {
   double? get distanceToSegmentEndMeters => _activePath?.remainingDistanceMeters;
   bool get hasActiveSegment => _lastEvent?.activeSegmentId != null;
   String? get activeSegmentId => _lastEvent?.activeSegmentId;
+  SegmentHandoverStatus? get handoverStatus => _handoverStatus;
 
   void reset() {
     _lastEvent = null;
@@ -44,6 +79,10 @@ class CurrentSegmentController extends ChangeNotifier {
     _progressLabel = null;
     _lastAverageSamplePosition = null;
     _lastAverageSampleAt = null;
+    _handoverTimer?.cancel();
+    _handoverTimer = null;
+    _handoverStatus = null;
+    _pendingExitSummary = null;
     _averageController.reset();
     notifyListeners();
   }
@@ -91,6 +130,9 @@ class CurrentSegmentController extends ChangeNotifier {
   }) {
     double? exitAverage;
 
+    final double? previousLimit = _lastEvent?.activeSegmentSpeedLimitKph;
+    final DateTime now = timestamp;
+
     if (event.endedSegment || event.completedSegmentLengthMeters != null) {
       final double? segmentLength = event.completedSegmentLengthMeters;
       final Duration? elapsed = _averageController.elapsed;
@@ -106,6 +148,14 @@ class CurrentSegmentController extends ChangeNotifier {
       _averageController.reset();
       _lastAverageSamplePosition = null;
       _lastAverageSampleAt = null;
+
+      if (event.endedSegment) {
+        _pendingExitSummary = _PendingExitSummary(
+          createdAt: now,
+          averageKph: _lastSegmentAverageKph,
+          limitKph: previousLimit,
+        );
+      }
     }
 
     if (event.startedSegment) {
@@ -113,6 +163,11 @@ class CurrentSegmentController extends ChangeNotifier {
       _averageController.start(startedAt: timestamp);
       _lastAverageSamplePosition = userPosition;
       _lastAverageSampleAt = timestamp;
+
+      _maybeCreateHandover(
+        timestamp: now,
+        nextLimitKph: event.activeSegmentSpeedLimitKph,
+      );
     }
 
     _lastEvent = event;
@@ -120,6 +175,8 @@ class CurrentSegmentController extends ChangeNotifier {
     _debugData = event.debugData;
     _distanceToSegmentStartMeters = distanceToSegmentStartMeters;
     _progressLabel = progressLabel;
+
+    _expireStaleSummaries(now);
 
     notifyListeners();
 
@@ -129,6 +186,53 @@ class CurrentSegmentController extends ChangeNotifier {
   @override
   void dispose() {
     _averageController.dispose();
+    _handoverTimer?.cancel();
     super.dispose();
+  }
+
+  void _maybeCreateHandover({
+    required DateTime timestamp,
+    double? nextLimitKph,
+  }) {
+    final _PendingExitSummary? pending = _pendingExitSummary;
+    if (pending == null) {
+      return;
+    }
+
+    if (timestamp.difference(pending.createdAt) > _handoverWindow) {
+      _pendingExitSummary = null;
+      return;
+    }
+
+    _handoverStatus = SegmentHandoverStatus(
+      previousAverageKph: pending.averageKph,
+      previousLimitKph: pending.limitKph,
+      nextLimitKph: nextLimitKph,
+      createdAt: timestamp,
+    );
+    _pendingExitSummary = null;
+    _handoverTimer?.cancel();
+    _handoverTimer = Timer(_handoverVisibility, () {
+      if (_handoverStatus != null) {
+        _handoverStatus = null;
+        if (hasListeners) {
+          notifyListeners();
+        }
+      }
+    });
+  }
+
+  void _expireStaleSummaries(DateTime now) {
+    final _PendingExitSummary? pending = _pendingExitSummary;
+    if (pending != null &&
+        now.difference(pending.createdAt) > _handoverVisibility) {
+      _pendingExitSummary = null;
+    }
+
+    final SegmentHandoverStatus? status = _handoverStatus;
+    if (status != null &&
+        now.difference(status.createdAt) > _handoverVisibility) {
+      _handoverStatus = null;
+    }
   }
 }
