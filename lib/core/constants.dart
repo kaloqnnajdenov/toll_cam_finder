@@ -1,3 +1,4 @@
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 class AppConstants {
@@ -69,6 +70,13 @@ class AppConstants {
   /// Geographic center used before a GPS fix is available; shifting it moves the
   /// initial map focus to another country or region.
   static const LatLng initialCenter = LatLng(42.7339, 25.4858);
+
+  /// Geographic bounds used to constrain the map camera so the user cannot zoom
+  /// out beyond a Europe-sized view.
+  static final LatLngBounds europeBounds = LatLngBounds(
+    LatLng(34.0, -11.0),
+    LatLng(72.0, 45.0),
+  );
 
   /// Map zoom level applied at startup; increasing it starts the user closer to
   /// street level, while decreasing shows a broader overview.

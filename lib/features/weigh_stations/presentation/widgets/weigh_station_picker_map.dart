@@ -55,6 +55,9 @@ class _WeighStationPickerMapState extends State<WeighStationPickerMap> {
             initialZoom: AppConstants.initialZoom,
             minZoom: AppConstants.segmentPickerMinZoom,
             maxZoom: AppConstants.segmentPickerMaxZoom,
+            cameraConstraint: CameraConstraint.contain(
+              bounds: AppConstants.europeBounds,
+            ),
             onTap: _handleMapTap,
             onMapReady: _handleMapReady,
           ),
