@@ -711,26 +711,46 @@ class SegmentGuidanceController {
     await _playChime(times: 2, isBoundary: true);
 
     final bool isBulgarian = _useBulgarianVoice;
+
+    if (isBulgarian) {
+      final String? limitText = _formatBoundaryNumber(exitAnnouncement.limitKph);
+      final String? averageText = _formatBoundaryNumber(exitAnnouncement.averageKph);
+      final String? nextLimitText = _formatBoundaryNumber(nextLimitKph);
+
+      final List<String> sentences = <String>['Предишната зона приключи.'];
+
+      if (limitText != null && averageText != null) {
+        sentences.add('Позволена средна $limitText, твоята $averageText.');
+      } else if (limitText != null) {
+        sentences.add('Позволена средна $limitText.');
+      } else if (averageText != null) {
+        sentences.add('Твоята средна $averageText.');
+      }
+
+      if (nextLimitText != null) {
+        sentences.add('Започва нова зона с ограничение $nextLimitText.');
+      } else {
+        sentences.add('Започва нова зона.');
+      }
+
+      sentences.add('Следим средната скорост.');
+
+      await _speak(sentences.join(' '));
+      return;
+    }
+
     final String limitText = _formatBoundaryValue(
       exitAnnouncement.limitKph,
-      bulgarian: isBulgarian,
+      bulgarian: false,
     );
     final String averageText = _formatBoundaryValue(
       exitAnnouncement.averageKph,
-      bulgarian: isBulgarian,
+      bulgarian: false,
     );
     final String nextLimitText = _formatBoundaryValue(
       nextLimitKph,
-      bulgarian: isBulgarian,
+      bulgarian: false,
     );
-
-    if (isBulgarian) {
-      final String message =
-          'Предишната зона приключи. Позволена средна $limitText. Твоята средна $averageText. '
-          'Започва нова зона. Ограничението е $nextLimitText. Следим средната скорост.';
-      await _speak(message);
-      return;
-    }
 
     final String message =
         'Previous zone complete. Allowed average $limitText. Your average $averageText. '
@@ -765,6 +785,13 @@ class SegmentGuidanceController {
   String _formatBoundaryValue(double? value, {required bool bulgarian}) {
     if (value == null || !value.isFinite) {
       return bulgarian ? 'неизвестно' : 'unknown';
+    }
+    return value.toStringAsFixed(0);
+  }
+
+  String? _formatBoundaryNumber(double? value) {
+    if (value == null || !value.isFinite) {
+      return null;
     }
     return value.toStringAsFixed(0);
   }
