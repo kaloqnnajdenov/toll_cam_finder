@@ -121,6 +121,32 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteAccount() async {
+    final userId = _currentUserId;
+
+    if (userId == null) {
+      throw AuthFailure(AppMessages.unableToDetermineLoggedInAccount);
+    }
+
+    if (_client == null) {
+      _applySession(null);
+      return;
+    }
+
+    try {
+      await _client!.auth.admin.deleteUser(userId);
+      await _client!.auth.signOut();
+      _applySession(null);
+    } on AuthException catch (error) {
+      throw AuthFailure(error.message);
+    } on AuthApiException catch (error) {
+      throw AuthFailure(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('Delete account failed: $error\n$stackTrace');
+      throw AuthFailure(AppMessages.unableToDeleteAccount);
+    }
+  }
+
   void _applySession(Session? session) {
     final user = session?.user;
     _currentEmail = user?.email;
