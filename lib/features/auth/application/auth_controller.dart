@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:toll_cam_finder/core/app_messages.dart';
+import 'package:toll_cam_finder/core/supabase_config.dart';
 
 /// Simple wrapper around Supabase authentication that exposes the user state to
 /// the widget tree. Errors are surfaced via [AuthFailure] so the UI can display
@@ -118,6 +121,62 @@ class AuthController extends ChangeNotifier {
     } catch (error, stackTrace) {
       debugPrint('Sign-out failed: $error\n$stackTrace');
       throw  AuthFailure(AppMessages.unexpectedErrorSigningOut);
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    if (_currentUserId == null) {
+      throw AuthFailure(AppMessages.unableToDetermineLoggedInAccount);
+    }
+
+    if (_client == null) {
+      _applySession(null);
+      return;
+    }
+
+    final session = _client!.auth.currentSession;
+    final accessToken = session?.accessToken;
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw AuthFailure(AppMessages.unableToDetermineLoggedInAccount);
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('${SupabaseConfig.supabaseUrl}/auth/v1/user'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'apikey': SupabaseConfig.supabaseAnonKey,
+        },
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await _client!.auth.signOut();
+        _applySession(null);
+        return;
+      }
+
+      String? message;
+      try {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        final dynamic maybeMessage =
+            body['msg'] ?? body['message'] ?? body['error_description'];
+        if (maybeMessage is String && maybeMessage.isNotEmpty) {
+          message = maybeMessage;
+        }
+      } catch (_) {
+        // Ignore JSON parsing errors – we'll fall back to a generic message.
+      }
+
+      throw AuthFailure(message ?? AppMessages.unableToDeleteAccount);
+    } on AuthFailure {
+      rethrow;
+    } on http.ClientException catch (error, stackTrace) {
+      debugPrint('Delete account HTTP failed: $error\n$stackTrace');
+      throw AuthFailure(AppMessages.unableToDeleteAccount);
+    } catch (error, stackTrace) {
+      debugPrint('Delete account failed: $error\n$stackTrace');
+      throw AuthFailure(AppMessages.unableToDeleteAccount);
     }
   }
 

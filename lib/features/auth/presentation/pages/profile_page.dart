@@ -44,6 +44,59 @@ class ProfilePage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: Text(localizations.deleteProfileTitle),
+                          content:
+                              Text(localizations.deleteProfileConfirmation),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              child: Text(localizations.cancelAction),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              child: Text(localizations.deleteAction),
+                            ),
+                          ],
+                        ),
+                      ) ??
+                      false;
+
+                  if (!confirmed) {
+                    return;
+                  }
+
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    await context.read<AuthController>().deleteAccount();
+                    Navigator.of(context).popUntil(
+                      ModalRoute.withName(AppRoutes.map),
+                    );
+                  } on AuthFailure catch (error) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(error.message)),
+                    );
+                  } catch (error, stackTrace) {
+                    debugPrint('Delete profile error: $error\n$stackTrace');
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(AppMessages.unableToDeleteAccount),
+                      ),
+                    );
+                  }
+                },
+                child: Text(localizations.deleteProfileAction),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
