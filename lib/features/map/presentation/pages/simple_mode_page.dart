@@ -231,11 +231,21 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
                         ),
                         value: mode,
                         groupValue: controller.mode,
-                        onChanged: (value) {
+                        onChanged: (value) async {
                           if (value == null) {
                             return;
                           }
+                          if (value == GuidanceAudioMode.absoluteMute) {
+                            final confirmed =
+                                await _confirmAbsoluteMute(sheetContext);
+                            if (!confirmed) {
+                              return;
+                            }
+                          }
                           controller.setMode(value);
+                          if (!sheetContext.mounted) {
+                            return;
+                          }
                           Navigator.of(sheetContext).pop();
                         },
                       ),
@@ -336,5 +346,30 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
         },
       );
     });
+  }
+
+  Future<bool> _confirmAbsoluteMute(BuildContext context) async {
+    final localizations = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(localizations.audioModeAbsoluteMuteConfirmationTitle),
+          content: Text(localizations.audioModeAbsoluteMuteConfirmationBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(localizations.noAction),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(localizations.yesAction),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
   }
 }
