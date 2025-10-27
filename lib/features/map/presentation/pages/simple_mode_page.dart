@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
+import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
@@ -231,11 +232,21 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
                         ),
                         value: mode,
                         groupValue: controller.mode,
-                        onChanged: (value) {
+                        onChanged: (value) async {
                           if (value == null) {
                             return;
                           }
+                          if (value == GuidanceAudioMode.absoluteMute) {
+                            final confirmed =
+                                await _confirmAbsoluteMute(sheetContext);
+                            if (!confirmed) {
+                              return;
+                            }
+                          }
                           controller.setMode(value);
+                          if (!sheetContext.mounted) {
+                            return;
+                          }
                           Navigator.of(sheetContext).pop();
                         },
                       ),
@@ -336,5 +347,30 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
         },
       );
     });
+  }
+
+  Future<bool> _confirmAbsoluteMute(BuildContext context) async {
+    final localizations = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(localizations.audioModeAbsoluteMuteConfirmationTitle),
+          content: Text(localizations.audioModeAbsoluteMuteConfirmationBody),
+          actions: [
+           TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(AppMessages.noAction),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(AppMessages.yesAction),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
   }
 }

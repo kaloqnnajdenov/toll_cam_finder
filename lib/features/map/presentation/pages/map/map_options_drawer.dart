@@ -120,11 +120,21 @@ extension _MapPageDrawer on _MapPageState {
                         title: Text(_audioModeLabel(mode, localizations)),
                         value: mode,
                         groupValue: controller.mode,
-                        onChanged: (value) {
+                        onChanged: (value) async {
                           if (value == null) {
                             return;
                           }
+                          if (value == GuidanceAudioMode.absoluteMute) {
+                            final confirmed =
+                                await _confirmAbsoluteMute(sheetContext);
+                            if (!confirmed) {
+                              return;
+                            }
+                          }
                           controller.setMode(value);
+                          if (!sheetContext.mounted) {
+                            return;
+                          }
                           Navigator.of(sheetContext).pop();
                         },
                       ),
@@ -136,6 +146,31 @@ extension _MapPageDrawer on _MapPageState {
         },
       );
     });
+  }
+
+  Future<bool> _confirmAbsoluteMute(BuildContext context) async {
+    final localizations = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(localizations.audioModeAbsoluteMuteConfirmationTitle),
+          content: Text(localizations.audioModeAbsoluteMuteConfirmationBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(AppMessages.noAction),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(AppMessages.yesAction),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
   }
 
   void _onLanguageSelected() {

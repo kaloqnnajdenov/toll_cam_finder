@@ -166,6 +166,10 @@ class AppLocalizations {
       'audioModeBackgroundMuted':
           'Mute in background (in-app guidance, start/end dings only)',
       'audioModeAbsoluteMute': 'Absolute mute (no sounds)',
+      'audioModeAbsoluteMuteConfirmationTitle':
+          'Mute all voice guidance?',
+      'audioModeAbsoluteMuteConfirmationBody':
+          'If you mute all voice guidance, you will not receive alerts while driving when the app is in the foreground or background. Do you want to continue?',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
       'logOut': 'Log out',
@@ -636,6 +640,10 @@ class AppLocalizations {
       'audioModeBackgroundMuted':
           'Заглушено на заден план (активно в приложението, само сигнал при старт/край)',
       'audioModeAbsoluteMute': 'Пълно заглушаване (без звук)',
+      'audioModeAbsoluteMuteConfirmationTitle':
+          'Изключване на всички гласови предупреждения?',
+      'audioModeAbsoluteMuteConfirmationBody':
+          'Ако изключиш всички гласови предупреждения, няма да получаваш известия нито когато приложението е на преден план, нито във фонов режим. Искаш ли да продължиш?',
 'savingLocalSegmentsNotSupportedOnWeb':
 'Запазването на локални сегменти не се поддържа в уеб версията.',
 'loadingLocalSegmentsNotSupportedOnWeb':
@@ -768,6 +776,10 @@ class AppLocalizations {
   String get audioModeBackgroundMuted =>
       _value('audioModeBackgroundMuted');
   String get audioModeAbsoluteMute => _value('audioModeAbsoluteMute');
+  String get audioModeAbsoluteMuteConfirmationTitle =>
+      _value('audioModeAbsoluteMuteConfirmationTitle');
+  String get audioModeAbsoluteMuteConfirmationBody =>
+      _value('audioModeAbsoluteMuteConfirmationBody');
   String get welcomeTitle => _value('welcomeTitle');
   String get joinTollCam => _value('joinTollCam');
   String get emailLabel => _value('emailLabel');
