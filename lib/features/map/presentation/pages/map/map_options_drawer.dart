@@ -159,11 +159,11 @@ extension _MapPageDrawer on _MapPageState {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(localizations.noAction),
+              child: Text(MaterialLocalizations.of(dialogContext).cancelButtonLabel),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(localizations.yesAction),
+              child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
             ),
           ],
         );

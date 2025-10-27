@@ -117,7 +117,8 @@ class _MapPageState extends State<MapPage>
   final SpeedSmoother _speedSmoother = SpeedSmoother();
   final Distance _distanceCalculator = const Distance();
   final TollCameraController _cameraController = TollCameraController();
-  final WeighStationController _weighStationController = WeighStationController();
+  final WeighStationController _weighStationController =
+      WeighStationController();
   final SegmentTracker _segmentTracker = SegmentTracker(
     indexService: SegmentIndexService.instance,
   );
@@ -186,10 +187,12 @@ class _MapPageState extends State<MapPage>
     );
 
     _metadataLoadFuture = _loadSegmentsMetadata();
-    unawaited(_metadataLoadFuture!.then((_) async {
-      await _loadCameras();
-      await _loadWeighStations();
-    }));
+    unawaited(
+      _metadataLoadFuture!.then((_) async {
+        await _loadCameras();
+        await _loadWeighStations();
+      }),
+    );
 
     _handleLanguageChange();
 
@@ -271,9 +274,11 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _initConnectivityMonitoring() async {
-    _connectivitySub ??=
-        _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
-    final List<ConnectivityResult> results = await _connectivity.checkConnectivity();
+    _connectivitySub ??= _connectivity.onConnectivityChanged.listen(
+      _onConnectivityChanged,
+    );
+    final List<ConnectivityResult> results = await _connectivity
+        .checkConnectivity();
     _onConnectivityChanged(results);
   }
 
@@ -444,10 +449,7 @@ class _MapPageState extends State<MapPage>
     final smoothedKmh = _speedSmoother.next(shownKmh);
     final next = LatLng(position.latitude, position.longitude);
     _updateHeading(position.heading);
-    _currentSegmentController.recordProgress(
-      position: next,
-      timestamp: now,
-    );
+    _currentSegmentController.recordProgress(position: next, timestamp: now);
     _moveBlueDot(next);
     _maybeFetchSpeedLimit(next);
     final nearestWeigh = _segmentsService.nearestWeighStation(next);
@@ -550,9 +552,7 @@ class _MapPageState extends State<MapPage>
         _osmSpeedLimitKph = result;
         _isOsmServiceAvailable = true;
       });
-      _cancelSegmentsOnlyRedirectTimer(
-        SegmentsOnlyModeReason.osmUnavailable,
-      );
+      _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.osmUnavailable);
       if (_segmentsOnlyModeController.reason ==
           SegmentsOnlyModeReason.osmUnavailable) {
         _segmentsOnlyModeController.exitMode();
@@ -567,9 +567,7 @@ class _MapPageState extends State<MapPage>
       _segmentsOnlyModeController.enterMode(
         SegmentsOnlyModeReason.osmUnavailable,
       );
-      _scheduleSegmentsOnlyRedirect(
-        SegmentsOnlyModeReason.osmUnavailable,
-      );
+      _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
     }
   }
 
@@ -688,6 +686,10 @@ class _MapPageState extends State<MapPage>
   void _onResetView() {
     final target = _blueDotAnimator.position ?? _userLatLng ?? _center;
     setState(() => _followUser = true);
+    _moveCameraTo(target);
+  }
+
+  void _moveCameraTo(LatLng target) {
     final zoom = _currentZoom < AppConstants.zoomWhenFocused
         ? AppConstants.zoomWhenFocused
         : _currentZoom;
@@ -757,9 +759,8 @@ class _MapPageState extends State<MapPage>
       _followHeading = true;
       _followUser = true;
     });
-    if (_userHeading != null) {
-      _applyHeadingRotation();
-    }
+    final target = _blueDotAnimator.position ?? _userLatLng ?? _center;
+    _moveCameraTo(target);
   }
 
   Future<void> _loadSegmentsMetadata({bool showErrors = false}) async {
@@ -846,7 +847,7 @@ class _MapPageState extends State<MapPage>
 
     final WeighStationVotes initialVotes =
         _segmentsService.weighStationsState.votes[station.id] ??
-            const WeighStationVotes();
+        const WeighStationVotes();
     final bool? userVote =
         _segmentsService.weighStationsState.userVotes[station.id];
 
@@ -858,13 +859,13 @@ class _MapPageState extends State<MapPage>
           initialVotes: initialVotes,
           onVote: (isUpvote) {
             final auth = sheetContext.read<AuthController>();
-            final WeighStationVoteResult updated =
-                _segmentsService.registerWeighStationVote(
-              stationId: station.id,
-              isUpvote: isUpvote,
-              client: auth.client,
-              userId: auth.currentUserId,
-            );
+            final WeighStationVoteResult updated = _segmentsService
+                .registerWeighStationVote(
+                  stationId: station.id,
+                  isUpvote: isUpvote,
+                  client: auth.client,
+                  userId: auth.currentUserId,
+                );
             if (mounted) {
               setState(() {});
             }
@@ -1023,15 +1024,15 @@ class _MapPageState extends State<MapPage>
     _segmentsOnlyModeController.updateMetrics(
       currentSpeedKmh: _speedKmh,
       hasActiveSegment: _currentSegmentController.hasActiveSegment,
-      segmentSpeedLimitKph: _currentSegmentController.activeSegmentSpeedLimitKph,
+      segmentSpeedLimitKph:
+          _currentSegmentController.activeSegmentSpeedLimitKph,
       segmentDebugPath: _currentSegmentController.activePath,
       distanceToSegmentStartMeters:
           _currentSegmentController.distanceToSegmentStartMeters,
     );
   }
 
-  Future<void> _openSimpleModePage(
-      SegmentsOnlyModeReason reason) async {
+  Future<void> _openSimpleModePage(SegmentsOnlyModeReason reason) async {
     _segmentsOnlyModeController.enterMode(reason);
     if (_simpleModePageOpen || !mounted) {
       return;
@@ -1056,8 +1057,7 @@ class _MapPageState extends State<MapPage>
     await Navigator.of(context).maybePop();
   }
 
-  bool _shouldExitSegmentsOnlyModeAfterNav(
-      SegmentsOnlyModeReason reason) {
+  bool _shouldExitSegmentsOnlyModeAfterNav(SegmentsOnlyModeReason reason) {
     final SegmentsOnlyModeReason? currentReason =
         _segmentsOnlyModeController.reason;
 
@@ -1108,8 +1108,7 @@ class _MapPageState extends State<MapPage>
             if (_visibleSegmentPolylines.isNotEmpty)
               PolylineLayer(polylines: _visibleSegmentPolylines),
 
-            if (kDebugMode &&
-                currentSegment.debugData.querySquare.isNotEmpty)
+            if (kDebugMode && currentSegment.debugData.querySquare.isNotEmpty)
               QuerySquareOverlay(points: currentSegment.debugData.querySquare),
             if (kDebugMode &&
                 currentSegment.debugData.boundingCandidates.isNotEmpty)
@@ -1120,7 +1119,8 @@ class _MapPageState extends State<MapPage>
                 currentSegment.debugData.candidatePaths.isNotEmpty)
               SegmentPolylineOverlay(
                 paths: currentSegment.debugData.candidatePaths,
-                startGeofenceRadius: currentSegment.debugData.startGeofenceRadius,
+                startGeofenceRadius:
+                    currentSegment.debugData.startGeofenceRadius,
                 endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
               ),
             WeighStationsOverlay(
@@ -1159,15 +1159,20 @@ class _MapPageState extends State<MapPage>
               padding: const EdgeInsets.only(top: 16, right: 16),
               child: Builder(
                 builder: (context) {
-                  final ScaffoldState? scaffoldState = Scaffold.maybeOf(context);
-                  final bool isDrawerOpen = scaffoldState?.isEndDrawerOpen ?? false;
+                  final ScaffoldState? scaffoldState = Scaffold.maybeOf(
+                    context,
+                  );
+                  final bool isDrawerOpen =
+                      scaffoldState?.isEndDrawerOpen ?? false;
                   final theme = Theme.of(context);
                   final palette = AppColors.of(context);
                   final bool isDark = theme.brightness == Brightness.dark;
                   final Color backgroundColor = isDrawerOpen
                       ? palette.primary
                       : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
-                  final Color iconColor = isDrawerOpen ? Colors.white : palette.onSurface;
+                  final Color iconColor = isDrawerOpen
+                      ? Colors.white
+                      : palette.onSurface;
                   final BorderSide borderSide = BorderSide(
                     color: isDrawerOpen
                         ? Colors.transparent
@@ -1233,8 +1238,7 @@ class _MapPageState extends State<MapPage>
       hasActiveSegment: currentSegment.hasActiveSegment,
       segmentSpeedLimitKph: currentSegment.activeSegmentSpeedLimitKph,
       segmentDebugPath: currentSegment.activePath,
-      distanceToSegmentStartMeters:
-          currentSegment.distanceToSegmentStartMeters,
+      distanceToSegmentStartMeters: currentSegment.distanceToSegmentStartMeters,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
