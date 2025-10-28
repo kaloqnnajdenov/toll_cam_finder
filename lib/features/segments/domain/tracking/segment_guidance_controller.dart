@@ -46,6 +46,7 @@ class SegmentGuidanceController {
   static const Duration _quietInterval = Duration(seconds: 20);
   static const double _quietDistanceMeters = 500.0;
   static const Duration _aboveLimitGrace = Duration(seconds: 5);
+  static const Duration _aboveLimitReminderInterval = Duration(seconds: 30);
   static const double _initialSpeechSuppressionDistanceMeters = 200.0;
   static const String _toneAsset = 'data/ding_sound.mp3';
   static const Duration _exitAnnouncementGrace = Duration(seconds: 4);
@@ -68,6 +69,7 @@ class SegmentGuidanceController {
   bool _closeToLimitNotified = false;
   DateTime? _aboveLimitSince;
   bool _aboveLimitAlerted = false;
+  DateTime? _lastAboveLimitReminderAt;
   bool _wasOverLimit = false;
   bool _approachAnnounced = false;
   _PendingExitAnnouncement? _pendingExitAnnouncement;
@@ -221,6 +223,7 @@ class SegmentGuidanceController {
     _closeToLimitNotified = false;
     _aboveLimitSince = null;
     _aboveLimitAlerted = false;
+    _lastAboveLimitReminderAt = null;
     _wasOverLimit = false;
     _approachAnnounced = false;
     _suppressGuidanceAudio = false;
@@ -386,6 +389,23 @@ class SegmentGuidanceController {
         } else {
           await _speak('Average above limit. Reduce speed.');
         }
+        _lastAboveLimitReminderAt = now;
+        return true;
+      }
+
+      if (_aboveLimitAlerted &&
+          allowSpeech &&
+          (_lastAboveLimitReminderAt == null ||
+              now.difference(_lastAboveLimitReminderAt!) >=
+                  _aboveLimitReminderInterval)) {
+        _lastAboveLimitReminderAt = now;
+        if (_useBulgarianVoice) {
+          await _playVoicePrompt(
+            AppConstants.averageAboveAllowedVoiceAsset,
+          );
+        } else {
+          await _speak('Average above limit. Reduce speed.');
+        }
         return true;
       }
       return false;
@@ -398,6 +418,7 @@ class SegmentGuidanceController {
       }
       _wasOverLimit = false;
       _aboveLimitAlerted = false;
+      _lastAboveLimitReminderAt = null;
       await _playChime();
       if (_useBulgarianVoice) {
         await _playVoicePrompt(
@@ -411,6 +432,7 @@ class SegmentGuidanceController {
 
     if (averageKph <= limit - 1) {
       _aboveLimitAlerted = false;
+      _lastAboveLimitReminderAt = null;
     }
 
     return false;
