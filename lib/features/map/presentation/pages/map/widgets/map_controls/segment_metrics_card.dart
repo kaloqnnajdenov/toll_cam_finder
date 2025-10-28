@@ -600,7 +600,7 @@ double? _estimateSafeSpeed({
   final double required = (limitKph * remainingKm) / denominator;
   if (!required.isFinite) return limitKph;
 
-  return math.max(0, math.min(limitKph, required));
+  return math.max(0, required);
 }
 
 _MetricValue _formatSpeed(double? speedKph, String unit) {
