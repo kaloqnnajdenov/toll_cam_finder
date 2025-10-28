@@ -373,12 +373,14 @@ class SegmentGuidanceController {
   }) async {
     final double limit = _currentLimitKph!;
     final double margin = 1.0;
+    final bool canDeliverSpeech =
+        allowSpeech || (_useBulgarianVoice && _audioPolicy.allowSpeech);
 
     if (averageKph > limit + margin) {
       _wasOverLimit = true;
       _aboveLimitSince ??= now;
       if (!_aboveLimitAlerted &&
-          allowSpeech &&
+          canDeliverSpeech &&
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
@@ -394,7 +396,7 @@ class SegmentGuidanceController {
       }
 
       if (_aboveLimitAlerted &&
-          allowSpeech &&
+          canDeliverSpeech &&
           (_lastAboveLimitReminderAt == null ||
               now.difference(_lastAboveLimitReminderAt!) >=
                   _aboveLimitReminderInterval)) {
@@ -413,7 +415,7 @@ class SegmentGuidanceController {
 
     _aboveLimitSince = null;
     if (_wasOverLimit && averageKph <= limit) {
-      if (!allowSpeech) {
+      if (!canDeliverSpeech) {
         return false;
       }
       _wasOverLimit = false;
