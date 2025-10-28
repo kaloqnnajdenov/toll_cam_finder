@@ -374,13 +374,21 @@ class SegmentGuidanceController {
     final double limit = _currentLimitKph!;
     final double margin = 1.0;
 
+    final bool allowInitialBreachAnnouncement = allowSpeech ||
+        (_suppressGuidanceAudio &&
+            _audioPolicy.allowSpeech &&
+            !_aboveLimitAlerted);
+
     if (averageKph > limit + margin) {
       _wasOverLimit = true;
       _aboveLimitSince ??= now;
       if (!_aboveLimitAlerted &&
-          allowSpeech &&
+          allowInitialBreachAnnouncement &&
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
+        if (_suppressGuidanceAudio) {
+          _suppressGuidanceAudio = false;
+        }
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
         if (_useBulgarianVoice) {
           await _playVoicePrompt(
