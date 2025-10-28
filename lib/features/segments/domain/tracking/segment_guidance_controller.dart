@@ -46,6 +46,7 @@ class SegmentGuidanceController {
   static const Duration _quietInterval = Duration(seconds: 20);
   static const double _quietDistanceMeters = 500.0;
   static const Duration _aboveLimitGrace = Duration(seconds: 5);
+  static const Duration _aboveLimitReminderInterval = Duration(seconds: 30);
   static const double _initialSpeechSuppressionDistanceMeters = 200.0;
   static const String _toneAsset = 'data/ding_sound.mp3';
   static const Duration _exitAnnouncementGrace = Duration(seconds: 4);
@@ -68,6 +69,7 @@ class SegmentGuidanceController {
   bool _closeToLimitNotified = false;
   DateTime? _aboveLimitSince;
   bool _aboveLimitAlerted = false;
+  DateTime? _lastAboveLimitReminderAt;
   bool _wasOverLimit = false;
   bool _approachAnnounced = false;
   _PendingExitAnnouncement? _pendingExitAnnouncement;
@@ -221,6 +223,7 @@ class SegmentGuidanceController {
     _closeToLimitNotified = false;
     _aboveLimitSince = null;
     _aboveLimitAlerted = false;
+    _lastAboveLimitReminderAt = null;
     _wasOverLimit = false;
     _approachAnnounced = false;
     _suppressGuidanceAudio = false;
@@ -286,6 +289,7 @@ class SegmentGuidanceController {
     _closeToLimitNotified = false;
     _aboveLimitSince = null;
     _aboveLimitAlerted = false;
+    _lastAboveLimitReminderAt = null;
     _wasOverLimit = false;
     _approachAnnounced = false;
     _suppressGuidanceAudio = true;
@@ -374,18 +378,25 @@ class SegmentGuidanceController {
     if (averageKph > limit + margin) {
       _wasOverLimit = true;
       _aboveLimitSince ??= now;
-      if (!_aboveLimitAlerted &&
-          allowSpeech &&
+      if (allowSpeech &&
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
-        _aboveLimitAlerted = true;
-        await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
-        await _speak('Average above limit. Reduce speed.');
-        return true;
+        final bool shouldRemind = !_aboveLimitAlerted ||
+            _lastAboveLimitReminderAt == null ||
+            now.difference(_lastAboveLimitReminderAt!) >=
+                _aboveLimitReminderInterval;
+        if (shouldRemind) {
+          _aboveLimitAlerted = true;
+          _lastAboveLimitReminderAt = now;
+          await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
+          await _speak('Average above limit. Reduce speed.');
+          return true;
+        }
       }
       return false;
     }
 
     _aboveLimitSince = null;
+    _lastAboveLimitReminderAt = null;
     if (_wasOverLimit && averageKph <= limit) {
       if (!allowSpeech) {
         return false;
@@ -399,6 +410,7 @@ class SegmentGuidanceController {
 
     if (averageKph <= limit - 1) {
       _aboveLimitAlerted = false;
+      _lastAboveLimitReminderAt = null;
     }
 
     return false;
