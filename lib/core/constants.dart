@@ -170,6 +170,16 @@ class AppConstants {
   static const String segmentEndingWithNextVoiceAsset =
       'data/segment_ends_in800_than_a_another_one.mp3';
 
+  /// Voice prompt played when the monitored average speed rises above the
+  /// allowed limit (Bulgarian locale).
+  static const String averageAboveAllowedVoiceAsset =
+      'data/avg_above_allowed.mp3';
+
+  /// Voice prompt played when the monitored average speed returns within the
+  /// allowed limit (Bulgarian locale).
+  static const String averageBackWithinAllowedVoiceAsset =
+      'data/avg_below_allowed.mp3';
+
 
   /// The animation controller starts with, and falls back to, a 500 ms duration for
   /// each interpolation run. Increasing that duration makes movements appear slower

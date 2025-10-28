@@ -379,7 +379,13 @@ class SegmentGuidanceController {
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
-        await _speak('Average above limit. Reduce speed.');
+        if (_useBulgarianVoice) {
+          await _playVoicePrompt(
+            AppConstants.averageAboveAllowedVoiceAsset,
+          );
+        } else {
+          await _speak('Average above limit. Reduce speed.');
+        }
         return true;
       }
       return false;
@@ -393,7 +399,13 @@ class SegmentGuidanceController {
       _wasOverLimit = false;
       _aboveLimitAlerted = false;
       await _playChime();
-      await _speak('Average back within limit.');
+      if (_useBulgarianVoice) {
+        await _playVoicePrompt(
+          AppConstants.averageBackWithinAllowedVoiceAsset,
+        );
+      } else {
+        await _speak('Average back within limit.');
+      }
       return true;
     }
 
