@@ -6,7 +6,7 @@ class NotificationPermissionService {
   const NotificationPermissionService();
 
   static const MethodChannel _channel = MethodChannel(
-    'com.example.toll_cam_finder/notifications',
+    'com.kalka.toll_cam_finder/notifications',
   );
 
   Future<bool> ensurePermissionGranted() async {
