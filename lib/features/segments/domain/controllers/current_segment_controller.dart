@@ -11,12 +11,14 @@ class SegmentHandoverStatus {
     this.previousAverageKph,
     this.previousLimitKph,
     this.nextLimitKph,
+    this.hasNextSegment = true,
     required this.createdAt,
   });
 
   final double? previousAverageKph;
   final double? previousLimitKph;
   final double? nextLimitKph;
+  final bool hasNextSegment;
   final DateTime createdAt;
 }
 
@@ -155,6 +157,10 @@ class CurrentSegmentController extends ChangeNotifier {
           averageKph: _lastSegmentAverageKph,
           limitKph: previousLimit,
         );
+
+        if (event.activeSegmentId == null) {
+          _showTerminalHandover(now);
+        }
       }
     }
 
@@ -204,22 +210,16 @@ class CurrentSegmentController extends ChangeNotifier {
       return;
     }
 
-    _handoverStatus = SegmentHandoverStatus(
-      previousAverageKph: pending.averageKph,
-      previousLimitKph: pending.limitKph,
-      nextLimitKph: nextLimitKph,
-      createdAt: timestamp,
+    _setHandoverStatus(
+      SegmentHandoverStatus(
+        previousAverageKph: pending.averageKph,
+        previousLimitKph: pending.limitKph,
+        nextLimitKph: nextLimitKph,
+        hasNextSegment: true,
+        createdAt: timestamp,
+      ),
     );
     _pendingExitSummary = null;
-    _handoverTimer?.cancel();
-    _handoverTimer = Timer(_handoverVisibility, () {
-      if (_handoverStatus != null) {
-        _handoverStatus = null;
-        if (hasListeners) {
-          notifyListeners();
-        }
-      }
-    });
   }
 
   void _expireStaleSummaries(DateTime now) {
@@ -234,5 +234,35 @@ class CurrentSegmentController extends ChangeNotifier {
         now.difference(status.createdAt) > _handoverVisibility) {
       _handoverStatus = null;
     }
+  }
+
+  void _showTerminalHandover(DateTime timestamp) {
+    final _PendingExitSummary? pending = _pendingExitSummary;
+    if (pending == null) {
+      return;
+    }
+
+    _setHandoverStatus(
+      SegmentHandoverStatus(
+        previousAverageKph: pending.averageKph,
+        previousLimitKph: pending.limitKph,
+        nextLimitKph: null,
+        hasNextSegment: false,
+        createdAt: timestamp,
+      ),
+    );
+  }
+
+  void _setHandoverStatus(SegmentHandoverStatus status) {
+    _handoverStatus = status;
+    _handoverTimer?.cancel();
+    _handoverTimer = Timer(_handoverVisibility, () {
+      if (_handoverStatus != null) {
+        _handoverStatus = null;
+        if (hasListeners) {
+          notifyListeners();
+        }
+      }
+    });
   }
 }

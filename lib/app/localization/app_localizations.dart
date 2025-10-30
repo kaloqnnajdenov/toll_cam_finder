@@ -309,6 +309,7 @@ class AppLocalizations {
       'segmentHandoverPreviousAverage': 'Prev avg {value} {unit}',
       'segmentHandoverPreviousLimit': 'Prev limit {value} {unit}',
       'segmentHandoverNextLimit': 'Next limit {value} {unit}',
+      'segmentHandoverNoNextSegment': 'Segment ended',
       'segmentHandoverUnknownValue': '--',
       'personalSegmentDefaultName': 'Personal segment',
       'syncAddedMany': '{count} segments added',
@@ -598,6 +599,7 @@ class AppLocalizations {
 'segmentHandoverPreviousAverage': 'Предишна средна {value} {unit}',
 'segmentHandoverPreviousLimit': 'Предишно ограничение {value} {unit}',
 'segmentHandoverNextLimit': 'Следващо ограничение {value} {unit}',
+'segmentHandoverNoNextSegment': 'Сегментът приключи',
 'segmentHandoverUnknownValue': '--',
 'syncAddedMany': '{count} сегмента добавени',
 'syncAddedOne': '{count} сегмент добавен',
@@ -791,6 +793,8 @@ class AppLocalizations {
         'segmentHandoverNextLimit',
         {'value': value, 'unit': unit},
       );
+  String get segmentHandoverNoNextSegment =>
+      _value('segmentHandoverNoNextSegment');
   String get segmentHandoverUnknownValue => _value('segmentHandoverUnknownValue');
   String get speedDialNoActiveSegment => _value('speedDialNoActiveSegment');
 }
