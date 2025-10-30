@@ -175,6 +175,7 @@ class SegmentGuidanceController {
         now: now,
         averageKph: averageKph,
         allowSpeech: allowSpeech,
+        remainingMeters: remainingMeters,
       );
     }
 
@@ -370,11 +371,30 @@ class SegmentGuidanceController {
     required DateTime now,
     required double averageKph,
     required bool allowSpeech,
+    required double? remainingMeters,
   }) async {
     final double limit = _currentLimitKph!;
     final double margin = 1.0;
     final bool canDeliverSpeech =
         allowSpeech || (_useBulgarianVoice && _audioPolicy.allowSpeech);
+
+    final bool suppressLimitMessages =
+        remainingMeters != null && remainingMeters <= 1000;
+
+    if (suppressLimitMessages) {
+      if (averageKph > limit + margin) {
+        _wasOverLimit = true;
+        _aboveLimitSince ??= now;
+      } else {
+        _aboveLimitSince = null;
+        if (_wasOverLimit && averageKph <= limit) {
+          _wasOverLimit = false;
+          _aboveLimitAlerted = false;
+          _lastAboveLimitReminderAt = null;
+        }
+      }
+      return false;
+    }
 
     if (averageKph > limit + margin) {
       _wasOverLimit = true;
@@ -458,11 +478,6 @@ class SegmentGuidanceController {
 
     _approachAnnounced = true;
 
-    final double? limit =
-        (_currentLimitKph != null && _currentLimitKph!.isFinite)
-        ? _currentLimitKph
-        : null;
-
     if (hasImmediateNextSegment) {
       if (_useBulgarianVoice) {
         await _playVoicePrompt(AppConstants.segmentEndingWithNextVoiceAsset);
@@ -473,25 +488,10 @@ class SegmentGuidanceController {
       final String distanceText = rounded >= 1000
           ? '${(rounded / 1000).toStringAsFixed(1)} km'
           : '$rounded m';
-      final StringBuffer message = StringBuffer(
-        'Current segment ending in $distanceText.',
-      );
+      final String message =
+          'Current segment ending in $distanceText. The next segment starts when the current one ends.';
 
-      if (limit != null) {
-        final String limitText = limit.toStringAsFixed(0);
-        if (averageKph > limit) {
-          final String avgText = averageKph.toStringAsFixed(0);
-          message
-            ..write(' Average speed is $avgText km/h')
-            ..write(', limit is $limitText km/h.');
-        } else {
-          message.write(' Allowed average is $limitText km/h.');
-        }
-      }
-
-      message.write(' The next segment starts when the current one ends.');
-
-      await _speak(message.toString());
+      await _speak(message);
       return true;
     }
 
@@ -500,19 +500,7 @@ class SegmentGuidanceController {
       return true;
     }
 
-    if (limit != null && averageKph > limit) {
-      final int rounded = (remainingMeters / 50).round() * 50;
-      final String distanceText = rounded >= 1000
-          ? '${(rounded / 1000).toStringAsFixed(1)} km'
-          : '$rounded m';
-      final String avgText = averageKph.toStringAsFixed(0);
-      final String limitText = limit.toStringAsFixed(0);
-      await _speak(
-        '$distanceText to end. Average speed is $avgText, speed limit is $limitText.',
-      );
-    } else {
-      await _playChime();
-    }
+    await _playChime();
     return true;
   }
 
