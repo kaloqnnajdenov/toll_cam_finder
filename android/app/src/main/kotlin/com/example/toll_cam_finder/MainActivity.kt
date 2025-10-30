@@ -1,4 +1,4 @@
-package com.example.toll_cam_finder
+package com.kalka.toll_cam_finder
 
 import android.Manifest
 import android.app.PendingIntent
@@ -18,11 +18,11 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val NOTIFICATION_CHANNEL = "com.example.toll_cam_finder/notifications"
+        private const val NOTIFICATION_CHANNEL = "com.kalka.toll_cam_finder/notifications"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
         private const val FOREGROUND_CHANNEL_ID = "geolocator_channel_01"
         private const val FOREGROUND_NOTIFICATION_ID = 75415
-        private const val ACTION_EXIT_APP = "com.example.toll_cam_finder.action.EXIT_APP"
+        private const val ACTION_EXIT_APP = "com.kalka.toll_cam_finder.action.EXIT_APP"
     }
 
     private var pendingNotificationResult: MethodChannel.Result? = null

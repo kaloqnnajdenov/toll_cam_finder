@@ -1,7 +1,7 @@
 name: toll_cam_finder
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0
+version: 1.0.1
 
 environment:
   sdk: ^3.9.0
@@ -45,7 +45,9 @@ flutter:
     - assets/data/segment_ends_in800_than_a_another_one.mp3
     - assets/data/segment_ended.mp3
     - assets/data/approaching_weigh_control.mp3
-
+    - assets/data/avg_above_allowed.mp3
+    - assets/data/avg_below_allowed.mp3
+    
 flutter_launcher_icons:
   android: true
   ios: true
