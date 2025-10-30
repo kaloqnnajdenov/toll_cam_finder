@@ -129,9 +129,10 @@ class _MapPageState extends State<MapPage>
   Future<void>? _metadataLoadFuture;
 
   final OsmSpeedLimitService _osmSpeedLimitService = OsmSpeedLimitService();
-  LatLng? _lastSpeedLimitQueryLocation;
-  DateTime? _lastSpeedLimitQueryAt;
   String? _osmSpeedLimitKph;
+  LatLng? _lastSpeedLimitQueryLocation;
+  Timer? _speedLimitPollTimer;
+  bool _isSpeedLimitRequestInFlight = false;
   bool _simpleModePageOpen = false;
   Timer? _offlineRedirectTimer;
   Timer? _osmUnavailableRedirectTimer;
@@ -208,6 +209,7 @@ class _MapPageState extends State<MapPage>
     _mapEvtSub?.cancel();
     _connectivitySub?.cancel();
     _speedIdleResetTimer?.cancel();
+    _speedLimitPollTimer?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
@@ -495,29 +497,81 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator.animate(from: from, to: next);
   }
 
-  void _maybeFetchSpeedLimit(LatLng position) {
-    final now = DateTime.now();
-    final lastLocation = _lastSpeedLimitQueryLocation;
-    final lastQueryAt = _lastSpeedLimitQueryAt;
+  Duration _currentSpeedLimitPollInterval() {
+    return _osmSpeedLimitKph == null
+        ? const Duration(seconds: 1)
+        : const Duration(seconds: 3);
+  }
 
-    if (lastLocation != null) {
-      final distanceMoved = _distanceCalculator.as(
-        LengthUnit.Meter,
-        lastLocation,
-        position,
-      );
-      const double minDistanceMeters = 30;
-      const Duration minInterval = Duration(seconds: 20);
-      if (distanceMoved < minDistanceMeters &&
-          lastQueryAt != null &&
-          now.difference(lastQueryAt) < minInterval) {
-        return;
-      }
+  void _maybeFetchSpeedLimit(LatLng position) {
+    _lastSpeedLimitQueryLocation = position;
+    final bool hasActiveTimer = _speedLimitPollTimer?.isActive ?? false;
+    if (_isSpeedLimitRequestInFlight || hasActiveTimer) {
+      return;
+    }
+    _speedLimitPollTimer = Timer(Duration.zero, _pollSpeedLimit);
+  }
+
+  void _scheduleNextSpeedLimitPoll() {
+    if (!mounted) {
+      return;
+    }
+    _speedLimitPollTimer?.cancel();
+    _speedLimitPollTimer =
+        Timer(_currentSpeedLimitPollInterval(), _pollSpeedLimit);
+  }
+
+  Future<void> _pollSpeedLimit() async {
+    _speedLimitPollTimer?.cancel();
+    _speedLimitPollTimer = null;
+    if (_isSpeedLimitRequestInFlight) {
+      _scheduleNextSpeedLimitPoll();
+      return;
     }
 
-    _lastSpeedLimitQueryLocation = position;
-    _lastSpeedLimitQueryAt = now;
-    unawaited(_loadSpeedLimit(position));
+    final LatLng? location = _lastSpeedLimitQueryLocation;
+    if (location == null) {
+      return;
+    }
+
+    _isSpeedLimitRequestInFlight = true;
+    try {
+      final result = await _osmSpeedLimitService.fetchSpeedLimit(location);
+      if (!mounted) return;
+
+      final bool shouldUpdateLimit =
+          result != null && result != _osmSpeedLimitKph;
+      final bool shouldUpdateAvailability = !_isOsmServiceAvailable;
+      if (shouldUpdateLimit || shouldUpdateAvailability) {
+        setState(() {
+          _isOsmServiceAvailable = true;
+          if (shouldUpdateLimit) {
+            _osmSpeedLimitKph = result;
+          }
+        });
+      } else {
+        _isOsmServiceAvailable = true;
+      }
+      _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.osmUnavailable);
+      if (_segmentsOnlyModeController.reason ==
+          SegmentsOnlyModeReason.osmUnavailable) {
+        _segmentsOnlyModeController.exitMode();
+        if (_simpleModePageOpen) {
+          unawaited(_closeSimpleModePageIfOpen());
+        }
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      _isOsmServiceAvailable = false;
+      _segmentsOnlyModeController.enterMode(
+        SegmentsOnlyModeReason.osmUnavailable,
+      );
+      _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
+    } finally {
+      _isSpeedLimitRequestInFlight = false;
+      _scheduleNextSpeedLimitPoll();
+    }
   }
 
   void _scheduleSpeedIdleReset() {
@@ -541,34 +595,6 @@ class _MapPageState extends State<MapPage>
       _speedKmh = 0.0;
     });
     _updateSegmentsOnlyMetrics();
-  }
-
-  Future<void> _loadSpeedLimit(LatLng position) async {
-    try {
-      final result = await _osmSpeedLimitService.fetchSpeedLimit(position);
-      if (!mounted) return;
-
-      setState(() {
-        _osmSpeedLimitKph = result;
-        _isOsmServiceAvailable = true;
-      });
-      _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.osmUnavailable);
-      if (_segmentsOnlyModeController.reason ==
-          SegmentsOnlyModeReason.osmUnavailable) {
-        _segmentsOnlyModeController.exitMode();
-        if (_simpleModePageOpen) {
-          unawaited(_closeSimpleModePageIfOpen());
-        }
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      _isOsmServiceAvailable = false;
-      _segmentsOnlyModeController.enterMode(
-        SegmentsOnlyModeReason.osmUnavailable,
-      );
-      _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
-    }
   }
 
   void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
