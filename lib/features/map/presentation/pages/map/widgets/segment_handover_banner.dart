@@ -32,6 +32,9 @@ class SegmentHandoverBanner extends StatelessWidget {
       _formatValue(status.nextLimitKph, unknown),
       unit,
     );
+    final String summaryText = status.hasNextSegment
+        ? nextLimitText
+        : localizations.segmentHandoverNoNextSegment;
 
     return Container(
       margin: margin ?? const EdgeInsets.only(top: 16),
@@ -75,7 +78,7 @@ class SegmentHandoverBanner extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            nextLimitText,
+            summaryText,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 12,
