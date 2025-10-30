@@ -124,7 +124,10 @@ class SegmentGuidanceController {
       if (_hasActiveSegment) {
         _hasActiveSegment = false;
         await _handleSegmentExit(averageKph: averageKph);
-        await reset(stopTts: false);
+        await reset(
+          stopTts: false,
+          preservePendingExitAnnouncement: true,
+        );
         return SegmentGuidanceResult.clear();
       }
       return null;
@@ -216,7 +219,10 @@ class SegmentGuidanceController {
     return SegmentGuidanceResult.update(ui);
   }
 
-  Future<void> reset({bool stopTts = true}) async {
+  Future<void> reset({
+    bool stopTts = true,
+    bool preservePendingExitAnnouncement = false,
+  }) async {
     _hasActiveSegment = false;
     _currentLimitKph = null;
     _lastUiUpdateAt = null;
@@ -229,9 +235,11 @@ class SegmentGuidanceController {
     _approachAnnounced = false;
     _suppressGuidanceAudio = false;
     _furthestDistanceFromStart = null;
-    _pendingExitAnnouncement = null;
-    _exitAnnouncementTimer?.cancel();
-    _exitAnnouncementTimer = null;
+    if (!preservePendingExitAnnouncement) {
+      _pendingExitAnnouncement = null;
+      _exitAnnouncementTimer?.cancel();
+      _exitAnnouncementTimer = null;
+    }
     if (stopTts) {
       await _tts.stop();
     }
@@ -298,6 +306,7 @@ class SegmentGuidanceController {
     final _PendingExitAnnouncement? exitAnnouncement =
         _takePendingExitAnnouncementForCombination();
     if (exitAnnouncement != null) {
+      _suppressGuidanceAudio = false;
       await _announceCombinedBoundary(exitAnnouncement, nextLimitKph: limitKph);
       return;
     }
@@ -478,16 +487,17 @@ class SegmentGuidanceController {
 
     _approachAnnounced = true;
 
+    final int rounded = (remainingMeters / 50).round() * 50;
+    final String distanceText = rounded >= 1000
+        ? '${(rounded / 1000).toStringAsFixed(1)} km'
+        : '$rounded m';
+
     if (hasImmediateNextSegment) {
       if (_useBulgarianVoice) {
         await _playVoicePrompt(AppConstants.segmentEndingWithNextVoiceAsset);
         return true;
       }
 
-      final int rounded = (remainingMeters / 50).round() * 50;
-      final String distanceText = rounded >= 1000
-          ? '${(rounded / 1000).toStringAsFixed(1)} km'
-          : '$rounded m';
       final String message =
           'Current segment ending in $distanceText. The next segment starts when the current one ends.';
 
@@ -501,6 +511,7 @@ class SegmentGuidanceController {
     }
 
     await _playChime();
+    await _speak('Current segment ending in $distanceText.');
     return true;
   }
 
