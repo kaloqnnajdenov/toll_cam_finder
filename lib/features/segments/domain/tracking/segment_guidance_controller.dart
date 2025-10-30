@@ -537,7 +537,7 @@ class SegmentGuidanceController {
     return delta >= _quietDistanceMeters;
   }
 
-   bool _hasImmediateNextSegment({
+  bool _hasImmediateNextSegment({
     required SegmentTrackerEvent event,
     required double? remainingMeters,
   }) {
@@ -547,6 +547,21 @@ class SegmentGuidanceController {
     }
 
     const double toleranceMeters = 120.0;
+    // Require the next segment to roughly continue in the same direction.
+    const double headingToleranceDegrees = 120.0;
+
+    SegmentDebugPath? activePath;
+    for (final SegmentDebugPath path in event.debugData.candidatePaths) {
+      if (path.id == activeId) {
+        activePath = path;
+        break;
+      }
+    }
+
+    final double? activeHeading = activePath == null
+        ? null
+        : _extractPolylineHeading(activePath.polyline, atEnd: true);
+
     for (final SegmentDebugPath path in event.debugData.candidatePaths) {
       if (path.id == activeId) {
         continue;
@@ -556,10 +571,82 @@ class SegmentGuidanceController {
         continue;
       }
       if ((startDistance - remainingMeters).abs() <= toleranceMeters) {
-        return true;
+        if (activeHeading == null) {
+          return true;
+        }
+
+        final double? candidateHeading =
+            _extractPolylineHeading(path.polyline, atEnd: false);
+        if (candidateHeading == null) {
+          return true;
+        }
+
+        final double delta =
+            _minimalHeadingDeltaDegrees(activeHeading, candidateHeading);
+        if (delta <= headingToleranceDegrees) {
+          return true;
+        }
       }
     }
     return false;
+  }
+
+  double? _extractPolylineHeading(List<LatLng> polyline, {required bool atEnd}) {
+    if (polyline.length < 2) {
+      return null;
+    }
+
+    if (atEnd) {
+      for (int i = polyline.length - 1; i > 0; i--) {
+        final LatLng current = polyline[i];
+        final LatLng previous = polyline[i - 1];
+        final double? bearing = _bearingBetween(previous, current);
+        if (bearing != null) {
+          return bearing;
+        }
+      }
+    } else {
+      for (int i = 0; i < polyline.length - 1; i++) {
+        final LatLng current = polyline[i];
+        final LatLng next = polyline[i + 1];
+        final double? bearing = _bearingBetween(current, next);
+        if (bearing != null) {
+          return bearing;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  double? _bearingBetween(LatLng from, LatLng to) {
+    final double lat1 = from.latitude * math.pi / 180.0;
+    final double lat2 = to.latitude * math.pi / 180.0;
+    final double dLon = (to.longitude - from.longitude) * math.pi / 180.0;
+
+    if (dLon.abs() <= 1e-9 && (lat2 - lat1).abs() <= 1e-9) {
+      return null;
+    }
+
+    final double y = math.sin(dLon) * math.cos(lat2);
+    final double x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+
+    final double bearingRad = math.atan2(y, x);
+    final double bearingDeg = bearingRad * 180.0 / math.pi;
+    final double normalized = (bearingDeg + 360.0) % 360.0;
+    return normalized.isFinite ? normalized : null;
+  }
+
+  double _minimalHeadingDeltaDegrees(double a, double b) {
+    double diff = (a - b).abs();
+    while (diff > 360) {
+      diff -= 360;
+    }
+    if (diff > 180) {
+      diff = 360 - diff;
+    }
+    return diff.abs();
   }
 
 
