@@ -51,6 +51,7 @@ class SegmentGuidanceController {
   static const double _initialSpeechSuppressionDistanceMeters = 200.0;
   static const String _toneAsset = 'data/ding_sound.mp3';
   static const Duration _exitAnnouncementGrace = Duration(seconds: 4);
+  static const Duration _immediateNextSegmentGrace = Duration(seconds: 8);
   bool _suppressGuidanceAudio = false;
   bool _useBulgarianVoice = false;
   double? _furthestDistanceFromStart;
@@ -75,6 +76,7 @@ class SegmentGuidanceController {
   bool _approachAnnounced = false;
   _PendingExitAnnouncement? _pendingExitAnnouncement;
   Timer? _exitAnnouncementTimer;
+  DateTime? _expectingImmediateNextSegmentUntil;
 
   void updateAudioPolicy(GuidanceAudioPolicy policy) {
     if (_audioPolicy == policy) {
@@ -124,7 +126,10 @@ class SegmentGuidanceController {
     if (event.endedSegment || event.activeSegmentId == null) {
       if (_hasActiveSegment) {
         _hasActiveSegment = false;
-        await _handleSegmentExit(averageKph: averageKph);
+        await _handleSegmentExit(
+          averageKph: averageKph,
+          now: now,
+        );
         await reset(
           stopTts: false,
           preservePendingExitAnnouncement: true,
@@ -189,6 +194,7 @@ class SegmentGuidanceController {
     );
 
     triggered |= await _checkApproachingExit(
+      now: now,
       remainingMeters: remainingMeters,
       averageKph: averageKph,
       allowSpeech: allowSpeech,
@@ -236,6 +242,7 @@ class SegmentGuidanceController {
     _approachAnnounced = false;
     _suppressGuidanceAudio = false;
     _furthestDistanceFromStart = null;
+    _expectingImmediateNextSegmentUntil = null;
     if (!preservePendingExitAnnouncement) {
       _pendingExitAnnouncement = null;
       _exitAnnouncementTimer?.cancel();
@@ -303,6 +310,7 @@ class SegmentGuidanceController {
     _approachAnnounced = false;
     _suppressGuidanceAudio = true;
     _furthestDistanceFromStart = null;
+    _expectingImmediateNextSegmentUntil = null;
 
     final _PendingExitAnnouncement? exitAnnouncement =
         _takePendingExitAnnouncementForCombination();
@@ -325,23 +333,40 @@ class SegmentGuidanceController {
     await _speak('Zone started. $limitText Tracking average speed.');
   }
 
-  Future<void> _handleSegmentExit({required double averageKph}) async {
+  Future<void> _handleSegmentExit({
+    required double averageKph,
+    required DateTime now,
+  }) async {
     final double? limit =
         (_currentLimitKph != null && _currentLimitKph!.isFinite)
         ? _currentLimitKph
         : null;
     final bool hasAverage = averageKph.isFinite;
 
+    final bool suppressBulgarianExitVoice = _useBulgarianVoice &&
+        _expectingImmediateNextSegmentUntil != null &&
+        now.isBefore(_expectingImmediateNextSegmentUntil!);
+
+    if (suppressBulgarianExitVoice) {
+      _expectingImmediateNextSegmentUntil = null;
+    }
+
     _scheduleExitAnnouncement(
       limitKph: limit,
       averageKph: hasAverage ? averageKph : null,
+      suppressVoicePrompt: suppressBulgarianExitVoice,
     );
   }
 
-  void _scheduleExitAnnouncement({double? limitKph, double? averageKph}) {
+  void _scheduleExitAnnouncement({
+    double? limitKph,
+    double? averageKph,
+    bool suppressVoicePrompt = false,
+  }) {
     _pendingExitAnnouncement = _PendingExitAnnouncement(
       createdAt: DateTime.now(),
       useVoicePrompt: _useBulgarianVoice,
+      suppressVoicePrompt: suppressVoicePrompt,
       limitKph: limitKph,
       averageKph: averageKph,
     );
@@ -471,6 +496,7 @@ class SegmentGuidanceController {
   }
 
   Future<bool> _checkApproachingExit({
+    required DateTime now,
     required double? remainingMeters,
     required double averageKph,
     required bool allowSpeech,
@@ -494,6 +520,8 @@ class SegmentGuidanceController {
         : '$rounded m';
 
     if (hasImmediateNextSegment) {
+      _expectingImmediateNextSegmentUntil =
+          now.add(_immediateNextSegmentGrace);
       if (_useBulgarianVoice) {
         await _playVoicePrompt(AppConstants.segmentEndingWithNextVoiceAsset);
         return true;
@@ -859,6 +887,9 @@ class SegmentGuidanceController {
   Future<void> _deliverExitAnnouncement(
     _PendingExitAnnouncement announcement,
   ) async {
+    if (announcement.suppressVoicePrompt) {
+      return;
+    }
     if (announcement.useVoicePrompt) {
       await _playVoicePrompt(AppConstants.segmentEndedVoiceAsset);
       return;
@@ -893,12 +924,14 @@ class _PendingExitAnnouncement {
   const _PendingExitAnnouncement({
     required this.createdAt,
     required this.useVoicePrompt,
+    required this.suppressVoicePrompt,
     this.limitKph,
     this.averageKph,
   });
 
   final DateTime createdAt;
   final bool useVoicePrompt;
+  final bool suppressVoicePrompt;
   final double? limitKph;
   final double? averageKph;
 }
