@@ -72,7 +72,12 @@ class SegmentMetricsCard extends StatelessWidget {
             : const _MetricValue(value: _MetricValue.missingValue, unit: null);
         final _MetricValue limitSpeed = _formatSpeed(speedLimitKph, speedUnit);
         final _MetricValue safeSpeedFormatted = safeSpeed != null
-            ? _formatSpeed(safeSpeed, speedUnit)
+            ? _formatSpeed(
+                safeSpeed,
+                speedUnit,
+                maxDisplay: 300,
+                showGreaterThanOnCap: true,
+              )
             : const _MetricValue(value: _MetricValue.missingValue, unit: null);
 
         final bool showSafeSpeed =
@@ -603,11 +608,22 @@ double? _estimateSafeSpeed({
   return math.max(0, required);
 }
 
-_MetricValue _formatSpeed(double? speedKph, String unit) {
+_MetricValue _formatSpeed(
+  double? speedKph,
+  String unit, {
+  double? maxDisplay,
+  bool showGreaterThanOnCap = false,
+}) {
   if (speedKph == null || !speedKph.isFinite) {
     return const _MetricValue(value: _MetricValue.missingValue, unit: null);
   }
   final double clamped = speedKph.clamp(0, double.infinity).toDouble();
+  if (maxDisplay != null && clamped > maxDisplay) {
+    final String cappedValue = showGreaterThanOnCap
+        ? '>${maxDisplay.toStringAsFixed(0)}'
+        : maxDisplay.toStringAsFixed(0);
+    return _MetricValue(value: cappedValue, unit: unit);
+  }
   final bool useDecimals = clamped < 10;
   final String formatted = clamped.toStringAsFixed(useDecimals ? 1 : 0);
   return _MetricValue(value: formatted, unit: unit);

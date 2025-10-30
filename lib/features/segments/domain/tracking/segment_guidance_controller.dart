@@ -590,9 +590,21 @@ class SegmentGuidanceController {
       averageStartedAt: averageStartedAt,
     );
 
-    final String? line3 = safeSpeed != null
-        ? 'Est. safe speed now: ${safeSpeed.toStringAsFixed(0)} (computed to finish ≤ limit)'
-        : null;
+    final String? line3;
+    if (safeSpeed != null) {
+      final String safeSpeedText;
+      if (!safeSpeed.isFinite) {
+        safeSpeedText = '--';
+      } else if (safeSpeed > 300) {
+        safeSpeedText = '>300';
+      } else {
+        safeSpeedText = safeSpeed.toStringAsFixed(0);
+      }
+      line3 =
+          'Est. safe speed now: $safeSpeedText (computed to finish ≤ limit)';
+    } else {
+      line3 = null;
+    }
 
     return SegmentGuidanceUiModel(line1: line1, line2: line2, line3: line3);
   }
