@@ -444,7 +444,7 @@ class SegmentGuidanceController {
     }
 
     _aboveLimitSince = null;
-    if (_wasOverLimit && averageKph <= limit) {
+    if (_wasOverLimit && _aboveLimitAlerted && averageKph <= limit) {
       if (!canDeliverSpeech) {
         return false;
       }
@@ -845,52 +845,15 @@ class SegmentGuidanceController {
   }) async {
     await _playChime(times: 2, isBoundary: true);
 
-    final bool isBulgarian = _useBulgarianVoice;
-
-    if (isBulgarian) {
-      final String? limitText = _formatBoundaryNumber(exitAnnouncement.limitKph);
-      final String? averageText = _formatBoundaryNumber(exitAnnouncement.averageKph);
-      final String? nextLimitText = _formatBoundaryNumber(nextLimitKph);
-
-      final List<String> sentences = <String>['Предишната зона приключи.'];
-
-      if (limitText != null && averageText != null) {
-        sentences.add('Позволена средна $limitText, твоята $averageText.');
-      } else if (limitText != null) {
-        sentences.add('Позволена средна $limitText.');
-      } else if (averageText != null) {
-        sentences.add('Твоята средна $averageText.');
-      }
-
-      if (nextLimitText != null) {
-        sentences.add('Започва нова зона с ограничение $nextLimitText.');
-      } else {
-        sentences.add('Започва нова зона.');
-      }
-
-      sentences.add('Следим средната скорост.');
-
-      await _speak(sentences.join(' '));
+    if (_useBulgarianVoice) {
+      await _playVoicePrompt(AppConstants.segmentEnteredVoiceAsset);
       return;
     }
 
-    final String limitText = _formatBoundaryValue(
-      exitAnnouncement.limitKph,
-      bulgarian: false,
-    );
-    final String averageText = _formatBoundaryValue(
-      exitAnnouncement.averageKph,
-      bulgarian: false,
-    );
-    final String nextLimitText = _formatBoundaryValue(
-      nextLimitKph,
-      bulgarian: false,
-    );
-
-    final String message =
-        'Previous zone complete. Allowed average $limitText. Your average $averageText. '
-        'Next zone started. Limit $nextLimitText. Tracking average speed.';
-    await _speak(message);
+    final String limitText = (nextLimitKph != null && nextLimitKph.isFinite)
+        ? 'Limit ${nextLimitKph.toStringAsFixed(0)}.'
+        : 'Limit unknown.';
+    await _speak('Zone started. $limitText Tracking average speed.');
   }
 
   Future<void> _deliverExitAnnouncement(
@@ -924,12 +887,6 @@ class SegmentGuidanceController {
     return value.toStringAsFixed(0);
   }
 
-  String? _formatBoundaryNumber(double? value) {
-    if (value == null || !value.isFinite) {
-      return null;
-    }
-    return value.toStringAsFixed(0);
-  }
 }
 
 class _PendingExitAnnouncement {
