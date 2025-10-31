@@ -38,6 +38,49 @@ class SegmentIndexService {
     _index = SegmentSpatialIndex.build(segments);
   }
 
+  List<SegmentGeometry> _deserializeSegments(
+    List<Map<String, Object?>> rawSegments,
+  ) {
+    final segments = <SegmentGeometry>[];
+    for (final data in rawSegments) {
+      final String? id = data['id'] as String?;
+      final List<dynamic>? rawPath = data['path'] as List<dynamic>?;
+      if (id == null || rawPath == null) {
+        continue;
+      }
+
+      final path = <GeoPoint>[];
+      for (final entry in rawPath) {
+        if (entry is List && entry.length >= 2) {
+          final lat = (entry[0] as num?)?.toDouble();
+          final lon = (entry[1] as num?)?.toDouble();
+          if (lat != null && lon != null) {
+            path.add(GeoPoint(lat, lon));
+          }
+        }
+      }
+
+      if (path.length < 2) {
+        continue;
+      }
+
+      final double? lengthMeters =
+          (data['lengthMeters'] as num?)?.toDouble();
+      final double? speedLimit =
+          (data['speedLimitKph'] as num?)?.toDouble();
+
+      segments.add(
+        SegmentGeometry(
+          id: id,
+          path: path,
+          lengthMeters: lengthMeters,
+          speedLimitKph: speedLimit,
+        ),
+      );
+    }
+    return segments;
+  }
+
   @visibleForTesting
   void resetForTest() {
     _index = null;
@@ -57,25 +100,19 @@ class SegmentIndexService {
     try {
       final raw = await _loadSegmentsData(assetPath);
 
-      List<SegmentGeometry> segments;
+      final parseArgs = <String, Object?>{
+        'raw': raw,
+        'assetPath': assetPath,
+      };
 
-      if (assetPath.toLowerCase().endsWith('.csv')) {
-        segments = _parseCsv(raw);
-      } else {
-        final dynamic decoded = json.decode(raw);
-
-        if (decoded is List) {
-          // Plain JSON array path
-          segments = _parsePlainArray(decoded);
-        } else if (decoded is Map<String, dynamic> &&
-            decoded['type'] == 'FeatureCollection' &&
-            decoded['features'] is List) {
-          // GeoJSON FeatureCollection path
-          segments = _parseGeoJson(decoded);
-        } else {
-          throw const FormatException('Unknown segment format');
-        }
+      List<Map<String, Object?>> serialized;
+      try {
+        serialized = await compute(_parseSegmentsInBackground, parseArgs);
+      } on FlutterError {
+        serialized = _parseSegmentsInBackground(parseArgs);
       }
+
+      final segments = _deserializeSegments(serialized);
 
       if (segments.isNotEmpty) {
         await buildFromGeometries(segments);
@@ -110,131 +147,6 @@ class SegmentIndexService {
   ///     "end":   {"lat": .., "lon": ..}
   ///   }
   /// ]
-  List<SegmentGeometry> _parsePlainArray(List list) {
-    final segments = <SegmentGeometry>[];
-    for (final e in list) {
-      final m = e as Map<String, dynamic>;
-      final id = '${m["id"]}';
-      List<GeoPoint> pts;
-
-      if (m['points'] is List) {
-        pts = (m['points'] as List).map((p) {
-          final mp = p as Map<String, dynamic>;
-          final lat = (mp['lat'] as num).toDouble();
-          final lon = ((mp['lon'] ?? mp['lng']) as num).toDouble();
-          return GeoPoint(lat, lon);
-        }).toList();
-      } else if (m['start'] is Map && m['end'] is Map) {
-        final s = m['start'] as Map<String, dynamic>;
-        final t = m['end'] as Map<String, dynamic>;
-        pts = [
-          GeoPoint(
-            (s['lat'] as num).toDouble(),
-            ((s['lon'] ?? s['lng']) as num).toDouble(),
-          ),
-          GeoPoint(
-            (t['lat'] as num).toDouble(),
-            ((t['lon'] ?? t['lng']) as num).toDouble(),
-          ),
-        ];
-      } else {
-        debugPrint(
-          'SegmentIndexService: skip $id (no geometry in plain array).',
-        );
-        continue;
-      }
-
-      final len = (m['length_m'] is num)
-          ? (m['length_m'] as num).toDouble()
-          : null;
-      double? speedLimit;
-      final dynamic rawSpeedLimit =
-          m['speed_limit_kph'] ?? m['speed_limit'] ?? m['max_speed_kph'];
-      if (rawSpeedLimit is num) {
-        speedLimit = rawSpeedLimit.toDouble();
-      } else if (rawSpeedLimit is String) {
-        speedLimit = double.tryParse(rawSpeedLimit.trim());
-      }
-      segments.add(
-        SegmentGeometry(
-          id: id,
-          path: pts,
-          lengthMeters: len,
-          speedLimitKph: speedLimit,
-        ),
-      );
-    }
-    return segments;
-  }
-
-  /// GeoJSON parser: supports LineString and MultiLineString.
-  /// Expects coordinates in [lon, lat] (GeoJSON spec).
-  /// Uses properties.segment_id as id when present; falls back to feature.id or properties.id.
-  List<SegmentGeometry> _parseGeoJson(Map<String, dynamic> fc) {
-    final features = (fc['features'] as List).cast<Map<String, dynamic>>();
-    final segments = <SegmentGeometry>[];
-
-    for (final feat in features) {
-      final geom = (feat['geometry'] ?? const {}) as Map<String, dynamic>;
-      final type = (geom['type'] ?? '') as String;
-
-      final props = (feat['properties'] ?? const {}) as Map<String, dynamic>;
-      // Prefer properties.segment_id (your schema), then feature.id, then properties.id.
-      final dynamic rawId = props['segment_id'] ?? feat['id'] ?? props['id'];
-      final id = (rawId == null) ? UniqueKey().toString() : '$rawId';
-
-      double? lengthMeters;
-      if (props['length_m'] is num) {
-        lengthMeters = (props['length_m'] as num).toDouble();
-      }
-
-      double? speedLimit;
-      final dynamic rawSpeedLimit =
-          props['speed_limit_kph'] ?? props['speed_limit'];
-      if (rawSpeedLimit is num) {
-        speedLimit = rawSpeedLimit.toDouble();
-      } else if (rawSpeedLimit is String) {
-        speedLimit = double.tryParse(rawSpeedLimit.trim());
-      }
-
-      List<GeoPoint> path;
-
-      if (type == 'LineString') {
-        final coords = (geom['coordinates'] as List);
-        path = _toGeoPointsFromLonLatList(coords);
-      } else if (type == 'MultiLineString') {
-        final lines = (geom['coordinates'] as List);
-        // Flatten all parts; alternatively, you could pick the longest sub-line.
-        path = <GeoPoint>[];
-        for (final part in lines) {
-          path.addAll(_toGeoPointsFromLonLatList(part as List));
-        }
-      } else {
-        // Unsupported geometry types are skipped
-        debugPrint(
-          'SegmentIndexService: skip feature $id (geometry type $type).',
-        );
-        continue;
-      }
-
-      if (path.length < 2) {
-        debugPrint('SegmentIndexService: skip $id (path < 2 points).');
-        continue;
-      }
-
-      segments.add(
-        SegmentGeometry(
-          id: id,
-          path: path,
-          lengthMeters: lengthMeters,
-          speedLimitKph: speedLimit,
-        ),
-      );
-    }
-
-    return segments;
-  }
-
   /// coords: [[lon, lat], [lon, lat], ...]
   List<GeoPoint> _toGeoPointsFromLonLatList(List coords) {
     final out = <GeoPoint>[];
@@ -246,171 +158,6 @@ class SegmentIndexService {
       }
     }
     return out;
-  }
-
-  List<GeoPoint>? _pathFromGeoJsonCell(Object? cell) {
-    if (cell == null) {
-      return null;
-    }
-
-    if (cell is String) {
-      final trimmed = cell.trim();
-      if (trimmed.isEmpty) {
-        return null;
-      }
-      try {
-        return _pathFromGeoJsonGeometry(json.decode(trimmed));
-      } catch (_) {
-        return null;
-      }
-    }
-
-    return _pathFromGeoJsonGeometry(cell);
-  }
-
-  List<GeoPoint>? _pathFromGeoJsonGeometry(dynamic geoJson) {
-    if (geoJson is Map<String, dynamic>) {
-      final type = (geoJson['type'] ?? '').toString();
-      if (type == 'Feature') {
-        return _pathFromGeoJsonGeometry(geoJson['geometry']);
-      }
-      if (type == 'LineString' && geoJson['coordinates'] is List) {
-        return _toGeoPointsFromLonLatList(geoJson['coordinates'] as List);
-      }
-      if (type == 'MultiLineString' && geoJson['coordinates'] is List) {
-        final path = <GeoPoint>[];
-        for (final part in geoJson['coordinates'] as List) {
-          if (part is List) {
-            path.addAll(_toGeoPointsFromLonLatList(part));
-          }
-        }
-        return path.isEmpty ? null : path;
-      }
-    } else if (geoJson is List) {
-      return _toGeoPointsFromLonLatList(geoJson);
-    }
-
-    return null;
-  }
-
-  List<SegmentGeometry> _parseCsv(String raw) {
-    final rows = const CsvToListConverter(
-      fieldDelimiter: ';',
-      shouldParseNumbers: false,
-    ).convert(raw);
-
-    if (rows.isEmpty) {
-      return const [];
-    }
-
-    final header = rows.first
-        .map((e) => e.toString().trim().toLowerCase())
-        .toList(growable: false);
-    final startIdx = header.indexOf('start');
-    final endIdx = header.indexOf('end');
-    final idIdx = header.indexOf('id');
-    final geoJsonIdx = header.indexOf('geojson');
-
-    if (startIdx == -1 || endIdx == -1) {
-      throw  FormatException(AppMessages.csvMissingStartEndColumns);
-    }
-
-    final nameIdx = header.indexOf('name');
-    final roadIdx = header.indexOf('road');
-    final startNameIdx = header.indexOf('start name');
-    final endNameIdx = header.indexOf('end name');
-
-    final segments = <SegmentGeometry>[];
-    final speedLimitIdx = header.indexOf('speed_limit_kph');
-
-    var rowIdx = 0;
-    for (final row in rows.skip(1)) {
-      rowIdx++;
-      LatLng? start;
-      LatLng? end;
-      if (row.length > startIdx) {
-        start = _latLngFromCsv(row[startIdx]);
-      }
-      if (row.length > endIdx) {
-        end = _latLngFromCsv(row[endIdx]);
-      }
-
-      final idParts = <String>[];
-      if (nameIdx != -1 && row.length > nameIdx) {
-        final name = row[nameIdx].toString().trim();
-        if (name.isNotEmpty) idParts.add(name);
-      }
-      if (roadIdx != -1 && row.length > roadIdx) {
-        final road = row[roadIdx].toString().trim();
-        if (road.isNotEmpty) idParts.add(road);
-      }
-      if (startNameIdx != -1 && row.length > startNameIdx) {
-        final sName = row[startNameIdx].toString().trim();
-        if (sName.isNotEmpty) idParts.add(sName);
-      }
-      if (endNameIdx != -1 && row.length > endNameIdx) {
-        final eName = row[endNameIdx].toString().trim();
-        if (eName.isNotEmpty) idParts.add(eName);
-      }
-
-      final explicitId = idIdx != -1 && row.length > idIdx
-          ? row[idIdx].toString().trim()
-          : '';
-      if (explicitId.isNotEmpty) {
-        idParts
-          ..clear()
-          ..add(explicitId);
-      } else {
-        idParts.add('row$rowIdx');
-      }
-      final id = idParts.join('::');
-
-      double? speedLimit;
-      if (speedLimitIdx != -1 && row.length > speedLimitIdx) {
-        final value = row[speedLimitIdx].toString().trim();
-        speedLimit = value.isEmpty ? null : double.tryParse(value);
-      }
-
-      List<GeoPoint>? path;
-      if (geoJsonIdx != -1 && row.length > geoJsonIdx) {
-        path = _pathFromGeoJsonCell(row[geoJsonIdx]);
-      }
-
-      if (path == null || path.length < 2) {
-        if (start == null || end == null) {
-          continue;
-        }
-        path = [
-          GeoPoint(start.latitude, start.longitude),
-          GeoPoint(end.latitude, end.longitude),
-        ];
-      }
-
-      segments.add(
-        SegmentGeometry(
-          id: id,
-          path: path,
-          speedLimitKph: speedLimit,
-        ),
-      );
-    }
-
-    return segments;
-  }
-
-  LatLng? _latLngFromCsv(Object? value) {
-    if (value == null) return null;
-    final text = value.toString().trim();
-    if (text.isEmpty) return null;
-
-    final parts = text.split(',').map((e) => e.trim()).toList();
-    if (parts.length < 2) return null;
-
-    final lat = double.tryParse(parts[0]);
-    final lon = double.tryParse(parts[1]);
-    if (lat == null || lon == null) return null;
-
-    return LatLng(lat, lon);
   }
 
   // -----------------------------------------------------------------------------
@@ -457,11 +204,11 @@ class SegmentIndexService {
 
   @visibleForTesting
   List<SegmentGeometry> parsePlainArrayForTest(List list) =>
-      _parsePlainArray(list);
+      _deserializeSegments(_parsePlainArraySerialized(list));
 
   @visibleForTesting
   List<SegmentGeometry> parseGeoJsonForTest(Map<String, dynamic> fc) =>
-      _parseGeoJson(fc);
+      _deserializeSegments(_parseGeoJsonSerialized(fc));
 
   @visibleForTesting
   List<GeoPoint> toGeoPointsFromLonLatListForTest(List coords) =>
@@ -481,4 +228,341 @@ class SegmentIndexService {
 
     return rootBundle.loadString(assetPath);
   }
+}
+
+List<Map<String, Object?>> _parseSegmentsInBackground(
+  Map<String, Object?> message,
+) {
+  final raw = message['raw'] as String? ?? '';
+  final assetPath = (message['assetPath'] as String? ?? '').toLowerCase();
+
+  if (assetPath.endsWith('.csv')) {
+    return _parseCsvSerialized(raw);
+  }
+
+  final dynamic decoded = json.decode(raw);
+  if (decoded is List) {
+    return _parsePlainArraySerialized(decoded);
+  }
+  if (decoded is Map<String, dynamic> &&
+      decoded['type'] == 'FeatureCollection' &&
+      decoded['features'] is List) {
+    return _parseGeoJsonSerialized(decoded);
+  }
+
+  throw const FormatException('Unknown segment format');
+}
+
+List<Map<String, Object?>> _parsePlainArraySerialized(List list) {
+  final segments = <Map<String, Object?>>[];
+  for (final entry in list) {
+    if (entry is! Map) {
+      continue;
+    }
+
+    final map = entry.cast<String, dynamic>();
+    final id = '${map['id']}';
+
+    List<List<double>>? path;
+    if (map['points'] is List) {
+      path = <List<double>>[];
+      for (final point in (map['points'] as List)) {
+        if (point is Map) {
+          final coords = _latLonFromPointMap(point.cast<String, dynamic>());
+          if (coords != null) {
+            path.add(coords);
+          }
+        }
+      }
+    } else if (map['start'] is Map && map['end'] is Map) {
+      final start =
+          _latLonFromPointMap((map['start'] as Map).cast<String, dynamic>());
+      final end =
+          _latLonFromPointMap((map['end'] as Map).cast<String, dynamic>());
+      if (start != null && end != null) {
+        path = <List<double>>[start, end];
+      }
+    }
+
+    if (path == null || path.length < 2) {
+      continue;
+    }
+
+    final double? lengthMeters = _parseNullableDouble(map['length_m']);
+    final double? speedLimit = _parseNullableDouble(
+      map['speed_limit_kph'] ?? map['speed_limit'] ?? map['max_speed_kph'],
+    );
+
+    segments.add({
+      'id': id,
+      'path': path,
+      if (lengthMeters != null) 'lengthMeters': lengthMeters,
+      if (speedLimit != null) 'speedLimitKph': speedLimit,
+    });
+  }
+  return segments;
+}
+
+List<Map<String, Object?>> _parseGeoJsonSerialized(
+  Map<String, dynamic> featureCollection,
+) {
+  final features = (featureCollection['features'] as List).cast<dynamic>();
+  final segments = <Map<String, Object?>>[];
+
+  for (var index = 0; index < features.length; index += 1) {
+    final feature = features[index];
+    if (feature is! Map) {
+      continue;
+    }
+
+    final featureMap = feature.cast<String, dynamic>();
+    final geometry =
+        (featureMap['geometry'] ?? const <String, dynamic>{}) as Map<String, dynamic>;
+    final properties =
+        (featureMap['properties'] ?? const <String, dynamic>{}) as Map<String, dynamic>;
+    final type = (geometry['type'] ?? '').toString();
+
+    final dynamic rawId =
+        properties['segment_id'] ?? featureMap['id'] ?? properties['id'];
+    final id =
+        rawId == null || (rawId is String && rawId.trim().isEmpty)
+            ? 'feature_$index'
+            : '$rawId';
+
+    final path = _pathFromGeoJsonGeometrySerialized(geometry, type: type);
+    if (path == null || path.length < 2) {
+      continue;
+    }
+
+    final lengthMeters = _parseNullableDouble(properties['length_m']);
+    final speedLimit = _parseNullableDouble(
+      properties['speed_limit_kph'] ?? properties['speed_limit'],
+    );
+
+    segments.add({
+      'id': id,
+      'path': path,
+      if (lengthMeters != null) 'lengthMeters': lengthMeters,
+      if (speedLimit != null) 'speedLimitKph': speedLimit,
+    });
+  }
+
+  return segments;
+}
+
+List<Map<String, Object?>> _parseCsvSerialized(String raw) {
+  final rows = const CsvToListConverter(
+    fieldDelimiter: ';',
+    shouldParseNumbers: false,
+  ).convert(raw);
+
+  if (rows.isEmpty) {
+    return const [];
+  }
+
+  final header = rows.first
+      .map((e) => e.toString().trim().toLowerCase())
+      .toList(growable: false);
+  final startIdx = header.indexOf('start');
+  final endIdx = header.indexOf('end');
+  final idIdx = header.indexOf('id');
+  final geoJsonIdx = header.indexOf('geojson');
+
+  if (startIdx == -1 || endIdx == -1) {
+    throw FormatException(AppMessages.csvMissingStartEndColumns);
+  }
+
+  final nameIdx = header.indexOf('name');
+  final roadIdx = header.indexOf('road');
+  final startNameIdx = header.indexOf('start name');
+  final endNameIdx = header.indexOf('end name');
+  final speedLimitIdx = header.indexOf('speed_limit_kph');
+
+  final segments = <Map<String, Object?>>[];
+
+  var rowIdx = 0;
+  for (final row in rows.skip(1)) {
+    rowIdx += 1;
+
+    final start =
+        row.length > startIdx ? _latLonFromCsvCell(row[startIdx]) : null;
+    final end = row.length > endIdx ? _latLonFromCsvCell(row[endIdx]) : null;
+
+    final idParts = <String>[];
+    if (nameIdx != -1 && row.length > nameIdx) {
+      final name = row[nameIdx].toString().trim();
+      if (name.isNotEmpty) {
+        idParts.add(name);
+      }
+    }
+    if (roadIdx != -1 && row.length > roadIdx) {
+      final road = row[roadIdx].toString().trim();
+      if (road.isNotEmpty) {
+        idParts.add(road);
+      }
+    }
+    if (startNameIdx != -1 && row.length > startNameIdx) {
+      final startName = row[startNameIdx].toString().trim();
+      if (startName.isNotEmpty) {
+        idParts.add(startName);
+      }
+    }
+    if (endNameIdx != -1 && row.length > endNameIdx) {
+      final endName = row[endNameIdx].toString().trim();
+      if (endName.isNotEmpty) {
+        idParts.add(endName);
+      }
+    }
+
+    final explicitId = idIdx != -1 && row.length > idIdx
+        ? row[idIdx].toString().trim()
+        : '';
+    if (explicitId.isNotEmpty) {
+      idParts
+        ..clear()
+        ..add(explicitId);
+    } else {
+      idParts.add('row$rowIdx');
+    }
+
+    final id = idParts.join('::');
+
+    final speedLimit =
+        speedLimitIdx != -1 && row.length > speedLimitIdx
+            ? _parseNullableDouble(row[speedLimitIdx])
+            : null;
+
+    List<List<double>>? path;
+    if (geoJsonIdx != -1 && row.length > geoJsonIdx) {
+      path = _pathFromGeoJsonCellSerialized(row[geoJsonIdx]);
+    }
+
+    if (path == null || path.length < 2) {
+      if (start == null || end == null) {
+        continue;
+      }
+      path = <List<double>>[start, end];
+    }
+
+    segments.add({
+      'id': id,
+      'path': path,
+      if (speedLimit != null) 'speedLimitKph': speedLimit,
+    });
+  }
+
+  return segments;
+}
+
+List<double>? _latLonFromPointMap(Map<String, dynamic> map) {
+  final lat = _parseNullableDouble(map['lat']);
+  final lon =
+      _parseNullableDouble(map['lon'] ?? map['lng'] ?? map['longitude']);
+  if (lat == null || lon == null) {
+    return null;
+  }
+  return <double>[lat, lon];
+}
+
+List<double>? _latLonFromCsvCell(Object? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final text = value.toString().trim();
+  if (text.isEmpty) {
+    return null;
+  }
+
+  final parts = text.split(',').map((part) => part.trim()).toList();
+  if (parts.length < 2) {
+    return null;
+  }
+
+  final lat = double.tryParse(parts[0]);
+  final lon = double.tryParse(parts[1]);
+  if (lat == null || lon == null) {
+    return null;
+  }
+
+  return <double>[lat, lon];
+}
+
+List<List<double>>? _pathFromGeoJsonCellSerialized(Object? cell) {
+  if (cell == null) {
+    return null;
+  }
+
+  if (cell is String) {
+    final trimmed = cell.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    try {
+      return _pathFromGeoJsonGeometrySerialized(json.decode(trimmed));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  return _pathFromGeoJsonGeometrySerialized(cell);
+}
+
+List<List<double>>? _pathFromGeoJsonGeometrySerialized(
+  Object? geometry, {
+  String? type,
+}) {
+  if (geometry is Map<String, dynamic>) {
+    final resolvedType = type ?? (geometry['type'] ?? '').toString();
+    if (resolvedType == 'Feature') {
+      return _pathFromGeoJsonGeometrySerialized(geometry['geometry']);
+    }
+    if (resolvedType == 'LineString' && geometry['coordinates'] is List) {
+      return _coordinatesToLatLonPairs(geometry['coordinates'] as List);
+    }
+    if (resolvedType == 'MultiLineString' && geometry['coordinates'] is List) {
+      final segments = <List<double>>[];
+      for (final part in geometry['coordinates'] as List) {
+        if (part is List) {
+          final coords = _coordinatesToLatLonPairs(part);
+          if (coords != null) {
+            segments.addAll(coords);
+          }
+        }
+      }
+      return segments.isEmpty ? null : segments;
+    }
+  } else if (geometry is List) {
+    return _coordinatesToLatLonPairs(geometry);
+  }
+
+  return null;
+}
+
+List<List<double>>? _coordinatesToLatLonPairs(List coordinates) {
+  final result = <List<double>>[];
+  for (final entry in coordinates) {
+    if (entry is List && entry.length >= 2) {
+      final lon = (entry[0] as num?)?.toDouble();
+      final lat = (entry[1] as num?)?.toDouble();
+      if (lat != null && lon != null) {
+        result.add(<double>[lat, lon]);
+      }
+    }
+  }
+  return result.isEmpty ? null : result;
+}
+
+double? _parseNullableDouble(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return double.tryParse(trimmed);
+  }
+  return null;
 }
