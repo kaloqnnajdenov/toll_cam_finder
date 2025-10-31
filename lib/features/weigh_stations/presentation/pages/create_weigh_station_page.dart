@@ -50,14 +50,6 @@ class _CreateWeighStationPageState extends State<CreateWeighStationPage> {
               WeighStationPickerMap(
                 coordinatesController: _coordinatesController,
               ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _coordinatesController,
-                decoration: InputDecoration(
-                  labelText: localizations.weighStationCoordinatesInputLabel,
-                  hintText: localizations.weighStationCoordinatesHint,
-                ),
-              ),
               const SizedBox(height: 32),
               Align(
                 alignment: Alignment.centerRight,
