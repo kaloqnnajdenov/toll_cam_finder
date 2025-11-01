@@ -24,6 +24,17 @@ extension _MapPageDrawer on _MapPageState {
               onTap: themeController.toggle,
             ),
             ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: Text(localizations.introMenuLabel),
+              onTap: () {
+                Navigator.of(context).pop();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _revealIntro();
+                });
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.sync),
               title: Text(localizations.sync),
               enabled: !_isSyncing,

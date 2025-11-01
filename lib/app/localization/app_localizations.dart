@@ -304,6 +304,43 @@ class AppLocalizations {
       'segmentMetricsDistanceToStart': 'To segment start',
       'segmentMetricsDistanceToEnd': 'To segment end',
       'segmentMetricsSafeSpeed': 'Safe to finish',
+      'introTitle': 'Welcome to TollCam',
+      'introSubtitle':
+          'Here\'s how to read the dashboard and what you can do from the menu.',
+      'introMetricsTitle': 'Dashboard metrics',
+      'introMetricCurrentSpeedTitle': 'Current speed',
+      'introMetricCurrentSpeedBody':
+          'Your live GPS speed so you always know how fast you\'re moving.',
+      'introMetricAverageSpeedTitle': 'Segment average',
+      'introMetricAverageSpeedBody':
+          'The running average for the active toll segment since guidance started.',
+      'introMetricLimitTitle': 'Speed limit / safe speed',
+      'introMetricLimitBody':
+          'Shows the posted limit or the safe speed to finish within the limit when averaging.',
+      'introMetricDistanceTitle': 'Distance',
+      'introMetricDistanceBody':
+          'Distance to the start or end of the selected segment, depending on where you are.',
+      'introSidebarTitle': 'What you can do from the menu',
+      'introSidebarSyncTitle': 'Sync',
+      'introSidebarSyncBody':
+          'Download the latest public segments and weigh stations so you stay up to date offline.',
+      'introSidebarSegmentsTitle': 'Segments',
+      'introSidebarSegmentsBody':
+          'Add new segments. You can keep personal ones without signing in, but you must log in to publish them publicly.',
+      'introSidebarWeighStationsTitle': 'Weigh stations',
+      'introSidebarWeighStationsBody':
+          'Review nearby weigh stations or add your own. Signing in is required to publish them for everyone.',
+      'introSidebarAudioTitle': 'Voice guidance',
+      'introSidebarAudioBody':
+          'Choose which voice alerts you hear and when they play during navigation.',
+      'introSidebarLanguageTitle': 'Language',
+      'introSidebarLanguageBody':
+          'Switch the entire app between supported languages instantly.',
+      'introSidebarProfileTitle': 'Profile & login',
+      'introSidebarProfileBody':
+          'Sign in or create an account. It\'s required to publish segments or weigh stations for the community.',
+      'introDismiss': 'Start exploring',
+      'introMenuLabel': 'Show introduction',
       'segmentMetricsStatusTracking': 'Tracking segment',
       'segmentHandoverTitle': 'New zone started',
       'segmentHandoverPreviousAverage': 'Prev avg {value} {unit}',
@@ -594,6 +631,43 @@ class AppLocalizations {
 'segmentMetricsDistanceToStart': 'До началото',
 'segmentMetricsDistanceToEnd': 'До края',
 'segmentMetricsSafeSpeed': 'Безопасна скорост',
+'introTitle': 'Добре дошли в TollCam',
+'introSubtitle':
+'Научете как да разчитате таблото и какво можете да правите от менюто.',
+'introMetricsTitle': 'Показатели на таблото',
+'introMetricCurrentSpeedTitle': 'Текуща скорост',
+'introMetricCurrentSpeedBody':
+'Показва моментната ви GPS скорост, за да знаете с каква скорост се движите.',
+'introMetricAverageSpeedTitle': 'Средна скорост в сегмента',
+'introMetricAverageSpeedBody':
+'Средната скорост за активния тол сегмент от началото на измерването.',
+'introMetricLimitTitle': 'Ограничение / безопасна скорост',
+'introMetricLimitBody':
+'Показва ограничението в сегмента или необходимата безопасна скорост, за да го завършите в рамките на лимита.',
+'introMetricDistanceTitle': 'Разстояние',
+'introMetricDistanceBody':
+'Разстоянието до началото или края на избрания сегмент според текущата ви позиция.',
+'introSidebarTitle': 'Какво можете да правите от менюто',
+'introSidebarSyncTitle': 'Синхронизирай',
+'introSidebarSyncBody':
+'Изтеглете най-новите публични сегменти и кантари, за да сте актуални офлайн.',
+'introSidebarSegmentsTitle': 'Сегменти',
+'introSidebarSegmentsBody':
+'Добавяйте нови сегменти. Можете да пазите лични без вход, но за публично споделяне е необходим акаунт.',
+'introSidebarWeighStationsTitle': 'Кантари',
+'introSidebarWeighStationsBody':
+'Разглеждайте близките кантари или добавяйте свои. За публикуване е нужен вход.',
+'introSidebarAudioTitle': 'Гласови съобщения',
+'introSidebarAudioBody':
+'Изберете кои гласови известия да чувате и кога да се възпроизвеждат.',
+'introSidebarLanguageTitle': 'Език',
+'introSidebarLanguageBody':
+'Сменете езика на приложението по всяко време.',
+'introSidebarProfileTitle': 'Профил и вход',
+'introSidebarProfileBody':
+'Влезте или създайте акаунт. Необходимо е за публикуване на сегменти и кантари.',
+'introDismiss': 'Започни',
+'introMenuLabel': 'Въведение',
 'segmentMetricsStatusTracking': 'Следене на сегмента',
 'segmentHandoverTitle': 'Нова зона',
 'segmentHandoverPreviousAverage': 'Предишна средна {value} {unit}',
@@ -797,6 +871,46 @@ class AppLocalizations {
       _value('segmentHandoverNoNextSegment');
   String get segmentHandoverUnknownValue => _value('segmentHandoverUnknownValue');
   String get speedDialNoActiveSegment => _value('speedDialNoActiveSegment');
+  String get introTitle => _value('introTitle');
+  String get introSubtitle => _value('introSubtitle');
+  String get introMetricsTitle => _value('introMetricsTitle');
+  String get introMetricCurrentSpeedTitle =>
+      _value('introMetricCurrentSpeedTitle');
+  String get introMetricCurrentSpeedBody =>
+      _value('introMetricCurrentSpeedBody');
+  String get introMetricAverageSpeedTitle =>
+      _value('introMetricAverageSpeedTitle');
+  String get introMetricAverageSpeedBody =>
+      _value('introMetricAverageSpeedBody');
+  String get introMetricLimitTitle => _value('introMetricLimitTitle');
+  String get introMetricLimitBody => _value('introMetricLimitBody');
+  String get introMetricDistanceTitle =>
+      _value('introMetricDistanceTitle');
+  String get introMetricDistanceBody =>
+      _value('introMetricDistanceBody');
+  String get introSidebarTitle => _value('introSidebarTitle');
+  String get introSidebarSyncTitle => _value('introSidebarSyncTitle');
+  String get introSidebarSyncBody => _value('introSidebarSyncBody');
+  String get introSidebarSegmentsTitle =>
+      _value('introSidebarSegmentsTitle');
+  String get introSidebarSegmentsBody =>
+      _value('introSidebarSegmentsBody');
+  String get introSidebarWeighStationsTitle =>
+      _value('introSidebarWeighStationsTitle');
+  String get introSidebarWeighStationsBody =>
+      _value('introSidebarWeighStationsBody');
+  String get introSidebarAudioTitle => _value('introSidebarAudioTitle');
+  String get introSidebarAudioBody => _value('introSidebarAudioBody');
+  String get introSidebarLanguageTitle =>
+      _value('introSidebarLanguageTitle');
+  String get introSidebarLanguageBody =>
+      _value('introSidebarLanguageBody');
+  String get introSidebarProfileTitle =>
+      _value('introSidebarProfileTitle');
+  String get introSidebarProfileBody =>
+      _value('introSidebarProfileBody');
+  String get introDismiss => _value('introDismiss');
+  String get introMenuLabel => _value('introMenuLabel');
 }
 
 class AppLocalizationsDelegate
