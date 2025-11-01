@@ -53,6 +53,8 @@ class AppLocalizations {
       'createSegmentMissingFieldEndCoordinates': 'end coordinates',
       'createSegmentMissingFieldsDelimiter': ', ',
       'createSegmentMissingFieldsConjunction': 'and',
+      'createSegmentInvalidSpeedLimit':
+          'Please enter a valid speed limit using numbers only.',
       'createSegmentMapInstructionBody':
           'Drop or drag markers to adjust the start and end points. Coordinates are filled automatically as you move them.',
       'createSegmentMapInstructionTitle':
@@ -61,6 +63,8 @@ class AppLocalizations {
       'createSegmentNameLabel': 'Segment name',
       'createSegmentRoadNameHint': 'Road name',
       'createSegmentRoadNameLabel': 'Road name',
+      'createSegmentSpeedLimitHint': 'e.g. 90',
+      'createSegmentSpeedLimitLabel': 'Speed limit (km/h)',
       'createSegmentStartCoordinatesHint': '41.8626802,26.0873785',
       'createSegmentStartCoordinatesLabel': 'Start coordinates',
       'createSegmentStartLabel': 'Start',
@@ -470,6 +474,8 @@ class AppLocalizations {
       'createSegmentMissingFieldEndCoordinates': 'крайни координати',
       'createSegmentMissingFieldsDelimiter': ', ',
       'createSegmentMissingFieldsConjunction': 'и',
+      'createSegmentInvalidSpeedLimit':
+          'Моля, въведи валидно ограничение на скоростта, използвайки само числа.',
       'cancelAction': 'Отказ',
       'okAction': 'Добре',
       'deleteAction': 'Изтрий',
@@ -483,6 +489,8 @@ class AppLocalizations {
 'createSegmentNameLabel': 'Име на сегмента',
 'createSegmentRoadNameHint': 'Име на пътя',
 'createSegmentRoadNameLabel': 'Име на пътя',
+'createSegmentSpeedLimitHint': 'напр. 90',
+'createSegmentSpeedLimitLabel': 'Ограничение на скоростта (км/ч)',
 'createSegmentStartCoordinatesHint': '41.8626802,26.0873785',
 'createSegmentStartCoordinatesLabel': 'Начални координати',
 'createSegmentStartLabel': 'Начало',

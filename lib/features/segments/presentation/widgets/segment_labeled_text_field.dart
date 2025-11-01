@@ -9,12 +9,14 @@ class SegmentLabeledTextField extends StatelessWidget {
     required this.label,
     this.hintText,
     this.focusNode,
+    this.keyboardType,
   });
 
   final TextEditingController controller;
   final String label;
   final String? hintText;
   final FocusNode? focusNode;
+  final TextInputType? keyboardType;
 
   @visibleForTesting
   static final RegExp allowedCharactersPattern = RegExp(
@@ -27,6 +29,7 @@ class SegmentLabeledTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,
+      keyboardType: keyboardType,
       inputFormatters: [
         FilteringTextInputFormatter.allow(allowedCharactersPattern),
       ],
