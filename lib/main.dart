@@ -10,6 +10,7 @@ import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mo
 import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
+import 'package:toll_cam_finder/shared/services/weigh_station_preferences_controller.dart';
 import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 void main() async {
@@ -51,6 +52,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => ThemeController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WeighStationPreferencesController(),
         ),
       ],
       child: const TollCamApp(),

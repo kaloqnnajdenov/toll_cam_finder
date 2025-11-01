@@ -339,6 +339,16 @@ class AppLocalizations {
       'introSidebarProfileTitle': 'Profile & login',
       'introSidebarProfileBody':
           'Sign in or create an account. It\'s required to publish segments or weigh stations for the community.',
+      'mapWelcomeTitle': 'Welcome to TollCam',
+      'mapWelcomeDescription':
+          'Let\'s get you set up. Choose your preferred language to personalize the experience.',
+      'mapWelcomeLanguagePrompt': 'Choose your language',
+      'mapWeighStationsPromptTitle': 'See weigh stations on the map?',
+      'mapWeighStationsPromptDescription':
+          'We can show nearby weigh stations while you drive. You can change this anytime from the Weigh stations page.',
+      'mapWeighStationsPromptEnableButton': 'Show weigh stations',
+      'mapWeighStationsPromptSkipButton': 'Not now',
+      'mapWeighStationsEnableButton': 'Enable weigh stations on map',
       'introDismiss': 'Start exploring',
       'introMenuLabel': 'Show introduction',
       'segmentMetricsStatusTracking': 'Tracking segment',
@@ -666,6 +676,16 @@ class AppLocalizations {
 'introSidebarProfileTitle': 'Профил и вход',
 'introSidebarProfileBody':
 'Влезте или създайте акаунт. Необходимо е за публикуване на сегменти и кантари.',
+'mapWelcomeTitle': 'Добре дошли в TollCam',
+'mapWelcomeDescription':
+'Нека ви настроим. Изберете предпочитания от вас език за приложението.',
+'mapWelcomeLanguagePrompt': 'Изберете вашия език',
+'mapWeighStationsPromptTitle': 'Да показваме ли кантари на картата?',
+'mapWeighStationsPromptDescription':
+'Можем да показваме близките кантари по време на пътуване. Можете да промените избора си по всяко време от страницата „Кантари“.',
+'mapWeighStationsPromptEnableButton': 'Показвай кантари',
+'mapWeighStationsPromptSkipButton': 'Не сега',
+'mapWeighStationsEnableButton': 'Активирай кантари на картата',
 'introDismiss': 'Започни',
 'introMenuLabel': 'Въведение',
 'segmentMetricsStatusTracking': 'Следене на сегмента',
@@ -909,6 +929,20 @@ class AppLocalizations {
       _value('introSidebarProfileTitle');
   String get introSidebarProfileBody =>
       _value('introSidebarProfileBody');
+  String get mapWelcomeTitle => _value('mapWelcomeTitle');
+  String get mapWelcomeDescription => _value('mapWelcomeDescription');
+  String get mapWelcomeLanguagePrompt =>
+      _value('mapWelcomeLanguagePrompt');
+  String get mapWeighStationsPromptTitle =>
+      _value('mapWeighStationsPromptTitle');
+  String get mapWeighStationsPromptDescription =>
+      _value('mapWeighStationsPromptDescription');
+  String get mapWeighStationsPromptEnableButton =>
+      _value('mapWeighStationsPromptEnableButton');
+  String get mapWeighStationsPromptSkipButton =>
+      _value('mapWeighStationsPromptSkipButton');
+  String get mapWeighStationsEnableButton =>
+      _value('mapWeighStationsEnableButton');
   String get introDismiss => _value('introDismiss');
   String get introMenuLabel => _value('introMenuLabel');
 }

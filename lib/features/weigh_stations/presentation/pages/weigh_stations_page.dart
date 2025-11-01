@@ -9,6 +9,7 @@ import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station.dar
 import 'package:toll_cam_finder/features/weigh_stations/presentation/widgets/weigh_station_action_dialogs.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/local_weigh_stations_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_repository.dart';
+import 'package:toll_cam_finder/shared/services/weigh_station_preferences_controller.dart';
 
 class WeighStationsPage extends StatefulWidget {
   const WeighStationsPage({super.key});
@@ -109,6 +110,24 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
                 vertical: 12,
               ),
             ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Consumer<WeighStationPreferencesController>(
+            builder: (context, preferences, _) {
+              final bool hasPreference = preferences.hasPreference;
+              final bool showWeighStations =
+                  preferences.shouldShowWeighStations;
+              if (!hasPreference || showWeighStations) {
+                return const SizedBox.shrink();
+              }
+              return FilledButton.icon(
+                onPressed: () => preferences.setShowWeighStations(true),
+                icon: const Icon(Icons.visibility_outlined),
+                label: Text(localizations.mapWeighStationsEnableButton),
+              );
+            },
           ),
         ),
       ),
