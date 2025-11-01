@@ -304,7 +304,7 @@ class AppLocalizations {
       'segmentMetricsHeading': 'Segment overview',
       'segmentMetricsCurrentSpeed': 'Current speed',
       'segmentMetricsAverageSpeed': 'Segment avg',
-      'segmentMetricsSpeedLimit': 'Speed limit',
+      'segmentMetricsSpeedLimit': 'Ticket-Free speed',
       'segmentMetricsDistanceToStart': 'To segment start',
       'segmentMetricsDistanceToEnd': 'To segment end',
       'segmentMetricsSafeSpeed': 'Ticket-Free speed',
@@ -645,7 +645,7 @@ class AppLocalizations {
 'segmentMetricsHeading': 'Преглед на сегмента',
 'segmentMetricsCurrentSpeed': 'Текуща скорост',
 'segmentMetricsAverageSpeed': 'Средна за сегмента',
-'segmentMetricsSpeedLimit': 'Ограничение на скоростта',
+'segmentMetricsSpeedLimit': 'Скорост без фиш',
 'segmentMetricsDistanceToStart': 'До началото',
 'segmentMetricsDistanceToEnd': 'До края',
 'segmentMetricsSafeSpeed': 'Скорост без фиш',
@@ -659,9 +659,9 @@ class AppLocalizations {
 'introMetricAverageSpeedTitle': 'Средна скорост в сегмента',
 'introMetricAverageSpeedBody':
 'Средната скорост за активния тол сегмент от началото на измерването.',
-'introMetricLimitTitle': 'Ограничение / скорост без фиш',
+'introMetricLimitTitle': 'скорост без фиш',
 'introMetricLimitBody':
-'Показва ограничението в сегмента или необходимата скорост без фиш, за да го завършите в рамките на лимита.',
+'Показва скоростта която трябва да поддържате, за да завършите сегмента в допустимата средна скорост.',
 'introMetricDistanceTitle': 'Разстояние',
 'introMetricDistanceBody':
 'Разстоянието до началото или края на избрания сегмент според текущата ви позиция.',
