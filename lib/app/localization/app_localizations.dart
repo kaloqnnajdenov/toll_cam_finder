@@ -303,7 +303,7 @@ class AppLocalizations {
       'segmentMetricsSpeedLimit': 'Speed limit',
       'segmentMetricsDistanceToStart': 'To segment start',
       'segmentMetricsDistanceToEnd': 'To segment end',
-      'segmentMetricsSafeSpeed': 'Safe to finish',
+      'segmentMetricsSafeSpeed': 'Ticket-Free speed',
       'introTitle': 'Welcome to TollCam',
       'introSubtitle':
           'Here\'s how to read the dashboard and what you can do from the menu.',
@@ -314,9 +314,9 @@ class AppLocalizations {
       'introMetricAverageSpeedTitle': 'Segment average',
       'introMetricAverageSpeedBody':
           'The running average for the active toll segment since guidance started.',
-      'introMetricLimitTitle': 'Speed limit / safe speed',
+      'introMetricLimitTitle': 'Speed limit / Ticket-Free speed',
       'introMetricLimitBody':
-          'Shows the posted limit or the safe speed to finish within the limit when averaging.',
+          'Shows the posted limit or the Ticket-Free speed to finish within the limit when averaging.',
       'introMetricDistanceTitle': 'Distance',
       'introMetricDistanceBody':
           'Distance to the start or end of the selected segment, depending on where you are.',
@@ -640,7 +640,7 @@ class AppLocalizations {
 'segmentMetricsSpeedLimit': 'Ограничение на скоростта',
 'segmentMetricsDistanceToStart': 'До началото',
 'segmentMetricsDistanceToEnd': 'До края',
-'segmentMetricsSafeSpeed': 'Безопасна скорост',
+'segmentMetricsSafeSpeed': 'Скорост без фиш',
 'introTitle': 'Добре дошли в TollCam',
 'introSubtitle':
 'Научете как да разчитате таблото и какво можете да правите от менюто.',
@@ -651,9 +651,9 @@ class AppLocalizations {
 'introMetricAverageSpeedTitle': 'Средна скорост в сегмента',
 'introMetricAverageSpeedBody':
 'Средната скорост за активния тол сегмент от началото на измерването.',
-'introMetricLimitTitle': 'Ограничение / безопасна скорост',
+'introMetricLimitTitle': 'Ограничение / скорост без фиш',
 'introMetricLimitBody':
-'Показва ограничението в сегмента или необходимата безопасна скорост, за да го завършите в рамките на лимита.',
+'Показва ограничението в сегмента или необходимата скорост без фиш, за да го завършите в рамките на лимита.',
 'introMetricDistanceTitle': 'Разстояние',
 'introMetricDistanceBody':
 'Разстоянието до началото или края на избрания сегмент според текущата ви позиция.',

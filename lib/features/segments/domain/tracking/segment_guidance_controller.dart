@@ -688,7 +688,7 @@ class SegmentGuidanceController {
         safeSpeedText = safeSpeed.toStringAsFixed(0);
       }
       line3 =
-          'Est. safe speed now: $safeSpeedText (computed to finish ≤ limit)';
+          'Est. Ticket-Free speed now: $safeSpeedText (computed to finish ≤ limit)';
     } else {
       line3 = null;
     }
