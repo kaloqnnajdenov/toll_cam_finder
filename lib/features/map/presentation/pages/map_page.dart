@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/core/app_messages.dart';
@@ -70,6 +71,7 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  static const String _introCompletedPreferenceKey = 'map_intro_completed';
   static const double _mapFollowEpsilonDeg = 1e-6;
   // External services
   final MapController _mapController = MapController();
@@ -162,7 +164,8 @@ class _MapPageState extends State<MapPage>
   bool _showIntro = false;
   bool _showWelcomeOverlay = false;
   bool _showWeighStationsPrompt = false;
-  bool _introFlowPresented = false;
+  bool? _introCompleted;
+  bool _introFlowPresented = true;
 
   AverageSpeedController get _avgCtrl =>
       _currentSegmentController.averageController;
@@ -184,6 +187,7 @@ class _MapPageState extends State<MapPage>
     _weighStationPreferencesController =
         context.read<WeighStationPreferencesController>();
     _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
+    unawaited(_loadIntroCompletionStatus());
     unawaited(_initConnectivityMonitoring());
     _audioController.addListener(_updateAudioPolicy);
     _languageController.addListener(_handleLanguageChange);
@@ -1145,9 +1149,15 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       return;
     }
+    final bool alreadyCompleted = _introCompleted == true;
     setState(() {
       _showIntro = false;
+      _introCompleted = true;
+      _introFlowPresented = true;
     });
+    if (!alreadyCompleted) {
+      unawaited(_persistIntroCompletion());
+    }
   }
 
   void _handleWeighStationPreferenceChange() {
@@ -1193,6 +1203,24 @@ class _MapPageState extends State<MapPage>
       _showWeighStationsPrompt = showPrompt;
       _showIntro = showIntro;
     });
+  }
+
+  Future<void> _loadIntroCompletionStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final completed = prefs.getBool(_introCompletedPreferenceKey) ?? false;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _introCompleted = completed;
+      _introFlowPresented = completed;
+    });
+    _evaluateIntroFlow();
+  }
+
+  Future<void> _persistIntroCompletion() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_introCompletedPreferenceKey, true);
   }
 
   void _dismissWelcomeOverlay() {

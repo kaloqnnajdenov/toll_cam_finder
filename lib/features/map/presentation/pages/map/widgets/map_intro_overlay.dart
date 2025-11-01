@@ -223,12 +223,6 @@ class _IntroContentCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: onDismiss,
-                  tooltip: MaterialLocalizations.of(context).closeButtonLabel,
-                  icon: const Icon(Icons.close),
-                ),
               ],
             ),
             const SizedBox(height: 28),
