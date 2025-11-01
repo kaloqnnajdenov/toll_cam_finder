@@ -73,6 +73,8 @@ class _MapPageState extends State<MapPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const String _introCompletedPreferenceKey = 'map_intro_completed';
   static const double _mapFollowEpsilonDeg = 1e-6;
+  static const Duration _osmUnavailableGracePeriod = Duration(seconds: 3);
+
   // External services
   final MapController _mapController = MapController();
   final PermissionService _permissionService = PermissionService();
@@ -147,6 +149,7 @@ class _MapPageState extends State<MapPage>
   Timer? _osmUnavailableRedirectTimer;
   bool _hasConnectivity = true;
   bool _isOsmServiceAvailable = true;
+  DateTime? _osmUnavailableSince;
 
   double? _speedKmh;
   bool _isSyncing = false;
@@ -572,6 +575,7 @@ class _MapPageState extends State<MapPage>
       final result = await _osmSpeedLimitService.fetchSpeedLimit(location);
       if (!mounted) return;
 
+      _osmUnavailableSince = null;
       final bool shouldUpdateLimit =
           result != null && result != _osmSpeedLimitKph;
       final bool shouldUpdateAvailability = !_isOsmServiceAvailable;
@@ -596,11 +600,20 @@ class _MapPageState extends State<MapPage>
     } catch (_) {
       if (!mounted) return;
 
+      final DateTime now = DateTime.now();
       _isOsmServiceAvailable = false;
-      _segmentsOnlyModeController.enterMode(
-        SegmentsOnlyModeReason.osmUnavailable,
-      );
-      _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
+      _osmUnavailableSince ??= now;
+
+      if (now.difference(_osmUnavailableSince!) >=
+          _osmUnavailableGracePeriod) {
+        if (_segmentsOnlyModeController.reason !=
+            SegmentsOnlyModeReason.osmUnavailable) {
+          _segmentsOnlyModeController.enterMode(
+            SegmentsOnlyModeReason.osmUnavailable,
+          );
+        }
+        _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
+      }
     } finally {
       _isSpeedLimitRequestInFlight = false;
       _scheduleNextSpeedLimitPoll();
