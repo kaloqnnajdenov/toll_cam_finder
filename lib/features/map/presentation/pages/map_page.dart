@@ -141,6 +141,8 @@ class _MapPageState extends State<MapPage>
   Timer? _speedLimitPollTimer;
   bool _isSpeedLimitRequestInFlight = false;
   bool _simpleModePageOpen = false;
+  Timer? _initialLocationInitTimer;
+  bool _initialLocationInitScheduled = false;
   Timer? _offlineRedirectTimer;
   Timer? _osmUnavailableRedirectTimer;
   bool _hasConnectivity = true;
@@ -216,7 +218,6 @@ class _MapPageState extends State<MapPage>
     _handleLanguageChange();
 
     _mapEvtSub = _mapController.mapEventStream.listen(_onMapEvent);
-    unawaited(_initLocation());
     unawaited(_initSegmentsIndex());
     _updateAudioPolicy();
 
@@ -235,6 +236,7 @@ class _MapPageState extends State<MapPage>
     _connectivitySub?.cancel();
     _speedIdleResetTimer?.cancel();
     _speedLimitPollTimer?.cancel();
+    _initialLocationInitTimer?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
@@ -1158,6 +1160,9 @@ class _MapPageState extends State<MapPage>
     if (!alreadyCompleted) {
       unawaited(_persistIntroCompletion());
     }
+    _scheduleInitialLocationInit(
+      delay: const Duration(milliseconds: 2500),
+    );
   }
 
   void _handleWeighStationPreferenceChange() {
@@ -1215,7 +1220,28 @@ class _MapPageState extends State<MapPage>
       _introCompleted = completed;
       _introFlowPresented = completed;
     });
+    if (completed) {
+      _scheduleInitialLocationInit();
+    }
     _evaluateIntroFlow();
+  }
+
+  void _scheduleInitialLocationInit({Duration delay = Duration.zero}) {
+    if (_initialLocationInitScheduled) {
+      return;
+    }
+    _initialLocationInitScheduled = true;
+    _initialLocationInitTimer?.cancel();
+    if (delay == Duration.zero) {
+      unawaited(_initLocation());
+      return;
+    }
+    _initialLocationInitTimer = Timer(delay, () {
+      if (!mounted) {
+        return;
+      }
+      unawaited(_initLocation());
+    });
   }
 
   Future<void> _persistIntroCompletion() async {
