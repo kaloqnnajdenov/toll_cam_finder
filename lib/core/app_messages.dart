@@ -220,6 +220,10 @@ class AppMessages {
       _l.translate('createSegmentRoadNameLabel');
   static String get createSegmentRoadNameHint =>
       _l.translate('createSegmentRoadNameHint');
+  static String get createSegmentSpeedLimitLabel =>
+      _l.translate('createSegmentSpeedLimitLabel');
+  static String get createSegmentSpeedLimitHint =>
+      _l.translate('createSegmentSpeedLimitHint');
   static String get createSegmentStartLabel =>
       _l.translate('createSegmentStartLabel');
   static String get createSegmentStartNameHint =>
@@ -254,6 +258,8 @@ class AppMessages {
       _l.translate('createSegmentMissingFieldsDelimiter');
   static String get createSegmentMissingFieldsConjunction =>
       _l.translate('createSegmentMissingFieldsConjunction');
+  static String get createSegmentInvalidSpeedLimit =>
+      _l.translate('createSegmentInvalidSpeedLimit');
   static String failedToLoadCameras(String error) =>
       _l.translate('failedToLoadCameras', {'error': error});
   static String get failedToAccessSegmentsMetadataFile =>

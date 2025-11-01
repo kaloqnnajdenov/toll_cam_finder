@@ -24,6 +24,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   static String? _cachedEndDisplayName;
   static String? _cachedStartCoordinates;
   static String? _cachedEndCoordinates;
+  static String? _cachedSpeedLimit;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _roadNameController = TextEditingController();
@@ -31,6 +32,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
   final TextEditingController _endNameController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
   final TextEditingController _endController = TextEditingController();
+  final TextEditingController _speedLimitController = TextEditingController();
   final FocusNode _nameFocusNode = FocusNode();
   final LocalSegmentsService _localSegmentsService = LocalSegmentsService();
   bool _persistDraftOnDispose = true;
@@ -58,6 +60,9 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     if (_cachedEndCoordinates != null) {
       _endController.text = _cachedEndCoordinates!;
     }
+    if (_cachedSpeedLimit != null) {
+      _speedLimitController.text = _cachedSpeedLimit!;
+    }
   }
 
   @override
@@ -69,6 +74,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       _cachedEndDisplayName = _endNameController.text;
       _cachedStartCoordinates = _startController.text;
       _cachedEndCoordinates = _endController.text;
+      _cachedSpeedLimit = _speedLimitController.text;
     } else {
       _cachedName = null;
       _cachedRoadName = null;
@@ -76,6 +82,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
       _cachedEndDisplayName = null;
       _cachedStartCoordinates = null;
       _cachedEndCoordinates = null;
+      _cachedSpeedLimit = null;
     }
     _nameController.dispose();
     _roadNameController.dispose();
@@ -83,6 +90,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _endNameController.dispose();
     _startController.dispose();
     _endController.dispose();
+    _speedLimitController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
   }
@@ -205,6 +213,16 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
                                   label: AppMessages.createSegmentRoadNameLabel,
                                   hintText:
                                       AppMessages.createSegmentRoadNameHint,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              SegmentLabeledTextField(
+                                controller: _speedLimitController,
+                                label: AppMessages.createSegmentSpeedLimitLabel,
+                                hintText: AppMessages.createSegmentSpeedLimitHint,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
                                 ),
                               ),
                             ],
@@ -490,6 +508,22 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     }
 
     try {
+      final speedLimitText = _speedLimitController.text.trim();
+      double? speedLimitKph;
+      if (speedLimitText.isNotEmpty) {
+        final normalizedSpeedLimit =
+            speedLimitText.replaceAll(',', '.').replaceAll(' ', '');
+        final parsedSpeedLimit =
+            double.tryParse(normalizedSpeedLimit);
+        if (parsedSpeedLimit == null ||
+            !parsedSpeedLimit.isFinite ||
+            parsedSpeedLimit <= 0) {
+          _showSnackBar(AppMessages.createSegmentInvalidSpeedLimit);
+          return null;
+        }
+        speedLimitKph = parsedSpeedLimit;
+      }
+
       return _localSegmentsService.prepareDraft(
         name: _nameController.text,
         roadName: _roadNameController.text,
@@ -498,6 +532,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
         startCoordinates: _startController.text,
         endCoordinates: _endController.text,
         isPublic: isPublic,
+        speedLimitKph: speedLimitKph,
         routeGeoJson: _routeGeoJson,
       );
     } on LocalSegmentsServiceException catch (error) {
@@ -539,6 +574,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedEndDisplayName = null;
     _cachedStartCoordinates = null;
     _cachedEndCoordinates = null;
+    _cachedSpeedLimit = null;
     _routeGeoJson = null;
   }
 
@@ -549,6 +585,7 @@ class _CreateSegmentPageState extends State<CreateSegmentPage> {
     _cachedEndDisplayName = _endNameController.text;
     _cachedStartCoordinates = _startController.text;
     _cachedEndCoordinates = _endController.text;
+    _cachedSpeedLimit = _speedLimitController.text;
   }
 }
 
