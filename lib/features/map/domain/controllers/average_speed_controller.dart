@@ -8,9 +8,13 @@ class AverageSpeedController extends ChangeNotifier {
   AverageSpeedController({AverageSpeedCalculator? calculator})
     : _calculator = calculator ?? const AverageSpeedCalculator();
 
+  static const Duration _smoothingDuration = Duration(seconds: 20);
+
   bool _isRunning = false;
   double _distanceMeters = 0.0;
-  double _averageKph = 0.0;
+  double _rawAverageKph = 0.0;
+  double _displayAverageKph = 0.0;
+  bool _hasDisplayAverage = false;
   DateTime? _startedAt;
   DateTime? _lastSampleAt;
   Timer? _ticker;
@@ -33,12 +37,14 @@ class AverageSpeedController extends ChangeNotifier {
     return diff;
   }
 
-  double get average => _averageKph;
+  double get average => _displayAverageKph;
 
   void start({DateTime? startedAt}) {
     _isRunning = true;
     _distanceMeters = 0.0;
-    _averageKph = 0.0;
+    _rawAverageKph = 0.0;
+    _displayAverageKph = 0.0;
+    _hasDisplayAverage = false;
     _startedAt = startedAt ?? DateTime.now();
     _lastSampleAt = _startedAt;
     _startTicker();
@@ -48,7 +54,9 @@ class AverageSpeedController extends ChangeNotifier {
   void reset() {
     _isRunning = false;
     _distanceMeters = 0.0;
-    _averageKph = 0.0;
+    _rawAverageKph = 0.0;
+    _displayAverageKph = 0.0;
+    _hasDisplayAverage = false;
     _startedAt = null;
     _lastSampleAt = null;
     _stopTicker();
@@ -120,7 +128,9 @@ class AverageSpeedController extends ChangeNotifier {
 
   void _updateAverage({DateTime? now, bool forceNotify = false}) {
     if (!_isRunning || _startedAt == null) {
-      _averageKph = 0.0;
+      _rawAverageKph = 0.0;
+      _displayAverageKph = 0.0;
+      _hasDisplayAverage = false;
       if (forceNotify) {
         notifyListeners();
       }
@@ -138,7 +148,9 @@ class AverageSpeedController extends ChangeNotifier {
 
     final Duration diff = referenceTime.difference(_startedAt!);
     if (diff <= Duration.zero) {
-      _averageKph = 0.0;
+      _rawAverageKph = 0.0;
+      _displayAverageKph = 0.0;
+      _hasDisplayAverage = false;
       _lastSampleAt = referenceTime;
       if (forceNotify) {
         notifyListeners();
@@ -146,13 +158,34 @@ class AverageSpeedController extends ChangeNotifier {
       return;
     }
 
-    final double nextAverage = _calculator.calculateKph(
+    final double nextRawAverage = _calculator.calculateKph(
       distanceMeters: _distanceMeters,
       elapsed: diff,
     );
 
-    final bool changed = (_averageKph - nextAverage).abs() > 1e-6;
-    _averageKph = nextAverage;
+    _rawAverageKph = nextRawAverage;
+
+    final bool smoothingActive = diff < _smoothingDuration;
+    final double nextDisplayAverage;
+    if (!smoothingActive) {
+      nextDisplayAverage = nextRawAverage;
+    } else if (!_hasDisplayAverage) {
+      nextDisplayAverage = nextRawAverage;
+    } else {
+      final double progress =
+          (diff.inMilliseconds / _smoothingDuration.inMilliseconds)
+              .clamp(0.0, 1.0);
+      const double minWeight = 0.35;
+      final double weight =
+          minWeight + (1 - minWeight) * progress; // -> [0.35, 1.0]
+      nextDisplayAverage =
+          _displayAverageKph + (nextRawAverage - _displayAverageKph) * weight;
+    }
+
+    final bool changed =
+        (_displayAverageKph - nextDisplayAverage).abs() > 1e-6;
+    _displayAverageKph = nextDisplayAverage;
+    _hasDisplayAverage = true;
     _lastSampleAt = referenceTime;
     if (forceNotify || changed) {
       notifyListeners();
