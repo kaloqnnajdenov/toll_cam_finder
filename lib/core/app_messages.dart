@@ -69,6 +69,8 @@ class AppMessages {
       _l.translate('segmentBadgeHidden');
   static String get segmentBadgeLocal =>
       _l.translate('segmentBadgeLocal');
+  static String get segmentBadgeApproved =>
+      _l.translate('segmentBadgeApproved');
   static String get segmentBadgeReview =>
       _l.translate('segmentBadgeReview');
   static String get segmentLocationStartLabel =>
