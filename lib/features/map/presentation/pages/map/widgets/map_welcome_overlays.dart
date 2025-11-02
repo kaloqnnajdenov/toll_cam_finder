@@ -25,11 +25,24 @@ class MapWelcomeOverlay extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = AppColors.of(context);
     final localizations = AppLocalizations.of(context);
+    final englishLocalizations =
+        localizations.locale.languageCode == 'en'
+            ? localizations
+            : AppLocalizations(const Locale('en'));
     final bool isDark = theme.brightness == Brightness.dark;
 
     final List<LanguageOption> availableOptions = languageOptions
         .where((option) => option.available)
         .toList(growable: false);
+
+    String labelFor(LanguageOption option) {
+      switch (option.languageCode) {
+        case 'en':
+          return englishLocalizations.languageLabelEnglish;
+        default:
+          return option.label;
+      }
+    }
 
     return IgnorePointer(
       ignoring: !visible,
@@ -85,13 +98,13 @@ class MapWelcomeOverlay extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                localizations.mapWelcomeTitle,
+                                englishLocalizations.mapWelcomeTitle,
                                 style: theme.textTheme.headlineSmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 24),
                               Text(
-                                localizations.mapWelcomeLanguagePrompt,
+                                englishLocalizations.mapWelcomeLanguagePrompt,
                                 style: theme.textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
@@ -105,7 +118,7 @@ class MapWelcomeOverlay extends StatelessWidget {
                                       onLanguageSelected(code);
                                     }
                                   },
-                                  title: Text(option.label),
+                                  title: Text(labelFor(option)),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
@@ -116,7 +129,7 @@ class MapWelcomeOverlay extends StatelessWidget {
                                 alignment: Alignment.centerRight,
                                 child: FilledButton(
                                   onPressed: onContinue,
-                                  child: Text(localizations.continueLabel),
+                                  child: Text(englishLocalizations.continueLabel),
                                 ),
                               ),
                             ],
