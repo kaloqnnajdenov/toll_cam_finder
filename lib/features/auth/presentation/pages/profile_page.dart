@@ -162,7 +162,7 @@ class ProfilePage extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(localizations.cancelAction),
+                    child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
                   ),
                   FilledButton(
                     style: FilledButton.styleFrom(
@@ -182,7 +182,7 @@ class ProfilePage extends StatelessWidget {
                         });
                       }
                     },
-                    child: Text(localizations.deleteAction),
+                    child: Text(localizations.profileDeleteAccountAction),
                   ),
                 ],
               );
