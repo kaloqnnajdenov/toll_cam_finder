@@ -84,7 +84,7 @@ class ProfilePage extends StatelessWidget {
     AppLocalizations localizations,
   ) async {
     final confirmed = await _showDeleteAccountDialog(context, localizations);
-    if (confirmed != true) {
+    if (!context.mounted || confirmed != true) {
       return;
     }
 
@@ -107,6 +107,10 @@ class ProfilePage extends StatelessWidget {
 
     try {
       await context.read<AuthController>().deleteAccount();
+      if (!context.mounted) {
+        closeLoadingDialog();
+        return;
+      }
       closeLoadingDialog();
       messenger.showSnackBar(
         SnackBar(content: Text(localizations.profileDeleteAccountSuccess)),
@@ -128,72 +132,71 @@ class ProfilePage extends StatelessWidget {
     BuildContext context,
     AppLocalizations localizations,
   ) async {
-    final controller = TextEditingController();
+    String confirmationInput = '';
     String? errorText;
-    try {
-      final result = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              return AlertDialog(
-                title: Text(localizations.profileDeleteAccountConfirmTitle),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(localizations.profileDeleteAccountConfirmBody),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          labelText:
-                              localizations.profileDeleteAccountConfirmLabel,
-                          helperText:
-                              localizations.profileDeleteAccountConfirmHelper,
-                          errorText: errorText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-                  ),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.error,
-                      foregroundColor:
-                          Theme.of(context).colorScheme.onError,
-                    ),
-                    onPressed: () {
-                      final input = controller.text.trim();
-                      if (input.toUpperCase() == 'DELETE') {
-                        Navigator.of(context).pop(true);
-                      } else {
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(localizations.profileDeleteAccountConfirmTitle),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(localizations.profileDeleteAccountConfirmBody),
+                    const SizedBox(height: 16),
+                    TextField(
+                      autofocus: true,
+                      onChanged: (value) {
                         setState(() {
-                          errorText =
-                              localizations.profileDeleteAccountMismatch;
+                          confirmationInput = value;
+                          errorText = null;
                         });
-                      }
-                    },
-                    child: Text(localizations.profileDeleteAccountAction),
+                      },
+                      decoration: InputDecoration(
+                        labelText:
+                            localizations.profileDeleteAccountConfirmLabel,
+                        helperText:
+                            localizations.profileDeleteAccountConfirmHelper,
+                        errorText: errorText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
                   ),
-                ],
-              );
-            },
-          );
-        },
-      );
-      return result;
-    } finally {
-      controller.dispose();
-    }
+                  onPressed: () {
+                    final input = confirmationInput.trim();
+                    if (input.toUpperCase() == 'DELETE') {
+                      Navigator.of(context).pop(true);
+                    } else {
+                      setState(() {
+                        errorText = localizations.profileDeleteAccountMismatch;
+                      });
+                    }
+                  },
+                  child: Text(localizations.profileDeleteAccountAction),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    return result;
   }
 }
 
