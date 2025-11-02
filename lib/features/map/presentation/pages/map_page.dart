@@ -1434,7 +1434,6 @@ class _MapPageState extends State<MapPage>
           ),
           child: MapFabColumn(
             followUser: _followUser,
-            followHeading: _followHeading,
             headingDegrees: _userHeading,
             onToggleHeading: _toggleFollowHeading,
             onResetView: _onResetView,
