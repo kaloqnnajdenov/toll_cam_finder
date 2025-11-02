@@ -159,7 +159,7 @@ class AppLocalizations {
       'joinTollCam': 'Join TollCam',
       'language': 'Language',
       'languageLabelEnglish': 'English',
-      'languageLabelBulgarian': 'Bulgarian',
+      'languageLabelBulgarian': 'Български',
       'languageButton': 'Change language',
       'darkMode': 'Dark mode',
       'audioModeTitle': 'Guidance audio mode',
@@ -358,8 +358,6 @@ class AppLocalizations {
       'introSidebarProfileBody':
           'Sign in or create an account. It\'s required to publish segments or weigh stations for the community.',
       'mapWelcomeTitle': 'Welcome to TollCam',
-      'mapWelcomeDescription':
-          'Let\'s get you set up. Choose your preferred language to personalize the experience.',
       'mapWelcomeLanguagePrompt': 'Choose your language',
       'mapWeighStationsPromptTitle': 'See weigh stations on the map?',
       'mapWeighStationsPromptDescription':
@@ -716,8 +714,6 @@ class AppLocalizations {
 'introSidebarProfileBody':
 'Влезте или създайте акаунт. Необходимо е за публикуване на сегменти и кантари.',
 'mapWelcomeTitle': 'Добре дошли в TollCam',
-'mapWelcomeDescription':
-'Нека ви настроим. Изберете предпочитания от вас език за приложението.',
 'mapWelcomeLanguagePrompt': 'Изберете вашия език',
 'mapWeighStationsPromptTitle': 'Да показваме ли кантари на картата?',
 'mapWeighStationsPromptDescription':
@@ -986,7 +982,6 @@ class AppLocalizations {
   String get introSidebarProfileBody =>
       _value('introSidebarProfileBody');
   String get mapWelcomeTitle => _value('mapWelcomeTitle');
-  String get mapWelcomeDescription => _value('mapWelcomeDescription');
   String get mapWelcomeLanguagePrompt =>
       _value('mapWelcomeLanguagePrompt');
   String get mapWeighStationsPromptTitle =>

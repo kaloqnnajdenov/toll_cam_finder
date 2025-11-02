@@ -89,14 +89,6 @@ class MapWelcomeOverlay extends StatelessWidget {
                                 style: theme.textTheme.headlineSmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                localizations.mapWelcomeDescription,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: palette.secondaryText,
-                                  height: 1.4,
-                                ),
-                              ),
                               const SizedBox(height: 24),
                               Text(
                                 localizations.mapWelcomeLanguagePrompt,
