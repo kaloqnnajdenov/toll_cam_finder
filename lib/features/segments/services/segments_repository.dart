@@ -23,6 +23,7 @@ class SegmentInfo {
     this.speedLimitKph,
     this.isLocalOnly = false,
     this.isMarkedPublic = false,
+    this.isPublicReviewPending = false,
     this.isDeactivated = false,
   });
 
@@ -35,7 +36,10 @@ class SegmentInfo {
   final String? speedLimitKph;
   final bool isLocalOnly;
   final bool isMarkedPublic;
+  final bool isPublicReviewPending;
   final bool isDeactivated;
+
+  bool get isPublicReviewApproved => isMarkedPublic && !isPublicReviewPending;
 
   String get startLabel =>
       startDisplayName.isNotEmpty ? startDisplayName : startCoordinates;
@@ -105,6 +109,14 @@ class SegmentsRepository {
       return const [];
     }
 
+    final remoteSegmentSignatures = assetPath == kTollSegmentsAssetPath
+        ? await _loadRemoteSegmentSignatures(
+            assetPath: assetPath,
+            startCoordinatesIndex: startCoordinatesIndex,
+            endCoordinatesIndex: endCoordinatesIndex,
+          )
+        : const <_SegmentSignature>{};
+
     final segments = <SegmentInfo>[];
     for (final row in rows.skip(1)) {
       if (row.length <= idIndex || row.length <= nameIndex) {
@@ -151,6 +163,15 @@ class SegmentsRepository {
           ? AppMessages.personalSegmentDefaultName
           : name;
 
+      final isMarkedPublic = publicFlags[id] ?? false;
+      final isPublicReviewPending = isLocalOnly && isMarkedPublic
+          ? !_isApprovedPublicSegment(
+              startCoordinates: startCoordinates,
+              endCoordinates: endCoordinates,
+              remoteSignatures: remoteSegmentSignatures,
+            )
+          : false;
+
       segments.add(
         SegmentInfo(
           id: id,
@@ -161,7 +182,8 @@ class SegmentsRepository {
           endCoordinates: endCoordinates,
           speedLimitKph: speedLimit.isEmpty ? null : speedLimit,
           isLocalOnly: isLocalOnly,
-          isMarkedPublic: publicFlags[id] ?? false,
+          isMarkedPublic: isMarkedPublic,
+          isPublicReviewPending: isPublicReviewPending,
           isDeactivated: deactivatedSegments.contains(id),
         ),
       );
@@ -169,16 +191,6 @@ class SegmentsRepository {
 
     if (onlyLocal) {
       segments.retainWhere((segment) => segment.isLocalOnly);
-       } else {
-      // When a local segment is submitted for public review it should only be
-      // surfaced in the dedicated "Local segments" view where it is labelled
-      // with the "Review" badge. Showing the same entry alongside the
-      // published network segments creates the impression that it is already
-      // public. Hide such rows from the combined listing until they are
-      // approved and synced back as real public entries.
-      segments.removeWhere(
-        (segment) => segment.isLocalOnly && segment.isMarkedPublic,
-      );
     }
 
     segments.sort(_compareSegments);
@@ -239,6 +251,52 @@ class SegmentsRepository {
     return '$value'.trim();
   }
 
+  Future<Set<_SegmentSignature>> _loadRemoteSegmentSignatures({
+    required String assetPath,
+    required int startCoordinatesIndex,
+    required int endCoordinatesIndex,
+  }) async {
+    if (startCoordinatesIndex == -1 || endCoordinatesIndex == -1) {
+      return const <_SegmentSignature>{};
+    }
+
+    try {
+      final remoteRows = await TollSegmentsDataStore.instance.ensureRemoteRows(
+        assetPath: assetPath,
+      );
+      final signatures = <_SegmentSignature>{};
+      for (final row in remoteRows) {
+        if (row.length <= startCoordinatesIndex ||
+            row.length <= endCoordinatesIndex) {
+          continue;
+        }
+
+        final start = _stringAt(row, startCoordinatesIndex);
+        final end = _stringAt(row, endCoordinatesIndex);
+        if (start.isEmpty || end.isEmpty) {
+          continue;
+        }
+
+        signatures.add(_SegmentSignature(start, end));
+      }
+      return signatures;
+    } catch (_) {
+      return const <_SegmentSignature>{};
+    }
+  }
+
+  bool _isApprovedPublicSegment({
+    required String startCoordinates,
+    required String endCoordinates,
+    required Set<_SegmentSignature> remoteSignatures,
+  }) {
+    if (startCoordinates.isEmpty || endCoordinates.isEmpty) {
+      return false;
+    }
+    return remoteSignatures
+        .contains(_SegmentSignature(startCoordinates, endCoordinates));
+  }
+
   Future<String> _loadSegmentsData(String assetPath) async {
     if (assetPath == kTollSegmentsAssetPath) {
       return TollSegmentsDataStore.instance.loadCombinedCsv(
@@ -250,4 +308,28 @@ class SegmentsRepository {
     return rootBundle.loadString(assetPath);
   }
 
+}
+
+class _SegmentSignature {
+  _SegmentSignature(String startCoordinates, String endCoordinates)
+      : start = _normalize(startCoordinates),
+        end = _normalize(endCoordinates);
+
+  final String start;
+  final String end;
+
+  static String _normalize(String value) => value.trim().toLowerCase();
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    return other is _SegmentSignature &&
+        other.start == start &&
+        other.end == end;
+  }
+
+  @override
+  int get hashCode => Object.hash(start, end);
 }

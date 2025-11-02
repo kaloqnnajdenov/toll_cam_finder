@@ -145,6 +145,28 @@ class _ReviewBadge extends StatelessWidget {
   }
 }
 
+class _ApprovedBadge extends StatelessWidget {
+  const _ApprovedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        AppMessages.segmentBadgeApproved,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
 class _SegmentBadges extends StatelessWidget {
   const _SegmentBadges({required this.segment});
 
@@ -157,8 +179,10 @@ class _SegmentBadges extends StatelessWidget {
       badges.add(const _DeactivatedBadge());
     }
     if (segment.isLocalOnly) {
-      if (segment.isMarkedPublic) {
+      if (segment.isPublicReviewPending) {
         badges.add(const _ReviewBadge());
+      } else if (segment.isPublicReviewApproved) {
+        badges.add(const _ApprovedBadge());
       } else {
         badges.add(const _LocalBadge());
       }
