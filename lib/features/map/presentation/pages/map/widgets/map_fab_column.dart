@@ -7,14 +7,12 @@ class MapFabColumn extends StatelessWidget {
   const MapFabColumn({
     super.key,
     required this.followUser,
-    required this.followHeading,
     required this.onToggleHeading,
     required this.onResetView,
     this.headingDegrees,
   });
 
   final bool followUser;
-  final bool followHeading;
   final VoidCallback onToggleHeading;
   final VoidCallback onResetView;
   final double? headingDegrees;
@@ -23,24 +21,26 @@ class MapFabColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final palette = AppColors.of(context);
+    final bool showRecenterButton = !followUser;
+
     final children = <Widget>[
-      if (!followHeading)
-        _MapMiniFab(
-          heroTag: 'heading_btn',
-          tooltip: localizations.faceTravelDirection,
-          onPressed: onToggleHeading,
-          child: _CompassNeedle(
-            headingDegrees: headingDegrees,
-          ),
+      _MapMiniFab(
+        heroTag: 'heading_btn',
+        tooltip: localizations.faceTravelDirection,
+        onPressed: onToggleHeading,
+        child: _CompassNeedle(
+          headingDegrees: headingDegrees,
         ),
-      if (!followHeading && !followUser) const SizedBox(height: 12),
-      if (!followUser)
+      ),
+      if (showRecenterButton) ...[
+        const SizedBox(height: 12),
         _MapMiniFab(
           heroTag: 'recenter_btn',
           tooltip: localizations.recenter,
           onPressed: onResetView,
           child: Icon(Icons.my_location_outlined, color: palette.onSurface),
         ),
+      ],
     ];
 
     return Column(
