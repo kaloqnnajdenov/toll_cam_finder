@@ -17,6 +17,7 @@ class LeftMapControlsPanel extends StatelessWidget {
     required this.segmentSpeedLimitKph,
     required this.segmentDebugPath,
     required this.distanceToSegmentStartMeters,
+    required this.distanceToSegmentStartIsCapped,
     required this.isLandscape,
   });
 
@@ -27,6 +28,7 @@ class LeftMapControlsPanel extends StatelessWidget {
   final double? segmentSpeedLimitKph;
   final SegmentDebugPath? segmentDebugPath;
   final double? distanceToSegmentStartMeters;
+  final bool distanceToSegmentStartIsCapped;
   final bool isLandscape;
 
   @override
@@ -72,6 +74,7 @@ class LeftMapControlsPanel extends StatelessWidget {
               segmentSpeedLimitKph: segmentSpeedLimitKph,
               segmentDebugPath: segmentDebugPath,
               distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+              distanceToSegmentStartIsCapped: distanceToSegmentStartIsCapped,
               maxWidth: panelMaxWidth,
               maxHeight: panelHeight,
               stackMetricsVertically: false,

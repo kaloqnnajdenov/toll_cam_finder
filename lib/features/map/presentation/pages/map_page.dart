@@ -159,6 +159,9 @@ class _MapPageState extends State<MapPage>
   DateTime? _nextCameraCheckAt;
 
   double? _userHeading;
+  DateTime? _lastUpcomingSegmentScanAt;
+  double? _upcomingSegmentDistanceMeters;
+  bool _upcomingSegmentDistanceIsCapped = false;
 
   final GlobalKey _controlsPanelKey = GlobalKey();
   double _controlsPanelHeight = 0;
@@ -171,6 +174,10 @@ class _MapPageState extends State<MapPage>
   bool _showWeighStationsPrompt = false;
   bool? _introCompleted;
   bool _introFlowPresented = true;
+
+  static const Duration _upcomingSegmentScanInterval = Duration(seconds: 5);
+  static const double _upcomingSegmentScanRangeMeters = 5000;
+  static const double _upcomingSegmentScanFieldOfView = 120;
 
   AverageSpeedController get _avgCtrl =>
       _currentSegmentController.averageController;
@@ -643,16 +650,63 @@ class _MapPageState extends State<MapPage>
     _updateSegmentsOnlyMetrics();
   }
 
+  void _resetUpcomingSegmentScan() {
+    _lastUpcomingSegmentScanAt = null;
+    _upcomingSegmentDistanceMeters = null;
+    _upcomingSegmentDistanceIsCapped = false;
+  }
+
+  void _performUpcomingSegmentScan(DateTime now) {
+    final LatLng? position = _userLatLng;
+    if (position == null) {
+      _upcomingSegmentDistanceMeters = null;
+      _upcomingSegmentDistanceIsCapped = false;
+      return;
+    }
+
+    final double? heading = _userHeading;
+    double? distance;
+    if (heading != null) {
+      distance = _segmentTracker.findUpcomingSegmentDistance(
+        current: position,
+        headingDegrees: heading,
+        fieldOfViewDegrees: _upcomingSegmentScanFieldOfView,
+        maxDistanceMeters: _upcomingSegmentScanRangeMeters,
+      );
+    } else {
+      distance = null;
+    }
+
+    if (distance != null) {
+      _upcomingSegmentDistanceMeters = distance;
+      _upcomingSegmentDistanceIsCapped = false;
+    } else {
+      _upcomingSegmentDistanceMeters = _upcomingSegmentScanRangeMeters;
+      _upcomingSegmentDistanceIsCapped = true;
+    }
+    _lastUpcomingSegmentScanAt = now;
+  }
+
   void _applySegmentEvent(SegmentTrackerEvent segEvent, {DateTime? now}) {
     final DateTime timestamp = now ?? DateTime.now();
     final SegmentDebugPath? activePath = _segmentUiService
         .resolveActiveSegmentPath(segEvent.debugData.candidatePaths, segEvent);
 
-    final double? nearestStart = segEvent.activeSegmentId != null
-        ? 0
-        : _segmentUiService.nearestUpcomingSegmentDistance(
-            segEvent.debugData.candidatePaths,
-          );
+    double? nearestStart;
+    bool startDistanceIsCapped = false;
+    if (segEvent.activeSegmentId != null) {
+      nearestStart = 0;
+      startDistanceIsCapped = false;
+      _resetUpcomingSegmentScan();
+    } else {
+      final DateTime? lastScan = _lastUpcomingSegmentScanAt;
+      if (lastScan == null ||
+          timestamp.difference(lastScan) >= _upcomingSegmentScanInterval) {
+        _performUpcomingSegmentScan(timestamp);
+      }
+      nearestStart = _upcomingSegmentDistanceMeters;
+      startDistanceIsCapped = _upcomingSegmentDistanceIsCapped;
+    }
     final String? progressLabel = _segmentUiService.buildSegmentProgressLabel(
       event: segEvent,
       activePath: activePath,
@@ -665,6 +719,7 @@ class _MapPageState extends State<MapPage>
       timestamp: timestamp,
       activePath: activePath,
       distanceToSegmentStartMeters: nearestStart,
+      distanceToSegmentStartIsCapped: startDistanceIsCapped,
       progressLabel: progressLabel,
       userPosition: _userLatLng,
     );
@@ -691,6 +746,7 @@ class _MapPageState extends State<MapPage>
     _lastNotificationStatus = null;
     _updateSegmentsOnlyMetrics();
     unawaited(_segmentGuidanceController.reset());
+    _resetUpcomingSegmentScan();
   }
 
   Future<void> _updateForegroundNotification(SegmentTrackerEvent event) async {
@@ -701,6 +757,10 @@ class _MapPageState extends State<MapPage>
     final String status = _foregroundNotificationService.buildStatus(
       event: event,
       avgController: _avgCtrl,
+      upcomingSegmentDistanceMeters:
+          _currentSegmentController.distanceToSegmentStartMeters,
+      upcomingDistanceIsCapped:
+          _currentSegmentController.distanceToSegmentStartIsCapped,
     );
     if (status == _lastNotificationStatus) {
       return;
@@ -1101,6 +1161,8 @@ class _MapPageState extends State<MapPage>
       segmentDebugPath: _currentSegmentController.activePath,
       distanceToSegmentStartMeters:
           _currentSegmentController.distanceToSegmentStartMeters,
+      distanceToSegmentStartIsCapped:
+          _currentSegmentController.distanceToSegmentStartIsCapped,
     );
   }
 
@@ -1453,6 +1515,8 @@ class _MapPageState extends State<MapPage>
       segmentSpeedLimitKph: currentSegment.activeSegmentSpeedLimitKph,
       segmentDebugPath: currentSegment.activePath,
       distanceToSegmentStartMeters: currentSegment.distanceToSegmentStartMeters,
+      distanceToSegmentStartIsCapped:
+          currentSegment.distanceToSegmentStartIsCapped,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {

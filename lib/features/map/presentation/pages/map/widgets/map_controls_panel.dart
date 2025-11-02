@@ -17,6 +17,7 @@ class MapControlsPanel extends StatelessWidget {
     this.segmentSpeedLimitKph,
     this.segmentDebugPath,
     this.distanceToSegmentStartMeters,
+    this.distanceToSegmentStartIsCapped = false,
     this.placement = MapControlsPlacement.bottom,
   });
 
@@ -26,6 +27,7 @@ class MapControlsPanel extends StatelessWidget {
   final double? segmentSpeedLimitKph;
   final SegmentDebugPath? segmentDebugPath;
   final double? distanceToSegmentStartMeters;
+  final bool distanceToSegmentStartIsCapped;
   final MapControlsPlacement placement;
 
   @override
@@ -43,6 +45,7 @@ class MapControlsPanel extends StatelessWidget {
           segmentSpeedLimitKph: segmentSpeedLimitKph,
           segmentDebugPath: segmentDebugPath,
           distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+          distanceToSegmentStartIsCapped: distanceToSegmentStartIsCapped,
           isLandscape: isLandscape,
         );
       case MapControlsPlacement.bottom:
@@ -55,6 +58,7 @@ class MapControlsPanel extends StatelessWidget {
           segmentSpeedLimitKph: segmentSpeedLimitKph,
           segmentDebugPath: segmentDebugPath,
           distanceToSegmentStartMeters: distanceToSegmentStartMeters,
+          distanceToSegmentStartIsCapped: distanceToSegmentStartIsCapped,
           isLandscape: isLandscape,
         );
     }

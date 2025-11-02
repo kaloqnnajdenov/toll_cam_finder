@@ -86,6 +86,8 @@ class SimpleModePage extends StatelessWidget {
                         segmentDebugPath: segmentsController.segmentDebugPath,
                         distanceToSegmentStartMeters:
                             segmentsController.distanceToSegmentStartMeters,
+                        distanceToSegmentStartIsCapped:
+                            segmentsController.distanceToSegmentStartIsCapped,
                         maxWidth: constraints.maxWidth,
                         maxHeight: null,
                         stackMetricsVertically: constraints.maxWidth < 480,

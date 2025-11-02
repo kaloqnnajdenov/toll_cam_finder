@@ -178,6 +178,79 @@ class SegmentTracker {
     );
   }
 
+  double? findUpcomingSegmentDistance({
+    required LatLng current,
+    required double headingDegrees,
+    double fieldOfViewDegrees = 120,
+    double maxDistanceMeters = 5000,
+  }) {
+    if (!_isReady) {
+      return null;
+    }
+
+    final GeoPoint userPoint = GeoPoint(current.latitude, current.longitude);
+    final double normalizedHeading = _normalizeHeading(headingDegrees);
+    final double halfFov = (fieldOfViewDegrees / 2).clamp(0, 180);
+
+    final List<SegmentGeometry> candidates = _index.candidatesNearLatLng(
+      current,
+      radiusMeters: maxDistanceMeters,
+    );
+
+    double? closestStartDistance;
+
+    for (final SegmentGeometry geom in candidates) {
+      if (_ignoredSegmentIds.contains(geom.id)) {
+        continue;
+      }
+
+      final List<GeoPoint> path = geom.path;
+      if (path.isEmpty) {
+        continue;
+      }
+
+      final _NearestPointResult nearest = _nearestPointOnPath(
+        userPoint,
+        path,
+      );
+
+      final double? bearingToNearest = _bearingBetweenPoints(
+        userPoint,
+        nearest.point,
+      );
+
+      final double relativeBearing =
+          bearingToNearest ?? normalizedHeading;
+      final double headingDelta = _headingDeltaDegrees(
+        normalizedHeading,
+        relativeBearing,
+      );
+
+      if (headingDelta > halfFov) {
+        continue;
+      }
+
+      final double startDistance = _distanceBetween(
+        userPoint,
+        path.first,
+      );
+
+      if (!startDistance.isFinite || startDistance < 0) {
+        continue;
+      }
+      if (startDistance > maxDistanceMeters) {
+        continue;
+      }
+
+      if (closestStartDistance == null ||
+          startDistance < closestStartDistance) {
+        closestStartDistance = startDistance;
+      }
+    }
+
+    return closestStartDistance;
+  }
+
   void dispose() {}
 
   void _resetTrackingState({required bool preserveActive}) {
