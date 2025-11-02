@@ -153,6 +153,36 @@ extension _SegmentTrackerGeometry on SegmentTracker {
 
     return remaining;
   }
+
+  double? _bearingBetweenPoints(GeoPoint from, GeoPoint to) {
+    final double lat1 = from.lat * math.pi / 180.0;
+    final double lat2 = to.lat * math.pi / 180.0;
+    final double dLon = (to.lon - from.lon) * math.pi / 180.0;
+
+    if (dLon.abs() < 1e-9 && (lat2 - lat1).abs() < 1e-9) {
+      return null;
+    }
+
+    final double y = math.sin(dLon) * math.cos(lat2);
+    final double x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    final double bearing = math.atan2(y, x) * 180.0 / math.pi;
+
+    final double normalized = (bearing + 360.0) % 360.0;
+    return normalized.isFinite ? normalized : null;
+  }
+
+  double _normalizeHeading(double heading) {
+    final double normalized = heading % 360.0;
+    return normalized < 0 ? normalized + 360.0 : normalized;
+  }
+
+  double _headingDeltaDegrees(double a, double b) {
+    final double normalizedA = _normalizeHeading(a);
+    final double normalizedB = _normalizeHeading(b);
+    final double diff = (normalizedA - normalizedB).abs() % 360.0;
+    return diff > 180.0 ? 360.0 - diff : diff;
+  }
 }
 
 /// Captures the result of projecting a point onto a polyline.

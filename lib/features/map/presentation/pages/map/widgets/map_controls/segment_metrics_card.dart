@@ -17,6 +17,7 @@ class SegmentMetricsCard extends StatelessWidget {
     required this.speedLimitKph,
     required this.distanceToSegmentStartMeters,
     required this.distanceToSegmentEndMeters,
+    required this.distanceToSegmentStartIsCapped,
     required this.stackMetricsVertically,
     required this.forceSingleRow,
     required this.maxAvailableHeight,
@@ -29,6 +30,7 @@ class SegmentMetricsCard extends StatelessWidget {
   final double? speedLimitKph;
   final double? distanceToSegmentStartMeters;
   final double? distanceToSegmentEndMeters;
+  final bool distanceToSegmentStartIsCapped;
   final bool stackMetricsVertically;
   final bool forceSingleRow;
   final double? maxAvailableHeight;
@@ -97,10 +99,17 @@ class SegmentMetricsCard extends StatelessWidget {
         final double? distanceMeters = hasActiveSegment
             ? sanitizedEnd ?? sanitizedStart
             : sanitizedStart;
-        final _MetricValue distanceValue = _formatDistance(
-          localizations,
-          distanceMeters,
-        );
+        final bool capDisplay =
+            !hasActiveSegment && distanceToSegmentStartIsCapped;
+        final _MetricValue distanceValue = capDisplay
+            ? _MetricValue(
+                value: '>5',
+                unit: localizations.translate('unitKilometersShort'),
+              )
+            : _formatDistance(
+                localizations,
+                distanceMeters,
+              );
 
         final String distanceLabel = localizations.translate(distanceLabelKey);
         final List<_MetricTileData> metrics = [

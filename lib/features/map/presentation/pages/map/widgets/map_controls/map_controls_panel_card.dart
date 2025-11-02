@@ -18,6 +18,7 @@ class MapControlsPanelCard extends StatelessWidget {
     required this.segmentSpeedLimitKph,
     required this.segmentDebugPath,
     required this.distanceToSegmentStartMeters,
+    required this.distanceToSegmentStartIsCapped,
     required this.maxWidth,
     required this.maxHeight,
     required this.stackMetricsVertically,
@@ -32,6 +33,7 @@ class MapControlsPanelCard extends StatelessWidget {
   final double? segmentSpeedLimitKph;
   final SegmentDebugPath? segmentDebugPath;
   final double? distanceToSegmentStartMeters;
+  final bool distanceToSegmentStartIsCapped;
   final double maxWidth;
   final double? maxHeight;
   final bool stackMetricsVertically;
@@ -88,6 +90,7 @@ class MapControlsPanelCard extends StatelessWidget {
                 distanceToSegmentStartMeters: distanceToSegmentStartMeters,
                 distanceToSegmentEndMeters:
                     segmentDebugPath?.remainingDistanceMeters,
+                distanceToSegmentStartIsCapped: distanceToSegmentStartIsCapped,
                 stackMetricsVertically: stackMetricsVertically,
                 forceSingleRow: forceSingleRow,
                 maxAvailableHeight: maxHeight,

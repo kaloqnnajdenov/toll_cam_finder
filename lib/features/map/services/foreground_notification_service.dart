@@ -12,6 +12,8 @@ class ForegroundNotificationService {
   String buildStatus({
     required SegmentTrackerEvent event,
     required AverageSpeedController avgController,
+    double? upcomingSegmentDistanceMeters,
+    bool upcomingDistanceIsCapped = false,
   }) {
     final String? activeId = event.activeSegmentId;
     if (activeId != null) {
@@ -23,11 +25,20 @@ class ForegroundNotificationService {
       return 'On segment • Avg $avgText • Allowed $limitText';
     }
 
-    final double? distance = _segmentUiService
-        .nearestUpcomingSegmentDistance(event.debugData.candidatePaths);
+    final double? distance = upcomingSegmentDistanceMeters ??
+        _segmentUiService.nearestUpcomingSegmentDistance(
+          event.debugData.candidatePaths,
+        );
+    if (upcomingDistanceIsCapped) {
+      return '>5 km to segment start';
+    }
     if (distance != null && distance <= 1500) {
       final int meters = distance.round();
       return '$meters m to segment start';
+    }
+    if (distance != null && distance.isFinite) {
+      final double km = distance / 1000.0;
+      return '${km.toStringAsFixed(1)} km to segment start';
     }
 
     return 'no segment nearby';

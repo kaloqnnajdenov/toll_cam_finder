@@ -10,6 +10,7 @@ class SegmentsOnlyModeController extends ChangeNotifier {
   double? _segmentSpeedLimitKph;
   SegmentDebugPath? _segmentDebugPath;
   double? _distanceToSegmentStartMeters;
+  bool _distanceToSegmentStartIsCapped = false;
   SegmentsOnlyModeReason? _reason;
   bool _isActive = false;
 
@@ -18,6 +19,7 @@ class SegmentsOnlyModeController extends ChangeNotifier {
   double? get segmentSpeedLimitKph => _segmentSpeedLimitKph;
   SegmentDebugPath? get segmentDebugPath => _segmentDebugPath;
   double? get distanceToSegmentStartMeters => _distanceToSegmentStartMeters;
+  bool get distanceToSegmentStartIsCapped => _distanceToSegmentStartIsCapped;
   SegmentsOnlyModeReason? get reason => _reason;
   bool get isActive => _isActive;
 
@@ -27,6 +29,7 @@ class SegmentsOnlyModeController extends ChangeNotifier {
     required double? segmentSpeedLimitKph,
     required SegmentDebugPath? segmentDebugPath,
     required double? distanceToSegmentStartMeters,
+    required bool distanceToSegmentStartIsCapped,
   }) {
     bool changed = false;
 
@@ -52,6 +55,11 @@ class SegmentsOnlyModeController extends ChangeNotifier {
 
     if (_distanceToSegmentStartMeters != distanceToSegmentStartMeters) {
       _distanceToSegmentStartMeters = distanceToSegmentStartMeters;
+      changed = true;
+    }
+
+    if (_distanceToSegmentStartIsCapped != distanceToSegmentStartIsCapped) {
+      _distanceToSegmentStartIsCapped = distanceToSegmentStartIsCapped;
       changed = true;
     }
 

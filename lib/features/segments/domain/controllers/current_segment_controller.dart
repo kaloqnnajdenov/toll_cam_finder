@@ -48,6 +48,7 @@ class CurrentSegmentController extends ChangeNotifier {
   SegmentDebugPath? _activePath;
   SegmentTrackerDebugData _debugData = const SegmentTrackerDebugData.empty();
   double? _distanceToSegmentStartMeters;
+  bool _distanceToSegmentStartIsCapped = false;
   double? _lastSegmentAverageKph;
   String? _progressLabel;
   LatLng? _lastAverageSamplePosition;
@@ -64,6 +65,7 @@ class CurrentSegmentController extends ChangeNotifier {
   SegmentDebugPath? get activePath => _activePath;
   SegmentTrackerDebugData get debugData => _debugData;
   double? get distanceToSegmentStartMeters => _distanceToSegmentStartMeters;
+  bool get distanceToSegmentStartIsCapped => _distanceToSegmentStartIsCapped;
   double? get activeSegmentSpeedLimitKph => _lastEvent?.activeSegmentSpeedLimitKph;
   double? get lastSegmentAverageKph => _lastSegmentAverageKph;
   String? get progressLabel => _progressLabel;
@@ -77,6 +79,7 @@ class CurrentSegmentController extends ChangeNotifier {
     _activePath = null;
     _debugData = const SegmentTrackerDebugData.empty();
     _distanceToSegmentStartMeters = null;
+    _distanceToSegmentStartIsCapped = false;
     _lastSegmentAverageKph = null;
     _progressLabel = null;
     _lastAverageSamplePosition = null;
@@ -127,6 +130,7 @@ class CurrentSegmentController extends ChangeNotifier {
     required DateTime timestamp,
     SegmentDebugPath? activePath,
     double? distanceToSegmentStartMeters,
+    bool distanceToSegmentStartIsCapped = false,
     String? progressLabel,
     LatLng? userPosition,
   }) {
@@ -180,6 +184,7 @@ class CurrentSegmentController extends ChangeNotifier {
     _activePath = activePath;
     _debugData = event.debugData;
     _distanceToSegmentStartMeters = distanceToSegmentStartMeters;
+    _distanceToSegmentStartIsCapped = distanceToSegmentStartIsCapped;
     _progressLabel = progressLabel;
 
     _expireStaleSummaries(now);
