@@ -38,7 +38,7 @@ class MapWelcomeOverlay extends StatelessWidget {
     String labelFor(LanguageOption option) {
       switch (option.languageCode) {
         case 'en':
-          return englishLocalizations.languageLabelEnglish;
+          return 'English';
         default:
           return option.label;
       }

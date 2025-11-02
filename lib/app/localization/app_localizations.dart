@@ -359,9 +359,9 @@ class AppLocalizations {
           'Sign in or create an account. It\'s required to publish segments or weigh stations for the community.',
       'mapWelcomeTitle': 'Welcome to TollCam',
       'mapWelcomeLanguagePrompt': 'Choose your language',
-      'mapWeighStationsPromptTitle': 'See weigh stations on the map?',
+      'mapWeighStationsPromptTitle': 'Stations for weight control on the move?',
       'mapWeighStationsPromptDescription':
-          'We can show nearby weigh stations while you drive. You can change this anytime from the Weigh stations page.',
+          'Do You want to see stations for weight control? You can change this anytime from the Weigh stations page.',
       'mapWeighStationsPromptEnableButton': 'Show weigh stations',
       'mapWeighStationsPromptSkipButton': 'Not now',
       'mapWeighStationsEnableButton': 'Enable weigh stations on map',
@@ -715,9 +715,9 @@ class AppLocalizations {
 'Влезте или създайте акаунт. Необходимо е за публикуване на сегменти и кантари.',
 'mapWelcomeTitle': 'Добре дошли в TollCam',
 'mapWelcomeLanguagePrompt': 'Изберете вашия език',
-'mapWeighStationsPromptTitle': 'Да показваме ли кантари на картата?',
+'mapWeighStationsPromptTitle': 'Станции за измерване на теглото в движение?',
 'mapWeighStationsPromptDescription':
-'Можем да показваме близките кантари по време на пътуване. Можете да промените избора си по всяко време от страницата „Кантари“.',
+'Искате ли да показваме близките станции за измерване на тегло в движение. Можете да промените избора си по всяко време от страницата „Кантари“.',
 'mapWeighStationsPromptEnableButton': 'Показвай кантари',
 'mapWeighStationsPromptSkipButton': 'Не сега',
 'mapWeighStationsEnableButton': 'Активирай кантари на картата',
