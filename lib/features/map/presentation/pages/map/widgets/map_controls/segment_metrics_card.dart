@@ -97,7 +97,7 @@ class SegmentMetricsCard extends StatelessWidget {
             ? 'segmentMetricsDistanceToEnd'
             : 'segmentMetricsDistanceToStart';
         final double? distanceMeters = hasActiveSegment
-            ? sanitizedEnd ?? sanitizedStart
+            ? sanitizedEnd
             : sanitizedStart;
         final bool capDisplay =
             !hasActiveSegment && distanceToSegmentStartIsCapped;
