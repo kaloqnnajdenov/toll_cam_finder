@@ -652,12 +652,16 @@ class _MapPageState extends State<MapPage>
         ? 0
         : _segmentUiService.nearestUpcomingSegmentDistance(
             segEvent.debugData.candidatePaths,
+            headingDegrees: _userHeading,
+            speedKph: _speedKmh,
           );
     final String? progressLabel = _segmentUiService.buildSegmentProgressLabel(
       event: segEvent,
       activePath: activePath,
       localizations: AppLocalizations.of(context),
       cueService: _upcomingSegmentCueService,
+      headingDegrees: _userHeading,
+      speedKph: _speedKmh,
     );
 
     final double? exitAverage = _currentSegmentController.updateWithEvent(
@@ -701,6 +705,8 @@ class _MapPageState extends State<MapPage>
     final String status = _foregroundNotificationService.buildStatus(
       event: event,
       avgController: _avgCtrl,
+      headingDegrees: _userHeading,
+      speedKph: _speedKmh,
     );
     if (status == _lastNotificationStatus) {
       return;

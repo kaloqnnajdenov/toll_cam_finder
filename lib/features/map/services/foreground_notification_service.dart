@@ -12,6 +12,8 @@ class ForegroundNotificationService {
   String buildStatus({
     required SegmentTrackerEvent event,
     required AverageSpeedController avgController,
+    double? headingDegrees,
+    double? speedKph,
   }) {
     final String? activeId = event.activeSegmentId;
     if (activeId != null) {
@@ -24,7 +26,11 @@ class ForegroundNotificationService {
     }
 
     final double? distance = _segmentUiService
-        .nearestUpcomingSegmentDistance(event.debugData.candidatePaths);
+        .nearestUpcomingSegmentDistance(
+      event.debugData.candidatePaths,
+      headingDegrees: headingDegrees,
+      speedKph: speedKph,
+    );
     if (distance != null && distance <= 1500) {
       final int meters = distance.round();
       return '$meters m to segment start';
