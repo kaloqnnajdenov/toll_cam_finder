@@ -20,6 +20,52 @@ class MapIntroOverlay extends StatelessWidget {
     final localizations = AppLocalizations.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
+    final instructions = <_IntroInstructionData>[
+      _IntroInstructionData(
+        icon: Icons.insights_outlined,
+        title: localizations.introInstructionsAverageTitle,
+        body: localizations.introInstructionsAverageBody,
+        children: [
+          _AverageSpeedVisual(
+            goodLabel: localizations.introInstructionsAverageStateGood,
+            warningLabel: localizations.introInstructionsAverageStateWarning,
+            overLabel: localizations.introInstructionsAverageStateOver,
+          ),
+        ],
+      ),
+      _IntroInstructionData(
+        icon: Icons.record_voice_over_outlined,
+        title: localizations.introInstructionsVoiceTitle,
+        body: localizations.introInstructionsVoiceBody,
+        children: [
+          _VoiceTimelineVisual(
+            steps: [
+              _VoiceTimelineStepData(
+                icon: Icons.flag_circle_outlined,
+                title: localizations.introInstructionsVoiceEnterTitle,
+                description: localizations.introInstructionsVoiceEnterBody,
+              ),
+              _VoiceTimelineStepData(
+                icon: Icons.speed_outlined,
+                title: localizations.introInstructionsVoiceSpeedTitle,
+                description: localizations.introInstructionsVoiceSpeedBody,
+              ),
+              _VoiceTimelineStepData(
+                icon: Icons.route_outlined,
+                title: localizations.introInstructionsVoiceApproachTitle,
+                description: localizations.introInstructionsVoiceApproachBody,
+              ),
+              _VoiceTimelineStepData(
+                icon: Icons.check_circle_outline,
+                title: localizations.introInstructionsVoiceExitTitle,
+                description: localizations.introInstructionsVoiceExitBody,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ];
+
     final metrics = <_IntroMetricData>[
       _IntroMetricData(
         icon: Icons.speed,
@@ -112,6 +158,8 @@ class MapIntroOverlay extends StatelessWidget {
                       child: _IntroContentCard(
                         title: localizations.introTitle,
                         subtitle: localizations.introSubtitle,
+                        instructionsTitle: localizations.introInstructionsTitle,
+                        instructions: instructions,
                         metricsTitle: localizations.introMetricsTitle,
                         actionsTitle: localizations.introSidebarTitle,
                         metrics: metrics,
@@ -155,10 +203,26 @@ class _IntroActionData {
   final String description;
 }
 
+class _IntroInstructionData {
+  const _IntroInstructionData({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.children = const <Widget>[],
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final List<Widget> children;
+}
+
 class _IntroContentCard extends StatelessWidget {
   const _IntroContentCard({
     required this.title,
     required this.subtitle,
+    required this.instructionsTitle,
+    required this.instructions,
     required this.metricsTitle,
     required this.actionsTitle,
     required this.metrics,
@@ -169,6 +233,8 @@ class _IntroContentCard extends StatelessWidget {
 
   final String title;
   final String subtitle;
+  final String instructionsTitle;
+  final List<_IntroInstructionData> instructions;
   final String metricsTitle;
   final String actionsTitle;
   final List<_IntroMetricData> metrics;
@@ -223,6 +289,18 @@ class _IntroContentCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(instructionsTitle, style: sectionStyle),
+            const SizedBox(height: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < instructions.length; i++) ...[
+                  _IntroInstructionCard(data: instructions[i]),
+                  if (i < instructions.length - 1) const SizedBox(height: 16),
+                ],
               ],
             ),
             const SizedBox(height: 28),
@@ -329,6 +407,291 @@ class _IntroMetricCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _IntroInstructionCard extends StatelessWidget {
+  const _IntroInstructionCard({required this.data});
+
+  final _IntroInstructionData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 0.8 : 0.45);
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.78 : 0.96);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor),
+        color: backgroundColor,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: palette.primary.withOpacity(isDark ? 0.22 : 0.14),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(data.icon, color: palette.primary, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.title,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        data.body,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: palette.secondaryText,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (data.children.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ...data.children,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AverageSpeedStateData {
+  const _AverageSpeedStateData({
+    required this.color,
+    required this.label,
+  });
+
+  final Color color;
+  final String label;
+}
+
+class _AverageSpeedVisual extends StatelessWidget {
+  const _AverageSpeedVisual({
+    required this.goodLabel,
+    required this.warningLabel,
+    required this.overLabel,
+  });
+
+  final String goodLabel;
+  final String warningLabel;
+  final String overLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final states = <_AverageSpeedStateData>[
+      _AverageSpeedStateData(color: Colors.green, label: goodLabel),
+      _AverageSpeedStateData(color: Colors.amber, label: warningLabel),
+      _AverageSpeedStateData(color: Colors.redAccent, label: overLabel),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool horizontal = constraints.maxWidth >= 520;
+        if (horizontal) {
+          return Row(
+            children: [
+              for (int i = 0; i < states.length; i++) ...[
+                Expanded(child: _AverageSpeedStateTile(data: states[i])),
+                if (i < states.length - 1) const SizedBox(width: 12),
+              ],
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int i = 0; i < states.length; i++) ...[
+              _AverageSpeedStateTile(data: states[i]),
+              if (i < states.length - 1) const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AverageSpeedStateTile extends StatelessWidget {
+  const _AverageSpeedStateTile({required this.data});
+
+  final _AverageSpeedStateData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            data.color.withOpacity(0.85),
+            data.color.withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.speed, color: Colors.white.withOpacity(0.95), size: 24),
+            const SizedBox(height: 12),
+            Text(
+              data.label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceTimelineStepData {
+  const _VoiceTimelineStepData({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+}
+
+class _VoiceTimelineVisual extends StatelessWidget {
+  const _VoiceTimelineVisual({required this.steps});
+
+  final List<_VoiceTimelineStepData> steps;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool horizontal = constraints.maxWidth >= 560;
+        if (horizontal) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < steps.length; i++) ...[
+                Expanded(child: _VoiceTimelineStep(data: steps[i])),
+                if (i < steps.length - 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32),
+                    child: SizedBox(
+                      width: 32,
+                      child: Divider(
+                        color: palette.divider.withOpacity(0.6),
+                        thickness: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int i = 0; i < steps.length; i++) ...[
+              _VoiceTimelineStep(data: steps[i]),
+              if (i < steps.length - 1)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 2,
+                    height: 24,
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 28),
+                    color: palette.divider.withOpacity(0.6),
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _VoiceTimelineStep extends StatelessWidget {
+  const _VoiceTimelineStep({required this.data});
+
+  final _VoiceTimelineStepData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color bubbleColor =
+        palette.primary.withOpacity(isDark ? 0.22 : 0.12);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Icon(data.icon, color: palette.primary, size: 26),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          data.title,
+          style: theme.textTheme.titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          data.description,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.secondaryText,
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 }
