@@ -167,6 +167,8 @@ class AppMessages {
       _l.translate('accountCreatedCheckEmail');
   static String get unableToLogOutTryAgain =>
       _l.translate('unableToLogOutTryAgain');
+  static String get unableToDeleteAccountTryAgain =>
+      _l.translate('unableToDeleteAccountTryAgain');
   static String get authenticationNotConfigured =>
       _l.translate('authenticationNotConfigured');
   static String get backgroundTrackingNotificationRationale =>
