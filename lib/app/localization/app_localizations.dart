@@ -213,6 +213,19 @@ class AppLocalizations {
       'passwordsDoNotMatch': 'Passwords do not match',
       'profile': 'Profile',
       'profileSubtitle': 'Manage your TollCam account and preferences.',
+      'profileDangerZoneTitle': 'Danger zone',
+      'profileDeleteAccountDescription':
+          'Delete your account and all associated data.',
+      'profileDeleteAccountAction': 'Delete account',
+      'profileDeleteAccountConfirmTitle': 'Delete account?',
+      'profileDeleteAccountConfirmBody':
+          'Type DELETE to confirm. This action cannot be undone.',
+      'profileDeleteAccountConfirmLabel': 'Type DELETE to confirm',
+      'profileDeleteAccountConfirmHelper':
+          'This will permanently remove your account.',
+      'profileDeleteAccountMismatch':
+          'Please type DELETE in all caps to continue.',
+      'profileDeleteAccountSuccess': 'Your account was deleted.',
       'publicSharingUnavailable':
           'Public segment sharing is currently unavailable.',
       'publicSharingUnavailableShort': 'Public sharing is not available.',
@@ -406,6 +419,8 @@ class AppLocalizations {
       'unableToDetermineLoggedInAccountRetry':
           'Unable to determine the logged in account. Please sign in again.',
       'unableToLogOutTryAgain': 'Unable to log out. Please try again.',
+      'unableToDeleteAccountTryAgain':
+          'Unable to delete your account. Please try again.',
       'unableToWithdrawSubmission': 'Unable to withdraw the public submission.',
       'unexpectedErrorCancellingSubmission':
           'Unexpected error while cancelling the public submission.',
@@ -564,6 +579,20 @@ class AppLocalizations {
 'passwordLabel': 'Парола',
 'profile': 'Профил',
 'profileSubtitle': 'Управлявай акаунта и настройките си в TollCam.',
+'profileDangerZoneTitle': 'Опасна зона',
+'profileDeleteAccountDescription':
+'Изтрий акаунта си и всички свързани данни.',
+'profileDeleteAccountAction': 'Изтрий акаунта',
+'profileDeleteAccountConfirmTitle': 'Да изтрия ли акаунта?',
+'profileDeleteAccountConfirmBody':
+'Напиши DELETE, за да потвърдиш. Това действие е необратимо.',
+'profileDeleteAccountConfirmLabel': 'Въведи DELETE за потвърждение',
+'profileDeleteAccountConfirmHelper':
+'След изтриване няма връщане.',
+'profileDeleteAccountMismatch': 'Моля, напиши DELETE с главни букви.',
+'profileDeleteAccountSuccess': 'Акаунтът ти беше изтрит.',
+'unableToDeleteAccountTryAgain':
+'Неуспешно изтриване на акаунта. Опитай отново.',
 'faceTravelDirection': 'По посока на движение',
 'northUp': 'Север нагоре',
 'recenter': 'Центрирай Екрана',
@@ -876,6 +905,23 @@ class AppLocalizations {
   String get confirmPasswordLabel => _value('confirmPasswordLabel');
   String get fullNameLabel => _value('fullNameLabel');
   String get profileSubtitle => _value('profileSubtitle');
+  String get profileDangerZoneTitle => _value('profileDangerZoneTitle');
+  String get profileDeleteAccountDescription =>
+      _value('profileDeleteAccountDescription');
+  String get profileDeleteAccountAction =>
+      _value('profileDeleteAccountAction');
+  String get profileDeleteAccountConfirmTitle =>
+      _value('profileDeleteAccountConfirmTitle');
+  String get profileDeleteAccountConfirmBody =>
+      _value('profileDeleteAccountConfirmBody');
+  String get profileDeleteAccountConfirmLabel =>
+      _value('profileDeleteAccountConfirmLabel');
+  String get profileDeleteAccountConfirmHelper =>
+      _value('profileDeleteAccountConfirmHelper');
+  String get profileDeleteAccountMismatch =>
+      _value('profileDeleteAccountMismatch');
+  String get profileDeleteAccountSuccess =>
+      _value('profileDeleteAccountSuccess');
   String get unknownUserLabel => _value('unknownUserLabel');
   String get averageSpeedStartTooltip => _value('averageSpeedStartTooltip');
   String get averageSpeedResetTooltip => _value('averageSpeedResetTooltip');

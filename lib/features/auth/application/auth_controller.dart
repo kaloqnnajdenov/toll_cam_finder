@@ -121,6 +121,46 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteAccount({String? password}) async {
+    if (_client == null) {
+      throw AuthFailure(AppMessages.authenticationNotConfigured);
+    }
+
+    try {
+      final supabase = _client!;
+      if (password != null && password.isNotEmpty) {
+        final email = supabase.auth.currentUser?.email;
+        if (email != null) {
+          await supabase.auth.signInWithPassword(
+            email: email,
+            password: password,
+          );
+        }
+      }
+
+      final response = await supabase.functions.invoke('delete-account');
+      final data = response.data;
+      final isSuccessful = data is Map && data['ok'] == true;
+
+      if (!isSuccessful) {
+        final message = data is Map && data['error'] is String
+            ? data['error'] as String
+            : AppMessages.unableToDeleteAccountTryAgain;
+        throw AuthFailure(message);
+      }
+
+      await supabase.auth.signOut();
+      _applySession(null);
+    } on AuthFailure {
+      rethrow;
+    } on AuthException catch (error) {
+      throw AuthFailure(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('Delete account failed: $error\n$stackTrace');
+      throw AuthFailure(AppMessages.unableToDeleteAccountTryAgain);
+    }
+  }
+
   void _applySession(Session? session) {
     final user = session?.user;
     _currentEmail = user?.email;
