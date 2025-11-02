@@ -325,6 +325,31 @@ class AppLocalizations {
       'introTitle': 'Welcome to TollCam',
       'introSubtitle':
           'Here\'s how to read the dashboard and what you can do from the menu.',
+      'introInstructionsTitle': 'How guidance keeps you informed',
+      'introInstructionsAverageTitle': 'Average speed indicator',
+      'introInstructionsAverageBody':
+          'We compare your running average with the allowed average. The number updates color instantly so you know when you\'re safe or need to adjust:',
+      'introInstructionsAverageStateGood':
+          'Green when you\'re safely under the limit.',
+      'introInstructionsAverageStateWarning':
+          'Amber when you are close to the limit—ease off to stay compliant.',
+      'introInstructionsAverageStateOver':
+          'Red when you exceed the allowed average. Slow down until it returns to amber or green.',
+      'introInstructionsVoiceTitle': 'Voice alerts along the segment',
+      'introInstructionsVoiceBody':
+          'Audio prompts guide you without taking your eyes off the road:',
+      'introInstructionsVoiceEnterTitle': 'Segment entry',
+      'introInstructionsVoiceEnterBody':
+          'We greet you and confirm the average speed monitoring has started.',
+      'introInstructionsVoiceSpeedTitle': 'Average speed changes',
+      'introInstructionsVoiceSpeedBody':
+          'Optional reminders play whenever the indicator changes color so you can react immediately.',
+      'introInstructionsVoiceApproachTitle': 'Approaching the finish',
+      'introInstructionsVoiceApproachBody':
+          'A heads-up plays in the final stretch so you can hold a safe pace.',
+      'introInstructionsVoiceExitTitle': 'Segment complete',
+      'introInstructionsVoiceExitBody':
+          'We close the loop with your final average and whether you stayed within the limit.',
       'introMetricsTitle': 'Dashboard metrics',
       'introMetricCurrentSpeedTitle': 'Current speed',
       'introMetricCurrentSpeedBody':
@@ -679,9 +704,34 @@ class AppLocalizations {
 'segmentMetricsDistanceToEnd': 'До края',
 'segmentMetricsSafeSpeed': 'Скорост без фиш',
 'introTitle': 'Добре дошли в TollCam',
-'introSubtitle':
-'Научете как да разчитате таблото и какво можете да правите от менюто.',
-'introMetricsTitle': 'Показатели на таблото',
+      'introSubtitle':
+          'Научете как да разчитате таблото и какво можете да правите от менюто.',
+      'introInstructionsTitle': 'Как ви информираме по време на път',
+      'introInstructionsAverageTitle': 'Показател за средна скорост',
+      'introInstructionsAverageBody':
+          'Сравняваме текущата ви средна скорост с допустимата. Числото сменя цвета си мигновено, за да знаете кога сте в безопасност и кога да намалите:',
+      'introInstructionsAverageStateGood':
+          'Зелено – когато сте под лимита и имате запас.',
+      'introInstructionsAverageStateWarning':
+          'Кехлибарено – когато сте близо до границата. Отпуснете педала, за да останете в норма.',
+      'introInstructionsAverageStateOver':
+          'Червено – когато надвишавате допустимата средна скорост. Намалете, докато се върне в жълто или зелено.',
+      'introInstructionsVoiceTitle': 'Гласови съобщения в сегмента',
+      'introInstructionsVoiceBody':
+          'Гласовите подсказки ви насочват, без да сваляте очи от пътя:',
+      'introInstructionsVoiceEnterTitle': 'При влизане в сегмента',
+      'introInstructionsVoiceEnterBody':
+          'Поздравяваме ви и потвърждаваме, че следим средната скорост.',
+      'introInstructionsVoiceSpeedTitle': 'Промяна на средната скорост',
+      'introInstructionsVoiceSpeedBody':
+          'По избор получавате напомняния всеки път, когато показателят смени цвят, за да реагирате навреме.',
+      'introInstructionsVoiceApproachTitle': 'При наближаване на края',
+      'introInstructionsVoiceApproachBody':
+          'Напомняне в последните метри, за да задържите безопасно темпо.',
+      'introInstructionsVoiceExitTitle': 'Край на сегмента',
+      'introInstructionsVoiceExitBody':
+          'Финално съобщение със средната ви скорост и дали сте останали в допустимото.',
+      'introMetricsTitle': 'Показатели на таблото',
 'introMetricCurrentSpeedTitle': 'Текуща скорост',
 'introMetricCurrentSpeedBody':
 'Показва моментната ви GPS скорост, за да знаете с каква скорост се движите.',
@@ -945,6 +995,37 @@ class AppLocalizations {
   String get speedDialNoActiveSegment => _value('speedDialNoActiveSegment');
   String get introTitle => _value('introTitle');
   String get introSubtitle => _value('introSubtitle');
+  String get introInstructionsTitle => _value('introInstructionsTitle');
+  String get introInstructionsAverageTitle =>
+      _value('introInstructionsAverageTitle');
+  String get introInstructionsAverageBody =>
+      _value('introInstructionsAverageBody');
+  String get introInstructionsAverageStateGood =>
+      _value('introInstructionsAverageStateGood');
+  String get introInstructionsAverageStateWarning =>
+      _value('introInstructionsAverageStateWarning');
+  String get introInstructionsAverageStateOver =>
+      _value('introInstructionsAverageStateOver');
+  String get introInstructionsVoiceTitle =>
+      _value('introInstructionsVoiceTitle');
+  String get introInstructionsVoiceBody =>
+      _value('introInstructionsVoiceBody');
+  String get introInstructionsVoiceEnterTitle =>
+      _value('introInstructionsVoiceEnterTitle');
+  String get introInstructionsVoiceEnterBody =>
+      _value('introInstructionsVoiceEnterBody');
+  String get introInstructionsVoiceSpeedTitle =>
+      _value('introInstructionsVoiceSpeedTitle');
+  String get introInstructionsVoiceSpeedBody =>
+      _value('introInstructionsVoiceSpeedBody');
+  String get introInstructionsVoiceApproachTitle =>
+      _value('introInstructionsVoiceApproachTitle');
+  String get introInstructionsVoiceApproachBody =>
+      _value('introInstructionsVoiceApproachBody');
+  String get introInstructionsVoiceExitTitle =>
+      _value('introInstructionsVoiceExitTitle');
+  String get introInstructionsVoiceExitBody =>
+      _value('introInstructionsVoiceExitBody');
   String get introMetricsTitle => _value('introMetricsTitle');
   String get introMetricCurrentSpeedTitle =>
       _value('introMetricCurrentSpeedTitle');
