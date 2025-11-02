@@ -35,6 +35,15 @@ class MapWelcomeOverlay extends StatelessWidget {
         .where((option) => option.available)
         .toList(growable: false);
 
+    String labelFor(LanguageOption option) {
+      switch (option.languageCode) {
+        case 'en':
+          return englishLocalizations.languageLabelEnglish;
+        default:
+          return option.label;
+      }
+    }
+
     return IgnorePointer(
       ignoring: !visible,
       child: AnimatedOpacity(
@@ -109,7 +118,7 @@ class MapWelcomeOverlay extends StatelessWidget {
                                       onLanguageSelected(code);
                                     }
                                   },
-                                  title: Text(option.label),
+                                  title: Text(labelFor(option)),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
