@@ -33,6 +33,7 @@ class SegmentTracker {
   static const int _maxCandidateMisses = 4;
   static const double _looseExitMultiplier = 2.5;
   static const Duration _reloadKeepAliveDuration = Duration(seconds: 15);
+  static const double _endReentryAllowanceMeters = 5.0;
 
   final SegmentIndexService _index;
 
@@ -48,6 +49,8 @@ class SegmentTracker {
 
   final Set<String> _ignoredSegmentIds = <String>{};
   SegmentGeometry? _lastExitedGeometry;
+  String? _lastEndExitSegmentId;
+  double? _lastEndExitRemainingDistance;
 
   bool get isReady => _isReady;
   SegmentTrackerDebugData get debugData => _latestDebugData;
@@ -254,6 +257,8 @@ class SegmentTracker {
   void dispose() {}
 
   void _resetTrackingState({required bool preserveActive}) {
+    _lastEndExitSegmentId = null;
+    _lastEndExitRemainingDistance = null;
     if (preserveActive && _active != null) {
       _active!
         ..consecutiveMisses = 0
@@ -275,6 +280,8 @@ class SegmentTracker {
       _pendingRestore = null;
       _active = null;
       _lastExitedGeometry = null;
+      _lastEndExitSegmentId = null;
+      _lastEndExitRemainingDistance = null;
     }
 
     _isReady = false;
@@ -323,7 +330,7 @@ class SegmentTracker {
     active.clearKeepAlive();
 
     if (current.endHit) {
-      _clearActiveSegment(reason: 'end geofence');
+      _clearActiveSegment(reason: 'end geofence', exitAtEnd: true);
       return const _SegmentTransition(ended: true);
     }
 
@@ -358,6 +365,8 @@ class SegmentTracker {
             (a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters),
           );
 
+    startCandidates.removeWhere(_shouldDeferEndReentry);
+
     return startCandidates.isNotEmpty ? startCandidates.first : null;
   }
 
@@ -371,6 +380,8 @@ class SegmentTracker {
 
     _active = active;
     _pendingRestore = null;
+    _lastEndExitSegmentId = null;
+    _lastEndExitRemainingDistance = null;
     active.clearKeepAlive();
 
     if (kDebugMode) {
@@ -381,13 +392,21 @@ class SegmentTracker {
     }
   }
 
-  void _clearActiveSegment({required String reason}) {
+  void _clearActiveSegment({required String reason, bool exitAtEnd = false}) {
     if (kDebugMode && _active != null) {
       debugPrint('[SEG] exit segment ${_active!.geometry.id} ($reason)');
     }
     if (_active != null) {
       _lastExitedGeometry = _active!.geometry;
       _active!.clearKeepAlive();
+      if (exitAtEnd) {
+        _lastEndExitSegmentId = _active!.geometry.id;
+        _lastEndExitRemainingDistance =
+            _active!.lastMatch?.remainingDistanceMeters;
+      } else {
+        _lastEndExitSegmentId = null;
+        _lastEndExitRemainingDistance = null;
+      }
     }
     _active = null;
     _pendingRestore = null;
@@ -422,6 +441,8 @@ class SegmentTracker {
       _active!.restoreKeepAlive(snapshot.keepAliveUntil);
 
       _pendingRestore = null;
+      _lastEndExitSegmentId = null;
+      _lastEndExitRemainingDistance = null;
 
       if (kDebugMode) {
         debugPrint('[SEG] restored segment ${match.geometry.id}');
@@ -430,6 +451,37 @@ class SegmentTracker {
     }
 
     return false;
+  }
+
+  bool _shouldDeferEndReentry(SegmentMatch match) {
+    final String? lastEndId = _lastEndExitSegmentId;
+    if (lastEndId == null || match.geometry.id != lastEndId) {
+      return false;
+    }
+
+    if (match.endHit) {
+      return true;
+    }
+
+    final double exitRemaining =
+        _lastEndExitRemainingDistance?.isFinite == true
+            ? _lastEndExitRemainingDistance!
+            : 0.0;
+    final double remaining = match.remainingDistanceMeters;
+    if (!remaining.isFinite) {
+      return false;
+    }
+
+    final double segmentLength = match.geometry.lengthMeters ??
+        _distanceToPathEnd(match.path, 0, 0.0);
+    if (!segmentLength.isFinite || segmentLength <= 0) {
+      return remaining <= exitRemaining + _endReentryAllowanceMeters;
+    }
+
+    final double exitProgress = segmentLength - exitRemaining;
+    final double currentProgress = segmentLength - remaining;
+    return currentProgress >=
+        exitProgress - _endReentryAllowanceMeters;
   }
 }
 
