@@ -131,31 +131,33 @@ class ProfilePage extends StatelessWidget {
     final controller = TextEditingController();
     String? errorText;
     try {
-      return showDialog<bool>(
+      final result = await showDialog<bool>(
         context: context,
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
                 title: Text(localizations.profileDeleteAccountConfirmTitle),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(localizations.profileDeleteAccountConfirmBody),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        labelText:
-                            localizations.profileDeleteAccountConfirmLabel,
-                        helperText:
-                            localizations.profileDeleteAccountConfirmHelper,
-                        errorText: errorText,
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(localizations.profileDeleteAccountConfirmBody),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText:
+                              localizations.profileDeleteAccountConfirmLabel,
+                          helperText:
+                              localizations.profileDeleteAccountConfirmHelper,
+                          errorText: errorText,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 actions: [
                   TextButton(
@@ -188,6 +190,7 @@ class ProfilePage extends StatelessWidget {
           );
         },
       );
+      return result;
     } finally {
       controller.dispose();
     }
