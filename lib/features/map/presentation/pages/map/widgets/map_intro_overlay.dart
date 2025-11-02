@@ -295,8 +295,8 @@ class _IntroMetricCard extends StatelessWidget {
             Border.all(color: palette.divider.withOpacity(isDark ? 0.8 : 0.45)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+        padding: const EdgeInsets.all(20),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
@@ -304,20 +304,27 @@ class _IntroMetricCard extends StatelessWidget {
                 color: palette.primary.withOpacity(isDark ? 0.2 : 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              padding: const EdgeInsets.all(12),
-              child: Icon(data.icon, color: palette.primary, size: 28),
+              padding: const EdgeInsets.all(10),
+              child: Icon(data.icon, color: palette.primary, size: 24),
             ),
-            const SizedBox(height: 16),
-            Text(
-              data.title,
-              style:
-                  theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              data.description,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: palette.secondaryText, height: 1.4),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data.title,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    data.description,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: palette.secondaryText, height: 1.4),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
