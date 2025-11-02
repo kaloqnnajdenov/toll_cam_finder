@@ -33,6 +33,8 @@ class SegmentTracker {
   static const int _maxCandidateMisses = 4;
   static const double _looseExitMultiplier = 2.5;
   static const Duration _reloadKeepAliveDuration = Duration(seconds: 15);
+  static const double _directionMinDistanceMeters = 5.0;
+  static const double _entryHeadingThresholdDegrees = 100.0;
 
   final SegmentIndexService _index;
 
@@ -48,6 +50,8 @@ class SegmentTracker {
 
   final Set<String> _ignoredSegmentIds = <String>{};
   SegmentGeometry? _lastExitedGeometry;
+  GeoPoint? _previousLocation;
+  GeoPoint? _currentLocation;
 
   bool get isReady => _isReady;
   SegmentTrackerDebugData get debugData => _latestDebugData;
@@ -114,6 +118,8 @@ class SegmentTracker {
     }
 
     final GeoPoint userPoint = GeoPoint(current.latitude, current.longitude);
+    _previousLocation = _currentLocation;
+    _currentLocation = userPoint;
 
     final List<SegmentGeometry> candidates = _index.candidatesNearLatLng(
       current,
@@ -206,6 +212,8 @@ class SegmentTracker {
 
     _isReady = false;
     _latestDebugData = const SegmentTrackerDebugData.empty();
+    _previousLocation = null;
+    _currentLocation = null;
   }
 
   _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {
@@ -279,11 +287,12 @@ class SegmentTracker {
   SegmentMatch? _chooseEntryMatch(List<SegmentMatch> matches) {
     if (matches.isEmpty) return null;
 
-    final startCandidates =
-        matches.where((m) => m.startHit).toList()
-          ..sort(
-            (a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters),
-          );
+    final startCandidates = matches
+        .where((match) => match.startHit && _isEntryDirectionValid(match))
+        .toList()
+      ..sort(
+        (a, b) => a.startDistanceMeters.compareTo(b.startDistanceMeters),
+      );
 
     return startCandidates.isNotEmpty ? startCandidates.first : null;
   }
@@ -357,6 +366,40 @@ class SegmentTracker {
     }
 
     return false;
+  }
+
+  bool _isEntryDirectionValid(SegmentMatch match) {
+    final GeoPoint? previous = _previousLocation;
+    final GeoPoint? current = _currentLocation;
+    if (previous == null || current == null) {
+      return true;
+    }
+
+    final double travelled = _distanceBetween(previous, current);
+    if (!travelled.isFinite || travelled < _directionMinDistanceMeters) {
+      return true;
+    }
+
+    final GeoPoint start = match.path.first;
+    GeoPoint? directionPoint;
+    for (final GeoPoint candidate in match.path.skip(1)) {
+      final double separation = _distanceBetween(start, candidate);
+      if (separation.isFinite && separation > 1.0) {
+        directionPoint = candidate;
+        break;
+      }
+    }
+
+    if (directionPoint == null) {
+      return true;
+    }
+
+    final double segmentBearing = _bearingBetween(start, directionPoint);
+    final double movementBearing = _bearingBetween(previous, current);
+    final double difference =
+        _angularDifferenceDegrees(segmentBearing, movementBearing);
+
+    return difference <= _entryHeadingThresholdDegrees;
   }
 }
 

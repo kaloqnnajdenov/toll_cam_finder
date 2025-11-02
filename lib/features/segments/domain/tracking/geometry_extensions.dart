@@ -116,6 +116,24 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     );
   }
 
+  double _bearingBetween(GeoPoint from, GeoPoint to) {
+    final double lat1 = from.lat * math.pi / 180.0;
+    final double lat2 = to.lat * math.pi / 180.0;
+    final double dLon = (to.lon - from.lon) * math.pi / 180.0;
+
+    final double y = math.sin(dLon) * math.cos(lat2);
+    final double x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    final double bearingRad = math.atan2(y, x);
+    final double bearingDeg = bearingRad * 180.0 / math.pi;
+    return (bearingDeg + 360.0) % 360.0;
+  }
+
+  double _angularDifferenceDegrees(double a, double b) {
+    final double delta = ((a - b + 540.0) % 360.0) - 180.0;
+    return delta.abs();
+  }
+
   /// Converts the polyline [path] into a [LatLng] list suitable for map widgets.
   List<LatLng> _pathToLatLngList(List<GeoPoint> path) {
     return path.map((p) => LatLng(p.lat, p.lon)).toList(growable: false);
