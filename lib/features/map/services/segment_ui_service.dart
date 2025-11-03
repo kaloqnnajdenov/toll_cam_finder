@@ -27,6 +27,10 @@ class SegmentUiService {
     required AppLocalizations localizations,
     required UpcomingSegmentCueService cueService,
   }) {
+    if (event.endedSegment) {
+      cueService.notifySegmentExit();
+    }
+
     final Iterable<SegmentDebugPath> paths = event.debugData.candidatePaths;
     if (paths.isEmpty) {
       cueService.reset();
