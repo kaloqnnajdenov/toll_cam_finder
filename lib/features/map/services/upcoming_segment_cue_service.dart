@@ -16,6 +16,9 @@ class UpcomingSegmentCueService {
   String? _segmentId;
   bool _hasPlayed = false;
   bool _useBulgarianVoice = false;
+  DateTime? _lastSegmentExitAt;
+
+  static const Duration _segmentExitVoiceHold = Duration(seconds: 5);
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
     allowAlertTones: true,
@@ -38,11 +41,17 @@ class UpcomingSegmentCueService {
   }
 
   void updateLanguage(String languageCode) {
-    final bool useBulgarian = languageCode.toLowerCase() == 'bg';
+    final String normalized = languageCode.toLowerCase();
+    final bool useBulgarian =
+        normalized == 'bg' || normalized.startsWith('bg-');
     if (_useBulgarianVoice == useBulgarian) {
       return;
     }
     _useBulgarianVoice = useBulgarian;
+  }
+
+  void notifySegmentExit() {
+    _lastSegmentExitAt = DateTime.now();
   }
 
   void updateCue(SegmentDebugPath upcoming) {
@@ -61,6 +70,13 @@ class UpcomingSegmentCueService {
 
     final bool canPlayVoice =
         _useBulgarianVoice ? _audioPolicy.allowSpeech : _audioPolicy.allowAlertTones;
+    if (_useBulgarianVoice &&
+        _lastSegmentExitAt != null &&
+        DateTime.now().difference(_lastSegmentExitAt!) <
+            _segmentExitVoiceHold) {
+      return;
+    }
+
     if (distance >= 1 && !_hasPlayed && canPlayVoice) {
       _hasPlayed = true;
       final String asset = _useBulgarianVoice
@@ -80,6 +96,7 @@ class UpcomingSegmentCueService {
   void reset() {
     _segmentId = null;
     _hasPlayed = false;
+    _lastSegmentExitAt = null;
   }
 
   Future<void> dispose() => _player.dispose();
