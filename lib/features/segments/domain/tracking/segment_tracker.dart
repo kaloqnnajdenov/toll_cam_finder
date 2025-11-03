@@ -34,6 +34,8 @@ class SegmentTracker {
   static const double _looseExitMultiplier = 2.5;
   static const Duration _reloadKeepAliveDuration = Duration(seconds: 15);
   static const double _endReentryAllowanceMeters = 5.0;
+  static const double _entryHeadingHalfFovDegrees = 90.0;
+  static const double _minimumHeadingSegmentLengthMeters = 3.0;
 
   final SegmentIndexService _index;
 
@@ -91,6 +93,7 @@ class SegmentTracker {
 
   SegmentTrackerEvent handleLocationUpdate({
     required LatLng current,
+    double? headingDegrees,
   }) {
     final SegmentGeometry? exitedGeometry = _lastExitedGeometry;
     _lastExitedGeometry = null;
@@ -163,7 +166,10 @@ class SegmentTracker {
 
     _updateDebugData(current, filteredCandidates, matches);
     
-    final transition = _updateActiveSegment(matches);
+    final transition = _updateActiveSegment(
+      matches,
+      headingDegrees: headingDegrees,
+    );
 
     final SegmentGeometry? refreshedGeometry = _active?.geometry;
     final _ActiveSegmentSnapshot? refreshedSnapshot = _pendingRestore;
@@ -288,12 +294,18 @@ class SegmentTracker {
     _latestDebugData = const SegmentTrackerDebugData.empty();
   }
 
-  _SegmentTransition _updateActiveSegment(List<SegmentMatch> matches) {
+  _SegmentTransition _updateActiveSegment(
+    List<SegmentMatch> matches, {
+    double? headingDegrees,
+  }) {
     if (_active == null) {
       if (_maybeRestoreActive(matches)) {
         return const _SegmentTransition();
       }
-      final entry = _chooseEntryMatch(matches);
+      final entry = _chooseEntryMatch(
+        matches,
+        headingDegrees: headingDegrees,
+      );
       if (entry != null) {
         _startSegment(entry);
         return const _SegmentTransition(started: true);
@@ -356,7 +368,10 @@ class SegmentTracker {
     return const _SegmentTransition();
   }
 
-  SegmentMatch? _chooseEntryMatch(List<SegmentMatch> matches) {
+  SegmentMatch? _chooseEntryMatch(
+    List<SegmentMatch> matches, {
+    double? headingDegrees,
+  }) {
     if (matches.isEmpty) return null;
 
     final startCandidates =
@@ -366,6 +381,24 @@ class SegmentTracker {
           );
 
     startCandidates.removeWhere(_shouldDeferEndReentry);
+
+    final double? normalizedHeading =
+        headingDegrees != null && headingDegrees.isFinite
+            ? _normalizeHeading(headingDegrees)
+            : null;
+
+    if (normalizedHeading != null) {
+      startCandidates.removeWhere((candidate) {
+        final double? segmentHeading = _segmentHeadingAtStart(candidate.path);
+        if (segmentHeading == null) {
+          return false;
+        }
+
+        final double delta =
+            _headingDeltaDegrees(normalizedHeading, segmentHeading);
+        return delta > _entryHeadingHalfFovDegrees;
+      });
+    }
 
     return startCandidates.isNotEmpty ? startCandidates.first : null;
   }

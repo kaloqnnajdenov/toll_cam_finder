@@ -183,6 +183,26 @@ extension _SegmentTrackerGeometry on SegmentTracker {
     final double diff = (normalizedA - normalizedB).abs() % 360.0;
     return diff > 180.0 ? 360.0 - diff : diff;
   }
+
+  double? _segmentHeadingAtStart(List<GeoPoint> path) {
+    if (path.length < 2) {
+      return null;
+    }
+
+    for (int i = 0; i < path.length - 1; i++) {
+      final GeoPoint from = path[i];
+      final GeoPoint to = path[i + 1];
+      final double segmentLength = _distanceBetween(from, to);
+      if (!segmentLength.isFinite) {
+        continue;
+      }
+      if (segmentLength >= _minimumHeadingSegmentLengthMeters) {
+        return _bearingBetweenPoints(from, to);
+      }
+    }
+
+    return _bearingBetweenPoints(path.first, path.last);
+  }
 }
 
 /// Captures the result of projecting a point onto a polyline.

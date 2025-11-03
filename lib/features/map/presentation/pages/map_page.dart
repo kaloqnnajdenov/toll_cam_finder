@@ -295,7 +295,10 @@ class _MapPageState extends State<MapPage>
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
     _center = firstFix;
-    final segEvent = _segmentTracker.handleLocationUpdate(current: firstFix);
+    final segEvent = _segmentTracker.handleLocationUpdate(
+      current: firstFix,
+      headingDegrees: _userHeading,
+    );
     _applySegmentEvent(segEvent);
     _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
       position: firstFix,
@@ -507,7 +510,10 @@ class _MapPageState extends State<MapPage>
       now: now,
       nextCameraCheckAt: _nextCameraCheckAt,
     )) {
-      final segEvent = _segmentTracker.handleLocationUpdate(current: next);
+      final segEvent = _segmentTracker.handleLocationUpdate(
+        current: next,
+        headingDegrees: _userHeading,
+      );
       _applySegmentEvent(segEvent, now: now);
       _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
         position: next,
