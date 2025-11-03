@@ -117,21 +117,26 @@ class SegmentGuidanceController {
     required DateTime now,
     required DateTime? averageStartedAt,
   }) async {
-    if (event.startedSegment) {
+    final bool startedSegment = event.startedSegment;
+    final bool endedSegment = event.endedSegment || event.activeSegmentId == null;
+    bool clearedActiveSegment = false;
+
+    if (endedSegment && _hasActiveSegment) {
+      _hasActiveSegment = false;
+      await _handleSegmentExit(averageKph: averageKph);
+      await reset(
+        stopTts: false,
+        preservePendingExitAnnouncement: true,
+      );
+      clearedActiveSegment = true;
+    }
+
+    if (startedSegment) {
       await _handleSegmentEntry(limitKph: speedLimitKph);
     }
 
-    if (event.endedSegment || event.activeSegmentId == null) {
-      if (_hasActiveSegment) {
-        _hasActiveSegment = false;
-        await _handleSegmentExit(averageKph: averageKph);
-        await reset(
-          stopTts: false,
-          preservePendingExitAnnouncement: true,
-        );
-        return SegmentGuidanceResult.clear();
-      }
-      return null;
+    if (event.activeSegmentId == null) {
+      return clearedActiveSegment ? SegmentGuidanceResult.clear() : null;
     }
 
     _hasActiveSegment = true;
@@ -165,7 +170,7 @@ class SegmentGuidanceController {
       _furthestDistanceFromStart = distanceFromStart;
     }
 
-    bool forceUi = event.startedSegment;
+    bool forceUi = startedSegment;
     bool triggered = false;
     final bool allowSpeech =
         !_suppressGuidanceAudio && _audioPolicy.allowSpeech;
