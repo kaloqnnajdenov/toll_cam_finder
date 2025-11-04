@@ -4,6 +4,8 @@ import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracke
 import 'upcoming_segment_cue_service.dart';
 
 class SegmentUiService {
+  String? _previousActiveSegmentId;
+
   SegmentDebugPath? resolveActiveSegmentPath(
     Iterable<SegmentDebugPath> paths,
     SegmentTrackerEvent event,
@@ -28,16 +30,15 @@ class SegmentUiService {
     required UpcomingSegmentCueService cueService,
   }) {
     if (event.endedSegment) {
-      cueService.notifySegmentExit();
+      cueService.notifySegmentExit(segmentId: _previousActiveSegmentId);
     }
 
     final Iterable<SegmentDebugPath> paths = event.debugData.candidatePaths;
+    String? label;
+
     if (paths.isEmpty) {
       cueService.reset();
-      return null;
-    }
-
-    if (event.activeSegmentId != null) {
+    } else if (event.activeSegmentId != null) {
       cueService.reset();
       final SegmentDebugPath? path =
           activePath ?? resolveActiveSegmentPath(paths, event);
@@ -47,53 +48,54 @@ class SegmentUiService {
           path.remainingDistanceMeters >= 0) {
         final double remaining = path.remainingDistanceMeters;
         if (remaining >= 1000) {
-          return localizations.translate(
+          label = localizations.translate(
             'segmentProgressEndKilometers',
             {'distance': (remaining / 1000).toStringAsFixed(2)},
           );
-        }
-        if (remaining >= 1) {
-          return localizations.translate(
+        } else if (remaining >= 1) {
+          label = localizations.translate(
             'segmentProgressEndMeters',
             {'distance': remaining.toStringAsFixed(0)},
           );
-        }
-        return localizations.translate('segmentProgressEndNearby');
-      }
-      return null;
-    }
-
-    SegmentDebugPath? upcoming;
-    for (final path in paths) {
-      final double startDist = path.startDistanceMeters;
-      if (!startDist.isFinite) continue;
-      if (startDist <= 500) {
-        if (upcoming == null || startDist < upcoming!.startDistanceMeters) {
-          upcoming = path;
+        } else {
+          label = localizations.translate('segmentProgressEndNearby');
         }
       }
+    } else {
+      SegmentDebugPath? upcoming;
+      for (final path in paths) {
+        final double startDist = path.startDistanceMeters;
+        if (!startDist.isFinite) continue;
+        if (startDist <= 500) {
+          if (upcoming == null || startDist < upcoming!.startDistanceMeters) {
+            upcoming = path;
+          }
+        }
+      }
+
+      if (upcoming == null) {
+        cueService.reset();
+      } else {
+        final double distance = upcoming.startDistanceMeters;
+        cueService.updateCue(upcoming);
+        if (distance >= 1000) {
+          label = localizations.translate(
+            'segmentProgressStartKilometers',
+            {'distance': (distance / 1000).toStringAsFixed(2)},
+          );
+        } else if (distance >= 1) {
+          label = localizations.translate(
+            'segmentProgressStartMeters',
+            {'distance': distance.toStringAsFixed(0)},
+          );
+        } else {
+          label = localizations.translate('segmentProgressStartNearby');
+        }
+      }
     }
 
-    if (upcoming == null) {
-      cueService.reset();
-      return null;
-    }
-
-    final double distance = upcoming.startDistanceMeters;
-    cueService.updateCue(upcoming);
-    if (distance >= 1000) {
-      return localizations.translate(
-        'segmentProgressStartKilometers',
-        {'distance': (distance / 1000).toStringAsFixed(2)},
-      );
-    }
-    if (distance >= 1) {
-      return localizations.translate(
-        'segmentProgressStartMeters',
-        {'distance': distance.toStringAsFixed(0)},
-      );
-    }
-    return localizations.translate('segmentProgressStartNearby');
+    _previousActiveSegmentId = event.activeSegmentId;
+    return label;
   }
 
   double? nearestUpcomingSegmentDistance(Iterable<SegmentDebugPath> paths) {

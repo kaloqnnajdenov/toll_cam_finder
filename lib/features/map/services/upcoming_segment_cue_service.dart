@@ -17,6 +17,7 @@ class UpcomingSegmentCueService {
   bool _hasPlayed = false;
   bool _useBulgarianVoice = false;
   DateTime? _lastSegmentExitAt;
+  String? _recentlyExitedSegmentId;
 
   static const Duration _segmentExitVoiceHold = Duration(seconds: 5);
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
@@ -50,8 +51,9 @@ class UpcomingSegmentCueService {
     _useBulgarianVoice = useBulgarian;
   }
 
-  void notifySegmentExit() {
+  void notifySegmentExit({String? segmentId}) {
     _lastSegmentExitAt = DateTime.now();
+    _recentlyExitedSegmentId = segmentId;
   }
 
   void updateCue(SegmentDebugPath upcoming) {
@@ -65,6 +67,13 @@ class UpcomingSegmentCueService {
 
     if (distance >= 500) {
       _hasPlayed = false;
+      if (_recentlyExitedSegmentId == segmentId) {
+        _recentlyExitedSegmentId = null;
+      }
+      return;
+    }
+
+    if (_recentlyExitedSegmentId == segmentId) {
       return;
     }
 
@@ -97,6 +106,7 @@ class UpcomingSegmentCueService {
     _segmentId = null;
     _hasPlayed = false;
     _lastSegmentExitAt = null;
+    _recentlyExitedSegmentId = null;
   }
 
   Future<void> dispose() => _player.dispose();
