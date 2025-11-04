@@ -65,6 +65,9 @@ class SegmentUiService {
 
     SegmentDebugPath? upcoming;
     for (final path in paths) {
+      if (path.startHit) {
+        continue;
+      }
       final double startDist = path.startDistanceMeters;
       if (!startDist.isFinite) continue;
       if (startDist <= 500) {
