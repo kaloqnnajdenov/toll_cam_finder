@@ -860,7 +860,7 @@ class SegmentGuidanceController {
     await _announceLocalizedSpeech(
       englishMessage:
           'Zone complete. Allowed average $limitText. Your average $averageText.',
-      bulgarianAsset: announcement.bulgarianAsset,
+      bulgarianAsset: AppConstants.segmentEndedVoiceAsset,
     );
   }
 

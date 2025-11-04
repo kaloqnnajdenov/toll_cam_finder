@@ -196,7 +196,7 @@ extension _SegmentTrackerGeometry on SegmentTracker {
       if (!segmentLength.isFinite) {
         continue;
       }
-      if (segmentLength >= _minimumHeadingSegmentLengthMeters) {
+      if (segmentLength >= SegmentTracker._minimumHeadingSegmentLengthMeters) {
         return _bearingBetweenPoints(from, to);
       }
     }
