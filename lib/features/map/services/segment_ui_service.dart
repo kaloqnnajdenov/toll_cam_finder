@@ -4,6 +4,8 @@ import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracke
 import 'upcoming_segment_cue_service.dart';
 
 class SegmentUiService {
+  bool _hadActiveSegment = false;
+
   SegmentDebugPath? resolveActiveSegmentPath(
     Iterable<SegmentDebugPath> paths,
     SegmentTrackerEvent event,
@@ -29,6 +31,15 @@ class SegmentUiService {
   }) {
     if (event.endedSegment) {
       cueService.notifySegmentExit();
+    }
+
+    if (event.activeSegmentId == null) {
+      if (_hadActiveSegment && !event.endedSegment) {
+        cueService.notifySegmentExit();
+      }
+      _hadActiveSegment = false;
+    } else {
+      _hadActiveSegment = true;
     }
 
     final Iterable<SegmentDebugPath> paths = event.debugData.candidatePaths;
