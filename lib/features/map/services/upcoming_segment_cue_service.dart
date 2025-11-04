@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
+import 'package:toll_cam_finder/shared/audio/bulgarian_voice_cooldown.dart';
 import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 class UpcomingSegmentCueService {
@@ -71,9 +72,10 @@ class UpcomingSegmentCueService {
     final bool canPlayVoice =
         _useBulgarianVoice ? _audioPolicy.allowSpeech : _audioPolicy.allowAlertTones;
     if (_useBulgarianVoice &&
-        _lastSegmentExitAt != null &&
-        DateTime.now().difference(_lastSegmentExitAt!) <
-            _segmentExitVoiceHold) {
+        (BulgarianVoiceCooldown.isExitVoiceCoolingDown(_segmentExitVoiceHold) ||
+            (_lastSegmentExitAt != null &&
+                DateTime.now().difference(_lastSegmentExitAt!) <
+                    _segmentExitVoiceHold))) {
       return;
     }
 

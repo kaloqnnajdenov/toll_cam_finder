@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
+import 'package:toll_cam_finder/shared/audio/bulgarian_voice_cooldown.dart';
 import 'package:toll_cam_finder/shared/audio/navigation_audio_context.dart';
 
 class SegmentGuidanceUiModel {
@@ -856,6 +857,10 @@ class SegmentGuidanceController {
       announcement.averageKph,
       bulgarian: false,
     );
+
+    if (_useBulgarianVoice) {
+      BulgarianVoiceCooldown.markExitVoicePlayed();
+    }
 
     await _announceLocalizedSpeech(
       englishMessage:
