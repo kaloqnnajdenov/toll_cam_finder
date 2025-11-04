@@ -312,17 +312,15 @@ class SegmentGuidanceController {
       return;
     }
 
-    if (_useBulgarianVoice) {
-      await _playVoicePrompt(AppConstants.segmentEnteredVoiceAsset);
-      return;
-    }
-
     await _playChime(times: 2, isBoundary: true);
 
     final String limitText = (limitKph != null && limitKph.isFinite)
         ? 'Limit ${limitKph.toStringAsFixed(0)}.'
         : 'Limit unknown.';
-    await _speak('Zone started. $limitText Tracking average speed.');
+    await _announceLocalizedSpeech(
+      englishMessage: 'Zone started. $limitText Tracking average speed.',
+      bulgarianAsset: AppConstants.segmentEnteredVoiceAsset,
+    );
   }
 
   Future<void> _handleSegmentExit({required double averageKph}) async {
@@ -341,7 +339,8 @@ class SegmentGuidanceController {
   void _scheduleExitAnnouncement({double? limitKph, double? averageKph}) {
     _pendingExitAnnouncement = _PendingExitAnnouncement(
       createdAt: DateTime.now(),
-      useVoicePrompt: _useBulgarianVoice,
+      bulgarianAsset:
+          _useBulgarianVoice ? AppConstants.segmentEndedVoiceAsset : null,
       limitKph: limitKph,
       averageKph: averageKph,
     );
@@ -367,7 +366,10 @@ class SegmentGuidanceController {
         averageKph < limit) {
       _closeToLimitNotified = true;
       await _playChime();
-      await _speak('Close to limit.');
+      await _announceLocalizedSpeech(
+        englishMessage: 'Close to limit.',
+        bulgarianAsset: null,
+      );
       return true;
     }
 
@@ -414,13 +416,10 @@ class SegmentGuidanceController {
           now.difference(_aboveLimitSince!) >= _aboveLimitGrace) {
         _aboveLimitAlerted = true;
         await _playChime(times: 2, spacing: const Duration(milliseconds: 180));
-        if (_useBulgarianVoice) {
-          await _playVoicePrompt(
-            AppConstants.averageAboveAllowedVoiceAsset,
-          );
-        } else {
-          await _speak('Average above limit. Reduce speed.');
-        }
+        await _announceLocalizedSpeech(
+          englishMessage: 'Average above limit. Reduce speed.',
+          bulgarianAsset: AppConstants.averageAboveAllowedVoiceAsset,
+        );
         _lastAboveLimitReminderAt = now;
         return true;
       }
@@ -431,13 +430,10 @@ class SegmentGuidanceController {
               now.difference(_lastAboveLimitReminderAt!) >=
                   _aboveLimitReminderInterval)) {
         _lastAboveLimitReminderAt = now;
-        if (_useBulgarianVoice) {
-          await _playVoicePrompt(
-            AppConstants.averageAboveAllowedVoiceAsset,
-          );
-        } else {
-          await _speak('Average above limit. Reduce speed.');
-        }
+        await _announceLocalizedSpeech(
+          englishMessage: 'Average above limit. Reduce speed.',
+          bulgarianAsset: AppConstants.averageAboveAllowedVoiceAsset,
+        );
         return true;
       }
       return false;
@@ -452,13 +448,10 @@ class SegmentGuidanceController {
       _aboveLimitAlerted = false;
       _lastAboveLimitReminderAt = null;
       await _playChime();
-      if (_useBulgarianVoice) {
-        await _playVoicePrompt(
-          AppConstants.averageBackWithinAllowedVoiceAsset,
-        );
-      } else {
-        await _speak('Average back within limit.');
-      }
+      await _announceLocalizedSpeech(
+        englishMessage: 'Average back within limit.',
+        bulgarianAsset: AppConstants.averageBackWithinAllowedVoiceAsset,
+      );
       return true;
     }
 
@@ -494,25 +487,21 @@ class SegmentGuidanceController {
         : '$rounded m';
 
     if (hasImmediateNextSegment) {
-      if (_useBulgarianVoice) {
-        await _playVoicePrompt(AppConstants.segmentEndingWithNextVoiceAsset);
-        return true;
-      }
-
       final String message =
           'Current segment ending in $distanceText. The next segment starts when the current one ends.';
 
-      await _speak(message);
-      return true;
-    }
-
-    if (_useBulgarianVoice) {
-      await _playVoicePrompt(AppConstants.segmentEndingSoonVoiceAsset);
+      await _announceLocalizedSpeech(
+        englishMessage: message,
+        bulgarianAsset: AppConstants.segmentEndingWithNextVoiceAsset,
+      );
       return true;
     }
 
     await _playChime();
-    await _speak('Current segment ending in $distanceText.');
+    await _announceLocalizedSpeech(
+      englishMessage: 'Current segment ending in $distanceText.',
+      bulgarianAsset: AppConstants.segmentEndingSoonVoiceAsset,
+    );
     return true;
   }
 
@@ -845,25 +834,18 @@ class SegmentGuidanceController {
   }) async {
     await _playChime(times: 2, isBoundary: true);
 
-    if (_useBulgarianVoice) {
-      await _playVoicePrompt(AppConstants.segmentEnteredVoiceAsset);
-      return;
-    }
-
     final String limitText = (nextLimitKph != null && nextLimitKph.isFinite)
         ? 'Limit ${nextLimitKph.toStringAsFixed(0)}.'
         : 'Limit unknown.';
-    await _speak('Zone started. $limitText Tracking average speed.');
+    await _announceLocalizedSpeech(
+      englishMessage: 'Zone started. $limitText Tracking average speed.',
+      bulgarianAsset: AppConstants.segmentEnteredVoiceAsset,
+    );
   }
 
   Future<void> _deliverExitAnnouncement(
     _PendingExitAnnouncement announcement,
   ) async {
-    if (announcement.useVoicePrompt) {
-      await _playVoicePrompt(AppConstants.segmentEndedVoiceAsset);
-      return;
-    }
-
     await _playChime(isBoundary: true);
 
     final String limitText = _formatBoundaryValue(
@@ -875,9 +857,26 @@ class SegmentGuidanceController {
       bulgarian: false,
     );
 
-    await _speak(
-      'Zone complete. Allowed average $limitText. Your average $averageText.',
+    await _announceLocalizedSpeech(
+      englishMessage:
+          'Zone complete. Allowed average $limitText. Your average $averageText.',
+      bulgarianAsset: announcement.bulgarianAsset,
     );
+  }
+
+  Future<void> _announceLocalizedSpeech({
+    required String englishMessage,
+    String? bulgarianAsset,
+  }) async {
+    if (_useBulgarianVoice) {
+      if (bulgarianAsset == null) {
+        return;
+      }
+      await _playVoicePrompt(bulgarianAsset);
+      return;
+    }
+
+    await _speak(englishMessage);
   }
 
   String _formatBoundaryValue(double? value, {required bool bulgarian}) {
@@ -892,13 +891,13 @@ class SegmentGuidanceController {
 class _PendingExitAnnouncement {
   const _PendingExitAnnouncement({
     required this.createdAt,
-    required this.useVoicePrompt,
+    this.bulgarianAsset,
     this.limitKph,
     this.averageKph,
   });
 
   final DateTime createdAt;
-  final bool useVoicePrompt;
+  final String? bulgarianAsset;
   final double? limitKph;
   final double? averageKph;
 }
