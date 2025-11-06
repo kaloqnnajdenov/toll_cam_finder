@@ -173,22 +173,22 @@ class AppConstants {
   /// Voice prompt played when the monitored average speed rises above the
   /// allowed limit (Bulgarian locale).
   static const String averageAboveAllowedVoiceAsset =
-      'data/average_above_allowed.mp3';
+      'data/avg_above_allowed.mp3';
 
   /// Voice prompt played when the monitored average speed returns within the
   /// allowed limit (Bulgarian locale).
   static const String averageBackWithinAllowedVoiceAsset =
-      'data/average_bellow_allowed.mp3';
+      'data/avg_bellow_allowed.mp3';
 
   /// Follow-up prompt played when announcing an upcoming segment end and the
   /// speed is above the allowed average (Bulgarian locale).
   static const String segmentSpeedAboveVoiceAsset =
-      'data/speed_above_allowed.mp3';
+      'data/avg_above_allowed.mp3';
 
   /// Follow-up prompt played when announcing an upcoming segment end and the
   /// speed is below the allowed average (Bulgarian locale).
   static const String segmentSpeedBelowVoiceAsset =
-      'data/speed_bellow_allowed.mp3';
+      'data/avg_bellow_allowed.mp3';
 
 
   /// The animation controller starts with, and falls back to, a 500 ms duration for

@@ -43,6 +43,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-# Voice guidance audio assets (managed outside of git)
-assets/data/*.mp3
-assets/data/icon.png
