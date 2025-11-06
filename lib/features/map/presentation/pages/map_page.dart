@@ -30,11 +30,10 @@ import 'package:toll_cam_finder/features/map/services/map_sync_message_service.d
 import 'package:toll_cam_finder/features/map/services/osm_speed_limit_service.dart';
 import 'package:toll_cam_finder/features/map/services/segment_ui_service.dart';
 import 'package:toll_cam_finder/features/map/services/speed_service.dart';
-import 'package:toll_cam_finder/features/map/services/upcoming_segment_cue_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/index/segment_index_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
-import 'package:toll_cam_finder/features/segments/domain/tracking/segment_guidance_controller.dart';
+import 'package:toll_cam_finder/features/segments/domain/tracking/segment_voice_guidance_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
@@ -86,8 +85,6 @@ class _MapPageState extends State<MapPage>
   final SegmentUiService _segmentUiService = SegmentUiService();
   late final ForegroundNotificationService _foregroundNotificationService =
       ForegroundNotificationService(segmentUiService: _segmentUiService);
-  final UpcomingSegmentCueService _upcomingSegmentCueService =
-      UpcomingSegmentCueService();
   final WeighStationAlertService _weighStationAlertService =
       WeighStationAlertService();
   final CameraPollingService _cameraPollingService =
@@ -133,7 +130,7 @@ class _MapPageState extends State<MapPage>
   );
   List<Polyline> _visibleSegmentPolylines = const [];
   Map<String, String> _visibleSegmentSignatures = const {};
-  late final SegmentGuidanceController _segmentGuidanceController;
+  late final SegmentVoiceGuidanceService _segmentGuidanceController;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
 
@@ -193,7 +190,7 @@ class _MapPageState extends State<MapPage>
 
     _currentSegmentController = context.read<CurrentSegmentController>();
     _blueDotAnimator = BlueDotAnimator(vsync: this, onTick: _onBlueDotTick);
-    _segmentGuidanceController = SegmentGuidanceController();
+    _segmentGuidanceController = SegmentVoiceGuidanceService();
     _audioController = context.read<GuidanceAudioController>();
     _languageController = context.read<LanguageController>();
     _weighStationPreferencesController =
@@ -250,7 +247,6 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
     unawaited(_segmentGuidanceController.dispose());
-    unawaited(_upcomingSegmentCueService.dispose());
     unawaited(_weighStationAlertService.dispose());
     _osmSpeedLimitService.dispose();
     _audioController.removeListener(_updateAudioPolicy);
@@ -362,7 +358,6 @@ class _MapPageState extends State<MapPage>
   void _handleLanguageChange() {
     final String languageCode = _languageController.locale.languageCode;
     _segmentGuidanceController.updateLanguage(languageCode);
-    _upcomingSegmentCueService.updateLanguage(languageCode);
     _weighStationAlertService.updateLanguage(languageCode);
   }
 
@@ -375,7 +370,6 @@ class _MapPageState extends State<MapPage>
     }
     _audioPolicy = newPolicy;
     _segmentGuidanceController.updateAudioPolicy(newPolicy);
-    _upcomingSegmentCueService.updateAudioPolicy(newPolicy);
     _weighStationAlertService.updateAudioPolicy(newPolicy);
   }
 
@@ -717,7 +711,6 @@ class _MapPageState extends State<MapPage>
       event: segEvent,
       activePath: activePath,
       localizations: AppLocalizations.of(context),
-      cueService: _upcomingSegmentCueService,
     );
 
     final double? exitAverage = _currentSegmentController.updateWithEvent(
@@ -739,7 +732,7 @@ class _MapPageState extends State<MapPage>
         averageKph: exitAverage ?? _avgCtrl.average,
         speedLimitKph: segEvent.activeSegmentSpeedLimitKph,
         now: timestamp,
-        averageStartedAt: _avgCtrl.startedAt,
+        headingDegrees: _userHeading,
       ),
     );
   }
@@ -747,7 +740,7 @@ class _MapPageState extends State<MapPage>
   void _resetSegmentState() {
     _currentSegmentController.reset();
     _nextCameraCheckAt = null;
-    _upcomingSegmentCueService.reset();
+    // Upcoming segment cues are handled through voice guidance; nothing to reset here.
     _weighStationAlertService.reset();
     _lastNotificationStatus = null;
     _updateSegmentsOnlyMetrics();

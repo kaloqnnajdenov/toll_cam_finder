@@ -1,8 +1,6 @@
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracker.dart';
 
-import 'upcoming_segment_cue_service.dart';
-
 class SegmentUiService {
   SegmentDebugPath? resolveActiveSegmentPath(
     Iterable<SegmentDebugPath> paths,
@@ -25,20 +23,13 @@ class SegmentUiService {
     required SegmentTrackerEvent event,
     required SegmentDebugPath? activePath,
     required AppLocalizations localizations,
-    required UpcomingSegmentCueService cueService,
   }) {
-    if (event.endedSegment) {
-      cueService.notifySegmentExit();
-    }
-
     final Iterable<SegmentDebugPath> paths = event.debugData.candidatePaths;
     if (paths.isEmpty) {
-      cueService.reset();
       return null;
     }
 
     if (event.activeSegmentId != null) {
-      cueService.reset();
       final SegmentDebugPath? path =
           activePath ?? resolveActiveSegmentPath(paths, event);
 
@@ -75,12 +66,10 @@ class SegmentUiService {
     }
 
     if (upcoming == null) {
-      cueService.reset();
       return null;
     }
 
     final double distance = upcoming.startDistanceMeters;
-    cueService.updateCue(upcoming);
     if (distance >= 1000) {
       return localizations.translate(
         'segmentProgressStartKilometers',

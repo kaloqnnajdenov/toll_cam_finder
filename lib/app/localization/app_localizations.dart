@@ -95,7 +95,8 @@ class AppLocalizations {
       'weighStationDownvoteAction': 'Downvote',
       'weighStationUpvoteCount': 'Upvotes: {count}',
       'weighStationDownvoteCount': 'Downvotes: {count}',
-      'weighStationApproachAlert': 'Approaching weigh station.',
+          'weighStationApproachAlert':
+              'You are approaching a station for weigh control.',
       'deleteWeighStationAction': 'Delete weigh station',
       'deleteWeighStationConfirmationTitle': 'Delete weigh station',
       'confirmDeleteWeighStation':
