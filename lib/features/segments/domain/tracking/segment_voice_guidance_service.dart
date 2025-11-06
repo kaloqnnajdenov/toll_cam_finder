@@ -279,6 +279,9 @@ class SegmentVoiceGuidanceService {
   }
 
   Future<void> _playSpeedFollowUp(_SpeedStatus status) async {
+    if (_messenger.isUsingBulgarianAudio) {
+      return;
+    }
     switch (status) {
       case _SpeedStatus.above:
         await _messenger.playBulgarianAsset(
@@ -595,6 +598,8 @@ class SegmentVoiceMessenger {
   int _englishSpeechSequence = 0;
   int? _activeEnglishSpeechId;
   String? _activeEnglishMessage;
+
+  bool get isUsingBulgarianAudio => _useBulgarian;
 
   Future<void> _initialize() async {
     await _tts.awaitSpeakCompletion(true);
