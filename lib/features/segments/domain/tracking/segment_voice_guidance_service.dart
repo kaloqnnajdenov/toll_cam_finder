@@ -24,20 +24,23 @@ class SegmentVoiceGuidanceService {
 
   String? _activeSegmentId;
   double? _currentLimitKph;
+  double? _currentSegmentLengthMeters;
   bool _endWarningIssued = false;
   bool _nextSegmentStartsImmediately = false;
   bool _wasAboveLimitOnLastCheck = false;
   bool _hasBeenAboveLimit = false;
   bool _announcedBelowAfterAbove = false;
   DateTime? _lastAboveAnnouncementAt;
+  double? _lastKnownDistanceFromStartMeters;
 
   String? _lastApproachSegmentId;
   DateTime? _lastApproachAnnouncedAt;
   double? _lastApproachAnnouncedDistance;
 
-  static const Duration _aboveReminderInterval = Duration(seconds: 20);
+  static const Duration _aboveReminderInterval = Duration(seconds: 30);
   static const Duration _approachCooldown = Duration(minutes: 2);
   static const double _approachTriggerDistanceMeters = 800;
+  static const double _aboveReminderStartDistanceMeters = 1000;
   static const double _speedReminderCutoffMeters = 1500;
   static const double _headingToleranceDegrees = 45;
 
@@ -70,7 +73,10 @@ class SegmentVoiceGuidanceService {
     }
 
     if (event.startedSegment) {
-      await _handleSegmentEntry(limitKph: speedLimitKph);
+      await _handleSegmentEntry(
+        limitKph: speedLimitKph,
+        lengthMeters: event.activeSegmentLengthMeters,
+      );
     }
 
     final String? activeId = event.activeSegmentId;
@@ -86,6 +92,11 @@ class SegmentVoiceGuidanceService {
 
     _activeSegmentId = activeId;
     _currentLimitKph = speedLimitKph;
+    if (event.activeSegmentLengthMeters != null &&
+        event.activeSegmentLengthMeters!.isFinite) {
+      _currentSegmentLengthMeters =
+          _normalizeDistance(event.activeSegmentLengthMeters);
+    }
 
     await _handleActiveSegment(
       event: event,
@@ -97,15 +108,20 @@ class SegmentVoiceGuidanceService {
     );
   }
 
-  Future<void> _handleSegmentEntry({double? limitKph}) async {
+  Future<void> _handleSegmentEntry({
+    double? limitKph,
+    double? lengthMeters,
+  }) async {
     _activeSegmentId = null;
     _currentLimitKph = limitKph;
+    _currentSegmentLengthMeters = _normalizeDistance(lengthMeters);
     _endWarningIssued = false;
     _nextSegmentStartsImmediately = false;
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
     _lastAboveAnnouncementAt = null;
+    _lastKnownDistanceFromStartMeters = null;
     _resetUpcomingApproachState();
 
     await _messenger.deliverPrompt(
@@ -136,10 +152,18 @@ class SegmentVoiceGuidanceService {
     double? headingDegrees,
   }) async {
     final double? remaining = _normalizeDistance(path?.remainingDistanceMeters);
+    final double? distanceFromStart =
+        _normalizeDistance(path?.startDistanceMeters);
+    final double? distanceForCheck =
+        distanceFromStart ?? _lastKnownDistanceFromStartMeters;
+    if (distanceFromStart != null) {
+      _lastKnownDistanceFromStartMeters = distanceFromStart;
+    }
 
     await _checkAverageSpeed(
       averageKph: averageKph,
       remainingMeters: remaining,
+      distanceFromStartMeters: distanceForCheck,
       now: now,
     );
 
@@ -164,6 +188,7 @@ class SegmentVoiceGuidanceService {
   Future<void> _checkAverageSpeed({
     required double averageKph,
     required double? remainingMeters,
+    required double? distanceFromStartMeters,
     required DateTime now,
   }) async {
     final double? limit = _currentLimitKph;
@@ -173,24 +198,33 @@ class SegmentVoiceGuidanceService {
     }
 
     final bool isAbove = averageKph > limit;
-    final bool withinReminderWindow =
-        remainingMeters == null || remainingMeters > _speedReminderCutoffMeters;
+    final double? progressMeters = _computeProgressMeters(
+      distanceFromStartMeters: distanceFromStartMeters,
+      remainingMeters: remainingMeters,
+      segmentLengthMeters: _currentSegmentLengthMeters,
+    );
+    final bool pastInitialDistance = progressMeters != null &&
+        progressMeters >= _aboveReminderStartDistanceMeters;
+    final bool outsideFinalWindow = remainingMeters == null ||
+        remainingMeters > _speedReminderCutoffMeters;
+    final bool allowReminder = pastInitialDistance && outsideFinalWindow;
 
     if (isAbove) {
       _hasBeenAboveLimit = true;
       _announcedBelowAfterAbove = false;
-      if (withinReminderWindow) {
+      if (allowReminder) {
         final bool shouldAnnounce =
             !_wasAboveLimitOnLastCheck ||
             _lastAboveAnnouncementAt == null ||
             now.difference(_lastAboveAnnouncementAt!) >=
                 _aboveReminderInterval;
         if (shouldAnnounce) {
+          _wasAboveLimitOnLastCheck = true;
+          _lastAboveAnnouncementAt = now;
           await _messenger.deliverPrompt(
             englishMessage: 'Average above limit. Reduce speed.',
             bulgarianAsset: AppConstants.averageAboveAllowedVoiceAsset,
           );
-          _lastAboveAnnouncementAt = now;
         }
       }
     } else if (_hasBeenAboveLimit && !_announcedBelowAfterAbove) {
@@ -480,6 +514,26 @@ class SegmentVoiceGuidanceService {
     return delta > 180 ? 360 - delta : delta;
   }
 
+  double? _computeProgressMeters({
+    double? distanceFromStartMeters,
+    double? remainingMeters,
+    double? segmentLengthMeters,
+  }) {
+    if (distanceFromStartMeters != null) {
+      return _normalizeDistance(distanceFromStartMeters);
+    }
+
+    if (segmentLengthMeters != null &&
+        remainingMeters != null &&
+        segmentLengthMeters.isFinite &&
+        remainingMeters.isFinite) {
+      final double progress = segmentLengthMeters - remainingMeters;
+      return _normalizeDistance(progress);
+    }
+
+    return null;
+  }
+
   double? _normalizeDistance(double? value) {
     if (value == null || !value.isFinite) {
       return null;
@@ -490,12 +544,14 @@ class SegmentVoiceGuidanceService {
   void _clearActiveSegmentState() {
     _activeSegmentId = null;
     _currentLimitKph = null;
+    _currentSegmentLengthMeters = null;
     _endWarningIssued = false;
     _nextSegmentStartsImmediately = false;
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
     _lastAboveAnnouncementAt = null;
+    _lastKnownDistanceFromStartMeters = null;
   }
 
   void _resetUpcomingApproachState() {
@@ -536,6 +592,9 @@ class SegmentVoiceMessenger {
     allowAlertTones: true,
     allowBoundaryTones: true,
   );
+  int _englishSpeechSequence = 0;
+  int? _activeEnglishSpeechId;
+  String? _activeEnglishMessage;
 
   Future<void> _initialize() async {
     await _tts.awaitSpeakCompletion(true);
@@ -577,11 +636,18 @@ class SegmentVoiceMessenger {
       return;
     }
 
-    if (englishMessage.trim().isEmpty) {
+    final String message = englishMessage.trim();
+    if (message.isEmpty) {
       return;
     }
 
-    await _speak(englishMessage);
+    final bool isDuplicateInFlight =
+        _activeEnglishSpeechId != null && _activeEnglishMessage == message;
+    if (isDuplicateInFlight) {
+      return;
+    }
+
+    await _speakEnglish(message);
   }
 
   Future<void> playBulgarianAsset(String asset) async {
@@ -602,6 +668,8 @@ class SegmentVoiceMessenger {
     } catch (_) {
       // best effort
     }
+    _activeEnglishSpeechId = null;
+    _activeEnglishMessage = null;
   }
 
   Future<void> dispose() async {
@@ -645,6 +713,20 @@ class SegmentVoiceMessenger {
       await _player.play(AssetSource(asset));
     } catch (_) {
       // best effort
+    }
+  }
+
+  Future<void> _speakEnglish(String message) async {
+    final int speechId = ++_englishSpeechSequence;
+    _activeEnglishSpeechId = speechId;
+    _activeEnglishMessage = message;
+    try {
+      await _speak(message);
+    } finally {
+      if (_activeEnglishSpeechId == speechId) {
+        _activeEnglishSpeechId = null;
+        _activeEnglishMessage = null;
+      }
     }
   }
 
