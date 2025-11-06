@@ -152,7 +152,7 @@ class AppConstants {
       'data/approaching_segment.mp3';
 
   /// Voice prompt that confirms a segment entry (Bulgarian locale).
-  static const String segmentEnteredVoiceAsset = 'data/entered_segment.mp3';
+  static const String segmentEnteredVoiceAsset = 'data/entered_segmen.mp3';
 
   /// Voice prompt that announces an upcoming segment end (Bulgarian locale).
   static const String segmentEndingSoonVoiceAsset =
@@ -178,7 +178,7 @@ class AppConstants {
   /// Voice prompt played when the monitored average speed returns within the
   /// allowed limit (Bulgarian locale).
   static const String averageBackWithinAllowedVoiceAsset =
-      'data/avg_bellow_allowed.mp3';
+      'data/avg_below_allowed.mp3';
 
   /// Follow-up prompt played when announcing an upcoming segment end and the
   /// speed is above the allowed average (Bulgarian locale).
@@ -188,7 +188,7 @@ class AppConstants {
   /// Follow-up prompt played when announcing an upcoming segment end and the
   /// speed is below the allowed average (Bulgarian locale).
   static const String segmentSpeedBelowVoiceAsset =
-      'data/avg_bellow_allowed.mp3';
+      'data/avg_below_allowed.mp3';
 
 
   /// The animation controller starts with, and falls back to, a 500 ms duration for
