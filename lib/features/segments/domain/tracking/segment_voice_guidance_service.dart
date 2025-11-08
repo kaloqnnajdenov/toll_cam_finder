@@ -147,10 +147,12 @@ class SegmentVoiceGuidanceService {
   }
 
   Future<void> _handleSegmentExit() async {
+    final String? exitingSegmentId = _activeSegmentId;
     if (_nextSegmentStartsImmediately) {
       _nextSegmentStartsImmediately = false;
       _suppressPromptsOnNextEntry = true;
       _clearActiveSegmentState();
+      _forgetSegmentHistory(exitingSegmentId);
       return;
     }
 
@@ -159,6 +161,7 @@ class SegmentVoiceGuidanceService {
       bulgarianAsset: AppConstants.segmentEndedVoiceAsset,
     );
     _clearActiveSegmentState();
+    _forgetSegmentHistory(exitingSegmentId);
   }
 
   Future<void> _handleActiveSegment({
@@ -589,6 +592,15 @@ class SegmentVoiceGuidanceService {
     _lastApproachSegmentId = null;
     _lastApproachAnnouncedAt = null;
     _lastApproachAnnouncedDistance = null;
+  }
+
+  void _forgetSegmentHistory(String? segmentId) {
+    if (segmentId == null) {
+      return;
+    }
+    if (_lastApproachSegmentId == segmentId) {
+      _resetUpcomingApproachState();
+    }
   }
 
   bool _isInEntryQuietPeriod({
