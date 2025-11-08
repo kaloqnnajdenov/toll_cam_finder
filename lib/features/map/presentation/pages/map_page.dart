@@ -700,8 +700,11 @@ class _MapPageState extends State<MapPage>
       _resetUpcomingSegmentScan();
     } else {
       final DateTime? lastScan = _lastUpcomingSegmentScanAt;
-      if (lastScan == null ||
-          timestamp.difference(lastScan) >= _upcomingSegmentScanInterval) {
+      final bool requiresContinuousUpdates = _upcomingSegmentDistanceMeters != null &&
+          !_upcomingSegmentDistanceIsCapped;
+      final bool scanIsStale = lastScan == null ||
+          timestamp.difference(lastScan) >= _upcomingSegmentScanInterval;
+      if (requiresContinuousUpdates || scanIsStale) {
         _performUpcomingSegmentScan(timestamp);
       }
       nearestStart = _upcomingSegmentDistanceMeters;
@@ -1553,4 +1556,3 @@ class _MapPageState extends State<MapPage>
     );
   }
 }
-
