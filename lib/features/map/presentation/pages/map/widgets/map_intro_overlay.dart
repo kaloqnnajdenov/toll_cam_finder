@@ -22,16 +22,9 @@ class MapIntroOverlay extends StatelessWidget {
 
     final instructions = <_IntroInstructionData>[
       _IntroInstructionData(
-        icon: Icons.insights_outlined,
-        title: localizations.introInstructionsAverageTitle,
-        body: localizations.introInstructionsAverageBody,
-        children: [
-          _AverageSpeedVisual(
-            goodLabel: localizations.introInstructionsAverageStateGood,
-            warningLabel: localizations.introInstructionsAverageStateWarning,
-            overLabel: localizations.introInstructionsAverageStateOver,
-          ),
-        ],
+        icon: Icons.cloud_sync_outlined,
+        title: localizations.introInstructionsSyncTitle,
+        body: localizations.introInstructionsSyncBody,
       ),
       _IntroInstructionData(
         icon: Icons.record_voice_over_outlined,
@@ -158,7 +151,6 @@ class MapIntroOverlay extends StatelessWidget {
                       child: _IntroContentCard(
                         title: localizations.introTitle,
                         subtitle: localizations.introSubtitle,
-                        instructionsTitle: localizations.introInstructionsTitle,
                         instructions: instructions,
                         metricsTitle: localizations.introMetricsTitle,
                         actionsTitle: localizations.introSidebarTitle,
@@ -221,7 +213,6 @@ class _IntroContentCard extends StatelessWidget {
   const _IntroContentCard({
     required this.title,
     required this.subtitle,
-    required this.instructionsTitle,
     required this.instructions,
     required this.metricsTitle,
     required this.actionsTitle,
@@ -233,7 +224,6 @@ class _IntroContentCard extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final String instructionsTitle;
   final List<_IntroInstructionData> instructions;
   final String metricsTitle;
   final String actionsTitle;
@@ -247,6 +237,7 @@ class _IntroContentCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
+    final bool hasSubtitle = subtitle.trim().isNotEmpty;
     final Color cardColor =
         theme.colorScheme.surface.withOpacity(isDark ? 0.96 : 0.94);
     final Color borderColor =
@@ -284,16 +275,16 @@ class _IntroContentCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title, style: titleStyle),
-                      const SizedBox(height: 12),
-                      Text(subtitle, style: subtitleStyle),
+                      if (hasSubtitle) ...[
+                        const SizedBox(height: 12),
+                        Text(subtitle, style: subtitleStyle),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            Text(instructionsTitle, style: sectionStyle),
-            const SizedBox(height: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -306,39 +297,11 @@ class _IntroContentCard extends StatelessWidget {
             const SizedBox(height: 28),
             Text(metricsTitle, style: sectionStyle),
             const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final double width = constraints.maxWidth;
-                final bool twoColumns = width >= 600;
-                final double cardWidth = twoColumns
-                    ? (width - 16) / 2
-                    : width;
-                return Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: metrics
-                      .map(
-                        (metric) => SizedBox(
-                          width: cardWidth,
-                          child: _IntroMetricCard(data: metric),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
+            _IntroMetricsPanel(metrics: metrics),
             const SizedBox(height: 32),
             Text(actionsTitle, style: sectionStyle),
             const SizedBox(height: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (int i = 0; i < actions.length; i++) ...[
-                  _IntroActionTile(data: actions[i]),
-                  if (i < actions.length - 1) const SizedBox(height: 12),
-                ],
-              ],
-            ),
+            _IntroActionsPanel(actions: actions),
             const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
@@ -354,8 +317,50 @@ class _IntroContentCard extends StatelessWidget {
   }
 }
 
-class _IntroMetricCard extends StatelessWidget {
-  const _IntroMetricCard({required this.data});
+class _IntroMetricsPanel extends StatelessWidget {
+  const _IntroMetricsPanel({required this.metrics});
+
+  final List<_IntroMetricData> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 0.8 : 0.45);
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.78 : 0.96);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor),
+        color: backgroundColor,
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < metrics.length; i++) ...[
+            _IntroMetricTile(data: metrics[i]),
+            if (i < metrics.length - 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _IntroMetricTile extends StatelessWidget {
+  const _IntroMetricTile({required this.data});
 
   final _IntroMetricData data;
 
@@ -365,47 +370,134 @@ class _IntroMetricCard extends StatelessWidget {
     final palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: palette.primary.withOpacity(isDark ? 0.2 : 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.all(10),
+            child: Icon(data.icon, color: palette.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.title,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  data.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.secondaryText,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntroActionsPanel extends StatelessWidget {
+  const _IntroActionsPanel({required this.actions});
+
+  final List<_IntroActionData> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color borderColor =
+        palette.divider.withOpacity(isDark ? 0.8 : 0.45);
+    final Color backgroundColor =
+        palette.surface.withOpacity(isDark ? 0.78 : 0.96);
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: palette.surface.withOpacity(isDark ? 0.75 : 0.9),
-        border:
-            Border.all(color: palette.divider.withOpacity(isDark ? 0.8 : 0.45)),
+        border: Border.all(color: borderColor),
+        color: backgroundColor,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: palette.primary.withOpacity(isDark ? 0.2 : 0.12),
-                borderRadius: BorderRadius.circular(14),
+      child: Column(
+        children: [
+          for (int i = 0; i < actions.length; i++) ...[
+            _IntroActionEntry(data: actions[i]),
+            if (i < actions.length - 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                ),
               ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(data.icon, color: palette.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    data.description,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: palette.secondaryText, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntroActionEntry extends StatelessWidget {
+  const _IntroActionEntry({required this.data});
+
+  final _IntroActionData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = AppColors.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: palette.primary.withOpacity(isDark ? 0.22 : 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.all(10),
+            child: Icon(data.icon, color: palette.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.title,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  data.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.secondaryText,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -439,7 +531,7 @@ class _IntroInstructionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   decoration: BoxDecoration(
@@ -451,130 +543,26 @@ class _IntroInstructionCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data.title,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        data.body,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: palette.secondaryText,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    data.title,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              data.body,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.secondaryText,
+                height: 1.45,
+              ),
             ),
             if (data.children.isNotEmpty) ...[
               const SizedBox(height: 16),
               ...data.children,
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AverageSpeedStateData {
-  const _AverageSpeedStateData({
-    required this.color,
-    required this.label,
-  });
-
-  final Color color;
-  final String label;
-}
-
-class _AverageSpeedVisual extends StatelessWidget {
-  const _AverageSpeedVisual({
-    required this.goodLabel,
-    required this.warningLabel,
-    required this.overLabel,
-  });
-
-  final String goodLabel;
-  final String warningLabel;
-  final String overLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final states = <_AverageSpeedStateData>[
-      _AverageSpeedStateData(color: Colors.green, label: goodLabel),
-      _AverageSpeedStateData(color: Colors.amber, label: warningLabel),
-      _AverageSpeedStateData(color: Colors.redAccent, label: overLabel),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool horizontal = constraints.maxWidth >= 520;
-        if (horizontal) {
-          return Row(
-            children: [
-              for (int i = 0; i < states.length; i++) ...[
-                Expanded(child: _AverageSpeedStateTile(data: states[i])),
-                if (i < states.length - 1) const SizedBox(width: 12),
-              ],
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (int i = 0; i < states.length; i++) ...[
-              _AverageSpeedStateTile(data: states[i]),
-              if (i < states.length - 1) const SizedBox(height: 12),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _AverageSpeedStateTile extends StatelessWidget {
-  const _AverageSpeedStateTile({required this.data});
-
-  final _AverageSpeedStateData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            data.color.withOpacity(0.85),
-            data.color.withOpacity(0.6),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.speed, color: Colors.white.withOpacity(0.95), size: 24),
-            const SizedBox(height: 12),
-            Text(
-              data.label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ],
         ),
       ),
@@ -666,8 +654,8 @@ class _VoiceTimelineStep extends StatelessWidget {
     final Color bubbleColor =
         palette.primary.withOpacity(isDark ? 0.22 : 0.12);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           decoration: BoxDecoration(
@@ -677,78 +665,28 @@ class _VoiceTimelineStep extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Icon(data.icon, color: palette.primary, size: 26),
         ),
-        const SizedBox(height: 12),
-        Text(
-          data.title,
-          style: theme.textTheme.titleSmall
-              ?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          data.description,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.secondaryText,
-            height: 1.4,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.title,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                data.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.secondaryText,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _IntroActionTile extends StatelessWidget {
-  const _IntroActionTile({required this.data});
-
-  final _IntroActionData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppColors.of(context);
-    final bool isDark = theme.brightness == Brightness.dark;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: palette.surface.withOpacity(isDark ? 0.7 : 0.92),
-        border:
-            Border.all(color: palette.divider.withOpacity(isDark ? 0.85 : 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: palette.primary.withOpacity(isDark ? 0.22 : 0.14),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(data.icon, color: palette.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    data.description,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: palette.secondaryText, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -323,19 +323,12 @@ class AppLocalizations {
       'segmentMetricsDistanceToStart': 'To segment start',
       'segmentMetricsDistanceToEnd': 'To segment end',
       'segmentMetricsSafeSpeed': 'Ticket-Free speed',
-      'introTitle': 'Welcome to TollCam',
-      'introSubtitle':
-          'Here\'s how to read the dashboard and what you can do from the menu.',
+      'introTitle': 'Welcome to TollSignal',
+      'introSubtitle': '',
       'introInstructionsTitle': 'How guidance keeps you informed',
-      'introInstructionsAverageTitle': 'Average speed indicator',
-      'introInstructionsAverageBody':
-          'We compare your running average with the allowed average. The number updates color instantly so you know when you\'re safe or need to adjust:',
-      'introInstructionsAverageStateGood':
-          'Green when you\'re safely under the limit.',
-      'introInstructionsAverageStateWarning':
-          'Amber when you are close to the limit—ease off to stay compliant.',
-      'introInstructionsAverageStateOver':
-          'Red when you exceed the allowed average. Slow down until it returns to amber or green.',
+      'introInstructionsSyncTitle': 'Always up-to-date segments',
+      'introInstructionsSyncBody':
+          'When you open the app, it automatically synchronizes with our servers. If you want to double-check, you can tap "Synchronize" to ensure you have the latest updates for all segments. There’s no need to manually update the app — everything happens automatically.',
       'introInstructionsVoiceTitle': 'Voice alerts along the segment',
       'introInstructionsVoiceBody':
           'Audio prompts guide you without taking your eyes off the road:',
@@ -383,7 +376,7 @@ class AppLocalizations {
       'introSidebarProfileTitle': 'Profile & login',
       'introSidebarProfileBody':
           'Sign in or create an account. It\'s required to publish segments or weigh stations for the community.',
-      'mapWelcomeTitle': 'Welcome to TollCam',
+      'mapWelcomeTitle': 'Welcome to TollSignal',
       'mapWelcomeLanguagePrompt': 'Choose your language',
       'mapWeighStationsPromptTitle': 'Stations for weight control on the move?',
       'mapWeighStationsPromptDescription':
@@ -704,19 +697,12 @@ class AppLocalizations {
 'segmentMetricsDistanceToStart': 'До началото',
 'segmentMetricsDistanceToEnd': 'До края',
 'segmentMetricsSafeSpeed': 'Скорост без фиш',
-'introTitle': 'Добре дошли в TollCam',
-      'introSubtitle':
-          'Научете как да разчитате таблото и какво можете да правите от менюто.',
+'introTitle': 'Добре дошли в TollSignal',
+      'introSubtitle': '',
       'introInstructionsTitle': 'Как ви информираме по време на път',
-      'introInstructionsAverageTitle': 'Показател за средна скорост',
-      'introInstructionsAverageBody':
-          'Сравняваме текущата ви средна скорост с допустимата. Числото сменя цвета си мигновено, за да знаете кога сте в безопасност и кога да намалите:',
-      'introInstructionsAverageStateGood':
-          'Зелено – когато сте под лимита и имате запас.',
-      'introInstructionsAverageStateWarning':
-          'Кехлибарено – когато сте близо до границата. Отпуснете педала, за да останете в норма.',
-      'introInstructionsAverageStateOver':
-          'Червено – когато надвишавате допустимата средна скорост. Намалете, докато се върне в жълто или зелено.',
+      'introInstructionsSyncTitle': 'Винаги актуални сегменти',
+      'introInstructionsSyncBody':
+          'Когато отворите приложението, то автоматично се синхронизира с нашите сървъри. Ако искате да сте сигурни, може да натиснете „Синхронизирай“, за да получите най-новите актуализации за всички сегменти. Не е необходимо да ъпдейтвате ръчно приложението ръчно приложението — всичко се случва автоматично.',
       'introInstructionsVoiceTitle': 'Гласови съобщения в сегмента',
       'introInstructionsVoiceBody':
           'Гласовите подсказки ви насочват, без да сваляте очи от пътя:',
@@ -764,7 +750,7 @@ class AppLocalizations {
 'introSidebarProfileTitle': 'Профил и вход',
 'introSidebarProfileBody':
 'Влезте или създайте акаунт. Необходимо е за публикуване на сегменти и кантари.',
-'mapWelcomeTitle': 'Добре дошли в TollCam',
+'mapWelcomeTitle': 'Добре дошли в TollSignal',
 'mapWelcomeLanguagePrompt': 'Изберете вашия език',
 'mapWeighStationsPromptTitle': 'Станции за измерване на теглото в движение?',
 'mapWeighStationsPromptDescription':
@@ -997,16 +983,10 @@ class AppLocalizations {
   String get introTitle => _value('introTitle');
   String get introSubtitle => _value('introSubtitle');
   String get introInstructionsTitle => _value('introInstructionsTitle');
-  String get introInstructionsAverageTitle =>
-      _value('introInstructionsAverageTitle');
-  String get introInstructionsAverageBody =>
-      _value('introInstructionsAverageBody');
-  String get introInstructionsAverageStateGood =>
-      _value('introInstructionsAverageStateGood');
-  String get introInstructionsAverageStateWarning =>
-      _value('introInstructionsAverageStateWarning');
-  String get introInstructionsAverageStateOver =>
-      _value('introInstructionsAverageStateOver');
+  String get introInstructionsSyncTitle =>
+      _value('introInstructionsSyncTitle');
+  String get introInstructionsSyncBody =>
+      _value('introInstructionsSyncBody');
   String get introInstructionsVoiceTitle =>
       _value('introInstructionsVoiceTitle');
   String get introInstructionsVoiceBody =>
