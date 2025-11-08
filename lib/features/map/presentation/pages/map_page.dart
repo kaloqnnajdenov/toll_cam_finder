@@ -140,6 +140,10 @@ class _MapPageState extends State<MapPage>
   Timer? _speedLimitPollTimer;
   bool _isSpeedLimitRequestInFlight = false;
   bool _simpleModePageOpen = false;
+  bool get _isMapInForeground =>
+      mounted &&
+      _appLifecycleState == AppLifecycleState.resumed &&
+      !_simpleModePageOpen;
   Timer? _initialLocationInitTimer;
   bool _initialLocationInitScheduled = false;
   Timer? _offlineRedirectTimer;
@@ -272,6 +276,7 @@ class _MapPageState extends State<MapPage>
       unawaited(_ensureNotificationPermission());
     }
     _updateAudioPolicy();
+    _updateSpeedLimitPollingForVisibility();
   }
 
   Future<void> _initLocation() async {
@@ -546,8 +551,30 @@ class _MapPageState extends State<MapPage>
         : const Duration(seconds: 3);
   }
 
+  void _cancelSpeedLimitPolling() {
+    _speedLimitPollTimer?.cancel();
+    _speedLimitPollTimer = null;
+  }
+
+  void _updateSpeedLimitPollingForVisibility() {
+    if (!_isMapInForeground) {
+      _cancelSpeedLimitPolling();
+      return;
+    }
+
+    final LatLng? lastLocation = _lastSpeedLimitQueryLocation;
+    if (lastLocation != null) {
+      _maybeFetchSpeedLimit(lastLocation);
+    }
+  }
+
   void _maybeFetchSpeedLimit(LatLng position) {
     _lastSpeedLimitQueryLocation = position;
+    if (!_isMapInForeground) {
+      _cancelSpeedLimitPolling();
+      return;
+    }
+
     final bool hasActiveTimer = _speedLimitPollTimer?.isActive ?? false;
     if (_isSpeedLimitRequestInFlight || hasActiveTimer) {
       return;
@@ -556,7 +583,8 @@ class _MapPageState extends State<MapPage>
   }
 
   void _scheduleNextSpeedLimitPoll() {
-    if (!mounted) {
+    if (!mounted || !_isMapInForeground) {
+      _cancelSpeedLimitPolling();
       return;
     }
     _speedLimitPollTimer?.cancel();
@@ -565,10 +593,13 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _pollSpeedLimit() async {
-    _speedLimitPollTimer?.cancel();
-    _speedLimitPollTimer = null;
+    _cancelSpeedLimitPolling();
     if (_isSpeedLimitRequestInFlight) {
       _scheduleNextSpeedLimitPoll();
+      return;
+    }
+
+    if (!_isMapInForeground) {
       return;
     }
 
@@ -1175,10 +1206,12 @@ class _MapPageState extends State<MapPage>
     }
 
     _simpleModePageOpen = true;
+    _updateSpeedLimitPollingForVisibility();
     try {
       await Navigator.of(context).pushNamed(AppRoutes.simpleMode);
     } finally {
       _simpleModePageOpen = false;
+      _updateSpeedLimitPollingForVisibility();
       if (_shouldExitSegmentsOnlyModeAfterNav(reason)) {
         _segmentsOnlyModeController.exitMode();
       }
