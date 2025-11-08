@@ -27,11 +27,14 @@ class SegmentVoiceGuidanceService {
   double? _currentSegmentLengthMeters;
   bool _endWarningIssued = false;
   bool _nextSegmentStartsImmediately = false;
+  bool _suppressPromptsOnNextEntry = false;
   bool _wasAboveLimitOnLastCheck = false;
   bool _hasBeenAboveLimit = false;
   bool _announcedBelowAfterAbove = false;
   DateTime? _lastAboveAnnouncementAt;
   double? _lastKnownDistanceFromStartMeters;
+  DateTime? _entryQuietExpiry;
+  double? _entryQuietDistanceThreshold;
 
   String? _lastApproachSegmentId;
   DateTime? _lastApproachAnnouncedAt;
@@ -43,6 +46,8 @@ class SegmentVoiceGuidanceService {
   static const double _aboveReminderStartDistanceMeters = 1000;
   static const double _speedReminderCutoffMeters = 1500;
   static const double _headingToleranceDegrees = 45;
+  static const Duration _entryQuietMinDuration = Duration(seconds: 4);
+  static const double _entryQuietDistanceMeters = 200;
 
   void updateAudioPolicy(GuidanceAudioPolicy policy) {
     _messenger.updateAudioPolicy(policy);
@@ -53,6 +58,7 @@ class SegmentVoiceGuidanceService {
   }
 
   Future<void> reset() async {
+    _suppressPromptsOnNextEntry = false;
     _clearActiveSegmentState();
     _resetUpcomingApproachState();
     await _messenger.stop();
@@ -76,6 +82,7 @@ class SegmentVoiceGuidanceService {
       await _handleSegmentEntry(
         limitKph: speedLimitKph,
         lengthMeters: event.activeSegmentLengthMeters,
+        startedAt: now,
       );
     }
 
@@ -111,12 +118,21 @@ class SegmentVoiceGuidanceService {
   Future<void> _handleSegmentEntry({
     double? limitKph,
     double? lengthMeters,
+    required DateTime startedAt,
   }) async {
     _activeSegmentId = null;
     _currentLimitKph = limitKph;
     _currentSegmentLengthMeters = _normalizeDistance(lengthMeters);
     _endWarningIssued = false;
     _nextSegmentStartsImmediately = false;
+    if (_suppressPromptsOnNextEntry) {
+      _entryQuietExpiry = startedAt.add(_entryQuietMinDuration);
+      _entryQuietDistanceThreshold = _entryQuietDistanceMeters;
+      _suppressPromptsOnNextEntry = false;
+    } else {
+      _entryQuietExpiry = null;
+      _entryQuietDistanceThreshold = null;
+    }
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
@@ -133,6 +149,7 @@ class SegmentVoiceGuidanceService {
   Future<void> _handleSegmentExit() async {
     if (_nextSegmentStartsImmediately) {
       _nextSegmentStartsImmediately = false;
+      _suppressPromptsOnNextEntry = true;
       _clearActiveSegmentState();
       return;
     }
@@ -160,14 +177,23 @@ class SegmentVoiceGuidanceService {
       _lastKnownDistanceFromStartMeters = distanceFromStart;
     }
 
-    await _checkAverageSpeed(
-      averageKph: averageKph,
-      remainingMeters: remaining,
-      distanceFromStartMeters: distanceForCheck,
+    // Ignore carry-over averages until the new segment has some progress.
+    final bool suppressPrompts = _isInEntryQuietPeriod(
       now: now,
+      distanceFromStartMeters: distanceForCheck,
     );
 
-    if (!_endWarningIssued &&
+    if (!suppressPrompts) {
+      await _checkAverageSpeed(
+        averageKph: averageKph,
+        remainingMeters: remaining,
+        distanceFromStartMeters: distanceForCheck,
+        now: now,
+      );
+    }
+
+    if (!suppressPrompts &&
+        !_endWarningIssued &&
         remaining != null &&
         remaining > 0 &&
         remaining <= _approachTriggerDistanceMeters) {
@@ -550,6 +576,8 @@ class SegmentVoiceGuidanceService {
     _currentSegmentLengthMeters = null;
     _endWarningIssued = false;
     _nextSegmentStartsImmediately = false;
+    _entryQuietExpiry = null;
+    _entryQuietDistanceThreshold = null;
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
@@ -561,6 +589,39 @@ class SegmentVoiceGuidanceService {
     _lastApproachSegmentId = null;
     _lastApproachAnnouncedAt = null;
     _lastApproachAnnouncedDistance = null;
+  }
+
+  bool _isInEntryQuietPeriod({
+    required DateTime now,
+    double? distanceFromStartMeters,
+  }) {
+    bool suppress = false;
+
+    final DateTime? expiry = _entryQuietExpiry;
+    if (expiry != null) {
+      if (now.isBefore(expiry)) {
+        suppress = true;
+      } else {
+        _entryQuietExpiry = null;
+      }
+    }
+
+    final double? distanceThreshold = _entryQuietDistanceThreshold;
+    if (distanceThreshold != null) {
+      if (distanceFromStartMeters != null) {
+        if (distanceFromStartMeters < distanceThreshold) {
+          suppress = true;
+        } else {
+          _entryQuietDistanceThreshold = null;
+        }
+      } else if (_entryQuietExpiry != null) {
+        suppress = true;
+      } else {
+        _entryQuietDistanceThreshold = null;
+      }
+    }
+
+    return suppress;
   }
 
   _SpeedStatus _speedStatusFor({

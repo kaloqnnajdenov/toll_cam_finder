@@ -342,7 +342,22 @@ class SegmentTracker {
     active.clearKeepAlive();
 
     if (current.endHit) {
+      final String exitedSegmentId = current.geometry.id;
       _clearActiveSegment(reason: 'end geofence', exitAtEnd: true);
+      // If another segment starts at the same location, enter it immediately
+      final List<SegmentMatch> remainingMatches = matches
+          .where((match) => match.geometry.id != exitedSegmentId)
+          .toList();
+      if (remainingMatches.isNotEmpty) {
+        final SegmentMatch? immediateEntry = _chooseEntryMatch(
+          remainingMatches,
+          headingDegrees: headingDegrees,
+        );
+        if (immediateEntry != null) {
+          _startSegment(immediateEntry);
+          return const _SegmentTransition(started: true, ended: true);
+        }
+      }
       return const _SegmentTransition(ended: true);
     }
 
@@ -535,4 +550,3 @@ class _ActiveSegmentSnapshot {
   final double? segmentLengthMeters;
   final double? segmentSpeedLimitKph;
 }
-
