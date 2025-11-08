@@ -31,6 +31,7 @@ class SegmentVoiceGuidanceService {
   bool _wasAboveLimitOnLastCheck = false;
   bool _hasBeenAboveLimit = false;
   bool _announcedBelowAfterAbove = false;
+  bool _eligibleForBelowAnnouncement = false;
   DateTime? _lastAboveAnnouncementAt;
   double? _lastKnownDistanceFromStartMeters;
   DateTime? _entryQuietExpiry;
@@ -136,6 +137,7 @@ class SegmentVoiceGuidanceService {
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
+    _eligibleForBelowAnnouncement = false;
     _lastAboveAnnouncementAt = null;
     _lastKnownDistanceFromStartMeters = null;
     _resetUpcomingApproachState();
@@ -242,6 +244,7 @@ class SegmentVoiceGuidanceService {
       _hasBeenAboveLimit = true;
       _announcedBelowAfterAbove = false;
       if (allowReminder) {
+        _eligibleForBelowAnnouncement = true;
         final bool shouldAnnounce =
             !_wasAboveLimitOnLastCheck ||
             _lastAboveAnnouncementAt == null ||
@@ -256,13 +259,16 @@ class SegmentVoiceGuidanceService {
           );
         }
       }
-    } else if (_hasBeenAboveLimit && !_announcedBelowAfterAbove) {
+    } else if (_hasBeenAboveLimit &&
+        !_announcedBelowAfterAbove &&
+        _eligibleForBelowAnnouncement) {
       await _messenger.deliverPrompt(
         englishMessage: 'Average speed is under the limit.',
         bulgarianAsset: AppConstants.averageBackWithinAllowedVoiceAsset,
       );
       _announcedBelowAfterAbove = true;
       _lastAboveAnnouncementAt = null;
+      _eligibleForBelowAnnouncement = false;
     } else {
       _lastAboveAnnouncementAt = null;
     }
@@ -271,6 +277,9 @@ class SegmentVoiceGuidanceService {
 
     if (!isAbove && averageKph <= limit) {
       _hasBeenAboveLimit = _hasBeenAboveLimit && _announcedBelowAfterAbove;
+      if (!_hasBeenAboveLimit) {
+        _eligibleForBelowAnnouncement = false;
+      }
     }
   }
 
@@ -584,6 +593,7 @@ class SegmentVoiceGuidanceService {
     _wasAboveLimitOnLastCheck = false;
     _hasBeenAboveLimit = false;
     _announcedBelowAfterAbove = false;
+    _eligibleForBelowAnnouncement = false;
     _lastAboveAnnouncementAt = null;
     _lastKnownDistanceFromStartMeters = null;
   }

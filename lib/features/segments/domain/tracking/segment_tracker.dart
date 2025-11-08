@@ -36,6 +36,9 @@ class SegmentTracker {
   static const double _endReentryAllowanceMeters = 5.0;
   static const double _entryHeadingHalfFovDegrees = 90.0;
   static const double _minimumHeadingSegmentLengthMeters = 3.0;
+  static const double _overshootStartAllowanceMeters = 60.0;
+  static const double _overshootMinProgressMeters = 8.0;
+  static const double _overshootMaxProgressMeters = 220.0;
 
   final SegmentIndexService _index;
 
@@ -415,7 +418,14 @@ class SegmentTracker {
       });
     }
 
-    return startCandidates.isNotEmpty ? startCandidates.first : null;
+    if (startCandidates.isNotEmpty) {
+      return startCandidates.first;
+    }
+
+    return _findOvershootEntryCandidate(
+      matches,
+      normalizedHeading: normalizedHeading,
+    );
   }
 
   void _startSegment(SegmentMatch entry) {
@@ -438,6 +448,70 @@ class SegmentTracker {
         '(detailed=${entry.isDetailed})',
       );
     }
+  }
+
+  SegmentMatch? _findOvershootEntryCandidate(
+    List<SegmentMatch> matches, {
+    double? normalizedHeading,
+  }) {
+    SegmentMatch? best;
+    final double maxStartDistance =
+        startGeofenceRadiusMeters + _overshootStartAllowanceMeters;
+
+    for (final SegmentMatch candidate in matches) {
+      if (candidate.startHit) {
+        continue;
+      }
+      if (_shouldDeferEndReentry(candidate)) {
+        continue;
+      }
+      if (!candidate.withinTolerance) {
+        continue;
+      }
+
+      final double startDistance = candidate.startDistanceMeters;
+      if (!startDistance.isFinite || startDistance > maxStartDistance) {
+        continue;
+      }
+
+      final double remaining = candidate.remainingDistanceMeters;
+      if (!remaining.isFinite) {
+        continue;
+      }
+
+      final double segmentLength =
+          candidate.geometry.lengthMeters ??
+              _distanceToPathEnd(candidate.path, 0, 0.0);
+      if (!segmentLength.isFinite || segmentLength <= 0) {
+        continue;
+      }
+
+      final double progress = segmentLength - remaining;
+      if (!progress.isFinite ||
+          progress < _overshootMinProgressMeters ||
+          progress > _overshootMaxProgressMeters) {
+        continue;
+      }
+
+      if (normalizedHeading != null) {
+        final double? segmentHeading =
+            _segmentHeadingAtStart(candidate.path);
+        if (segmentHeading != null) {
+          final double delta =
+              _headingDeltaDegrees(normalizedHeading, segmentHeading);
+          if (delta > _entryHeadingHalfFovDegrees) {
+            continue;
+          }
+        }
+      }
+
+      if (best == null ||
+          candidate.startDistanceMeters < best.startDistanceMeters) {
+        best = candidate;
+      }
+    }
+
+    return best;
   }
 
   void _clearActiveSegment({required String reason, bool exitAtEnd = false}) {
