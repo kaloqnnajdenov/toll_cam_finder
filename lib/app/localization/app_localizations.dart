@@ -334,10 +334,10 @@ class AppLocalizations {
           'Audio prompts guide you without taking your eyes off the road:',
       'introInstructionsVoiceEnterTitle': 'Segment entry',
       'introInstructionsVoiceEnterBody':
-          'We greet you and confirm the average speed monitoring has started.',
+          'We confirm the average speed monitoring has started.',
       'introInstructionsVoiceSpeedTitle': 'Average speed changes',
       'introInstructionsVoiceSpeedBody':
-          'Optional reminders play whenever the indicator changes color so you can react immediately.',
+          'Reminders play if your speed exceeds the limit or returns to safe levels.',
       'introInstructionsVoiceApproachTitle': 'Approaching the finish',
       'introInstructionsVoiceApproachBody':
           'A heads-up plays in the final stretch so you can hold a safe pace.',
@@ -350,13 +350,13 @@ class AppLocalizations {
           'Your live GPS speed so you always know how fast you\'re moving.',
       'introMetricAverageSpeedTitle': 'Segment average',
       'introMetricAverageSpeedBody':
-          'The running average for the active toll segment since guidance started.',
-      'introMetricLimitTitle': 'Speed limit / Ticket-Free speed',
+          'The running average for the current segment.',
+      'introMetricLimitTitle': 'Ticket-Free speed',
       'introMetricLimitBody':
-          'Shows the posted limit or the Ticket-Free speed to finish within the limit when averaging.',
-      'introMetricDistanceTitle': 'Distance',
+          'Shows the speed You can maintain without risking a speeding ticket.',
+      'introMetricDistanceTitle': 'Distance to start/end',
       'introMetricDistanceBody':
-          'Distance to the start or end of the selected segment, depending on where you are.',
+          'Distance to the start or end of the segment, depending on where you are.',
       'introSidebarTitle': 'What you can do from the menu',
       'introSidebarSyncTitle': 'Sync',
       'introSidebarSyncBody':
@@ -384,7 +384,7 @@ class AppLocalizations {
       'mapWeighStationsPromptEnableButton': 'Show weigh stations',
       'mapWeighStationsPromptSkipButton': 'Not now',
       'mapWeighStationsEnableButton': 'Enable weigh stations on map',
-      'introDismiss': 'Start exploring',
+      'introDismiss': 'Continue',
       'introMenuLabel': 'Show introduction',
       'segmentMetricsStatusTracking': 'Tracking segment',
       'segmentHandoverTitle': 'New zone started',
@@ -708,39 +708,39 @@ class AppLocalizations {
           'Гласовите подсказки ви насочват, без да сваляте очи от пътя:',
       'introInstructionsVoiceEnterTitle': 'При влизане в сегмента',
       'introInstructionsVoiceEnterBody':
-          'Поздравяваме ви и потвърждаваме, че следим средната скорост.',
+          'Потвърждаваме, че следим средната скорост.',
       'introInstructionsVoiceSpeedTitle': 'Промяна на средната скорост',
       'introInstructionsVoiceSpeedBody':
-          'По избор получавате напомняния всеки път, когато показателят смени цвят, за да реагирате навреме.',
+          'Получавате напомняния всеки път, когато превишите лимита или се върнете към безопасна средна скорост.',
       'introInstructionsVoiceApproachTitle': 'При наближаване на края',
       'introInstructionsVoiceApproachBody':
           'Напомняне в последните метри, за да задържите безопасно темпо.',
       'introInstructionsVoiceExitTitle': 'Край на сегмента',
       'introInstructionsVoiceExitBody':
-          'Финално съобщение със средната ви скорост и дали сте останали в допустимото.',
+          'Финално съобщение, което Ви информира за края на сегмента и дали сте спазили лимита.',
       'introMetricsTitle': 'Показатели на таблото',
 'introMetricCurrentSpeedTitle': 'Текуща скорост',
 'introMetricCurrentSpeedBody':
-'Показва моментната ви GPS скорост, за да знаете с каква скорост се движите.',
+'Показва моментната Ви скорост.',
 'introMetricAverageSpeedTitle': 'Средна скорост в сегмента',
 'introMetricAverageSpeedBody':
 'Средната скорост за активния тол сегмент от началото на измерването.',
 'introMetricLimitTitle': 'скорост без фиш',
 'introMetricLimitBody':
 'Показва скоростта която трябва да поддържате, за да завършите сегмента в допустимата средна скорост.',
-'introMetricDistanceTitle': 'Разстояние',
+'introMetricDistanceTitle': 'Разстояние до начало/край',
 'introMetricDistanceBody':
-'Разстоянието до началото или края на избрания сегмент според текущата ви позиция.',
+'Разстоянието до началото или края на сегмента според текущата ви позиция.',
 'introSidebarTitle': 'Какво можете да правите от менюто',
 'introSidebarSyncTitle': 'Синхронизирай',
 'introSidebarSyncBody':
 'Изтеглете най-новите публични сегменти и кантари, за да сте актуални офлайн.',
 'introSidebarSegmentsTitle': 'Сегменти',
 'introSidebarSegmentsBody':
-'Добавяйте нови сегменти. Можете да пазите лични без вход, но за публично споделяне е необходим акаунт.',
+'Добавяйте нови сегменти. Можете да пазите лични без да създавате акаунт, но за публично споделяне е необходим акаунт.',
 'introSidebarWeighStationsTitle': 'Кантари',
 'introSidebarWeighStationsBody':
-'Разглеждайте близките кантари или добавяйте свои. За публикуване е нужен вход.',
+'Разглеждайте близките кантари или добавяйте свои. За публикуване е нужен акаунт.',
 'introSidebarAudioTitle': 'Гласови съобщения',
 'introSidebarAudioBody':
 'Изберете кои гласови известия да чувате и кога да се възпроизвеждат.',

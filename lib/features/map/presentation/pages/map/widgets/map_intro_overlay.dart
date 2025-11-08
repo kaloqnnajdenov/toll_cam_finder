@@ -30,6 +30,7 @@ class MapIntroOverlay extends StatelessWidget {
         icon: Icons.record_voice_over_outlined,
         title: localizations.introInstructionsVoiceTitle,
         body: localizations.introInstructionsVoiceBody,
+        showBody: false,
         children: [
           _VoiceTimelineVisual(
             steps: [
@@ -201,12 +202,14 @@ class _IntroInstructionData {
     required this.title,
     required this.body,
     this.children = const <Widget>[],
+    this.showBody = true,
   });
 
   final IconData icon;
   final String title;
   final String body;
   final List<Widget> children;
+  final bool showBody;
 }
 
 class _IntroContentCard extends StatelessWidget {
@@ -327,7 +330,6 @@ class _IntroMetricsPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-
     final Color borderColor =
         palette.divider.withOpacity(isDark ? 0.8 : 0.45);
     final Color backgroundColor =
@@ -513,6 +515,8 @@ class _IntroInstructionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
+    final bool showBody =
+        data.showBody && data.body.trim().isNotEmpty;
 
     final Color borderColor =
         palette.divider.withOpacity(isDark ? 0.8 : 0.45);
@@ -551,16 +555,26 @@ class _IntroInstructionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              data.body,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.secondaryText,
-                height: 1.45,
+            if (showBody) ...[
+              const SizedBox(height: 12),
+              Text(
+                data.body,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.secondaryText,
+                  height: 1.45,
+                ),
               ),
-            ),
+            ],
             if (data.children.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: showBody ? 16 : 12),
+              if (!showBody) ...[
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                ),
+                const SizedBox(height: 16),
+              ],
               ...data.children,
             ],
           ],
