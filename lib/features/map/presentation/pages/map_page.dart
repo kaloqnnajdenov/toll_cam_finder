@@ -71,6 +71,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const String _introCompletedPreferenceKey = 'map_intro_completed';
+  static const String _termsAcceptedPreferenceKey = 'terms_and_conditions_accepted';
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const Duration _osmUnavailableGracePeriod = Duration(seconds: 3);
 
@@ -175,6 +176,7 @@ class _MapPageState extends State<MapPage>
   bool _showWeighStationsPrompt = false;
   bool? _introCompleted;
   bool _introFlowPresented = true;
+  bool _termsAccepted = false;
 
   static const Duration _upcomingSegmentScanInterval = Duration(seconds: 5);
   static const double _upcomingSegmentScanRangeMeters = 5000;
@@ -1261,6 +1263,9 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       return;
     }
+    if (!_termsAccepted) {
+      return;
+    }
     final bool alreadyCompleted = _introCompleted == true;
     setState(() {
       _showIntro = false;
@@ -1273,6 +1278,23 @@ class _MapPageState extends State<MapPage>
     _scheduleInitialLocationInit(
       delay: const Duration(milliseconds: 2500),
     );
+  }
+
+  void _onTermsConsentChanged(bool accepted) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _termsAccepted = accepted;
+    });
+    unawaited(_persistTermsAcceptance(accepted));
+  }
+
+  void _openTermsAndConditions() {
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pushNamed(AppRoutes.termsAndConditions);
   }
 
   void _handleWeighStationPreferenceChange() {
@@ -1323,14 +1345,18 @@ class _MapPageState extends State<MapPage>
   Future<void> _loadIntroCompletionStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final completed = prefs.getBool(_introCompletedPreferenceKey) ?? false;
+    final termsAccepted =
+        prefs.getBool(_termsAcceptedPreferenceKey) ?? false;
+    final bool introReady = completed && termsAccepted;
     if (!mounted) {
       return;
     }
     setState(() {
       _introCompleted = completed;
-      _introFlowPresented = completed;
+      _introFlowPresented = introReady;
+      _termsAccepted = termsAccepted;
     });
-    if (completed) {
+    if (introReady) {
       _scheduleInitialLocationInit();
     }
     _evaluateIntroFlow();
@@ -1357,6 +1383,11 @@ class _MapPageState extends State<MapPage>
   Future<void> _persistIntroCompletion() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_introCompletedPreferenceKey, true);
+  }
+
+  Future<void> _persistTermsAcceptance(bool accepted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_termsAcceptedPreferenceKey, accepted);
   }
 
   void _dismissWelcomeOverlay() {
@@ -1580,6 +1611,9 @@ class _MapPageState extends State<MapPage>
       MapIntroOverlay(
         visible: _showIntro,
         onDismiss: _dismissIntro,
+        termsAccepted: _termsAccepted,
+        onTermsConsentChanged: _onTermsConsentChanged,
+        onViewTerms: _openTermsAndConditions,
       ),
     ];
 

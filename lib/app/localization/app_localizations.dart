@@ -227,6 +227,39 @@ class AppLocalizations {
       'profileDeleteAccountMismatch':
           'Please type DELETE in all caps to continue.',
       'profileDeleteAccountSuccess': 'Your account was deleted.',
+      'termsAndConditions': 'Terms & Conditions',
+      'termsAcceptanceHeading': 'Acceptance of Terms',
+      'termsAcceptanceBody':
+          'By downloading, installing, or using TollCam you agree to these Terms & Conditions and confirm that any map, telemetry, or authentication calls executed by the app are initiated on your behalf. If you do not consent, uninstall the app and discontinue all use.',
+      'termsThirdPartyHeading': 'Network Activity & Third-Party Services',
+      'termsThirdPartyIntro':
+          'To provide navigation, enforcement alerts, and account sync, TollCam must contact third parties using your device\'s connectivity. By continuing, you expressly authorize the app to send such requests on your behalf to:',
+      'termsThirdPartyOsm':
+          'OpenStreetMap (OSM) for map tiles, routing data, and speed-limit lookups.',
+      'termsThirdPartySupabase':
+          'Supabase for authentication, profile storage, telemetry sync, and moderation workflows.',
+      'termsThirdPartyOther':
+          'Additional infrastructure, analytics, or messaging providers that may be required to deliver existing or future features, each governed by its own terms.',
+      'termsSpeedHeading': 'Speed Guidance Disclaimer',
+      'termsSpeedBody':
+          'Any speed thresholds, warnings, or recommended speeds that appear in the app are informational only. The development team does not condone speeding or aggressive driving, and you remain solely responsible for observing posted limits, traffic regulations, and law-enforcement directives. You accept that any fines, penalties, or consequences arising from your driving decisions are your own responsibility.',
+      'termsUserResponsibilityHeading': 'User Responsibilities',
+      'termsUserResponsibilityBody':
+          'You must exercise independent judgment whenever you act on information provided by TollCam, ensure that location permissions are used lawfully, and stop using the app if it distracts you or interferes with safe vehicle operation.',
+      'termsLiabilityHeading': 'Limitation of Liability',
+      'termsLiabilityBody':
+          'TollCam is provided on an "as is" and "as available" basis without warranties of any kind, whether express or implied. To the maximum extent permitted by applicable law, the developers and contributors disclaim all liability for direct, indirect, incidental, consequential, special, exemplary, or punitive damages, including but not limited to lost profits, loss of data, physical injury, or governmental sanctions that result from your access to or use of the app.',
+      'termsChangesHeading': 'Changes to These Terms',
+      'termsChangesBody':
+          'The development team may update these Terms & Conditions from time to time. Material updates will be communicated through in-app notices or official release notes. Continued use of the app after an update constitutes acceptance of the revised terms.',
+      'termsContactHeading': 'Contact',
+      'termsContactBody':
+          'For questions about these Terms & Conditions, reach out through the official TollCam communication channels or by contacting the development team through the in-app profile area.',
+      'termsConsentLabel':
+          'I have read and agree to the Terms & Conditions.',
+      'termsViewDetails': 'View full terms',
+      'termsConsentRequired':
+          'Please accept the Terms & Conditions to continue.',
       'publicSharingUnavailable':
           'Public segment sharing is currently unavailable.',
       'publicSharingUnavailableShort': 'Public sharing is not available.',
@@ -609,6 +642,39 @@ class AppLocalizations {
 'След изтриване няма връщане.',
 'profileDeleteAccountMismatch': 'Моля, напиши DELETE с главни букви.',
 'profileDeleteAccountSuccess': 'Акаунтът ти беше изтрит.',
+      'termsAndConditions': 'Общи условия',
+      'termsAcceptanceHeading': 'Приемане на условията',
+      'termsAcceptanceBody':
+          'С изтеглянето, инсталирането или използването на TollCam приемате настоящите Общи условия и потвърждавате, че всички картни, телеметрични или автентикационни заявки, които приложението изпраща, се извършват от ваше име. Ако не сте съгласни, деинсталирайте приложението и прекратете използването му.',
+      'termsThirdPartyHeading':
+          'Мрежова активност и външни услуги',
+      'termsThirdPartyIntro':
+          'За да осигурява навигация, предупреждения и синхронизиране на акаунти, TollCam извършва заявки чрез вашата интернет връзка. С продължаването на ползването изрично упълномощавате приложението да изпраща от ваше име заявки към:',
+      'termsThirdPartyOsm':
+          'OpenStreetMap (OSM) за картни плочки, маршрутни данни и справки за ограничение на скоростта.',
+      'termsThirdPartySupabase':
+          'Supabase за удостоверяване, съхранение на профил, синхронизация на телеметрия и процеси по модерация.',
+      'termsThirdPartyOther':
+          'Допълнителни инфраструктурни, аналитични или комуникационни доставчици, необходими за текущи или бъдещи функционалности, като всеки от тях се регулира от собствените си условия.',
+      'termsSpeedHeading': 'Опровержение относно скоростта',
+      'termsSpeedBody':
+          'Всички прагове, предупреждения или препоръчителни скорости в приложението имат само информативен характер. Разработчиците не насърчават и не оправдават превишаване на скоростта или агресивно шофиране и вие сте единственият отговорен да спазвате ограничителните знаци, правилата за движение и указанията на органите на реда. Приемате, че всички глоби, санкции или последици, произтичащи от вашите решения при шофиране, са изцяло за ваша сметка.',
+      'termsUserResponsibilityHeading': 'Отговорности на потребителя',
+      'termsUserResponsibilityBody':
+          'Винаги трябва да прилагате самостоятелна преценка при използване на информацията от TollCam, да гарантирате, че позволенията за местоположение се използват законосъобразно, и да преустановите използването на приложението, ако ви разсейва или затруднява безопасното управление на превозното средство.',
+      'termsLiabilityHeading': 'Ограничаване на отговорността',
+      'termsLiabilityBody':
+          'TollCam се предоставя \"както е\" и \"според наличността\", без изрични или подразбиращи се гаранции. До максимално допустимата степен от приложимото право разработчиците и приносителите се освобождават от всякаква отговорност за преки, непреки, последващи, специални, примерни или наказателни вреди, включително, но не само пропуснати ползи, загубени данни, телесни повреди или административни санкции, произтичащи от достъпа до приложението или използването му.',
+      'termsChangesHeading': 'Промени в условията',
+      'termsChangesBody':
+          'Екипът може периодично да актуализира тези Общи условия. Съществени промени ще бъдат съобщавани чрез уведомления в приложението или официални бележки към версиите. Продължаващото използване на приложението след актуализация означава, че приемате преработените условия.',
+      'termsContactHeading': 'Контакт',
+      'termsContactBody':
+          'При въпроси относно настоящите Общи условия се свържете с екипа на TollCam чрез официалните комуникационни канали или чрез секцията за профила в приложението.',
+      'termsConsentLabel': 'Прочетох и приемам Общите условия.',
+      'termsViewDetails': 'Виж пълните условия',
+      'termsConsentRequired':
+          'Моля, приеми Общите условия, за да продължиш.',
 'unableToDeleteAccountTryAgain':
 'Неуспешно изтриване на акаунта. Опитай отново.',
 'faceTravelDirection': 'По посока на движение',
@@ -957,6 +1023,29 @@ class AppLocalizations {
       _value('profileDeleteAccountMismatch');
   String get profileDeleteAccountSuccess =>
       _value('profileDeleteAccountSuccess');
+  String get termsAndConditions => _value('termsAndConditions');
+  String get termsAcceptanceHeading => _value('termsAcceptanceHeading');
+  String get termsAcceptanceBody => _value('termsAcceptanceBody');
+  String get termsThirdPartyHeading => _value('termsThirdPartyHeading');
+  String get termsThirdPartyIntro => _value('termsThirdPartyIntro');
+  String get termsThirdPartyOsm => _value('termsThirdPartyOsm');
+  String get termsThirdPartySupabase => _value('termsThirdPartySupabase');
+  String get termsThirdPartyOther => _value('termsThirdPartyOther');
+  String get termsSpeedHeading => _value('termsSpeedHeading');
+  String get termsSpeedBody => _value('termsSpeedBody');
+  String get termsUserResponsibilityHeading =>
+      _value('termsUserResponsibilityHeading');
+  String get termsUserResponsibilityBody =>
+      _value('termsUserResponsibilityBody');
+  String get termsLiabilityHeading => _value('termsLiabilityHeading');
+  String get termsLiabilityBody => _value('termsLiabilityBody');
+  String get termsChangesHeading => _value('termsChangesHeading');
+  String get termsChangesBody => _value('termsChangesBody');
+  String get termsContactHeading => _value('termsContactHeading');
+  String get termsContactBody => _value('termsContactBody');
+  String get termsConsentLabel => _value('termsConsentLabel');
+  String get termsViewDetails => _value('termsViewDetails');
+  String get termsConsentRequired => _value('termsConsentRequired');
   String get unknownUserLabel => _value('unknownUserLabel');
   String get averageSpeedStartTooltip => _value('averageSpeedStartTooltip');
   String get averageSpeedResetTooltip => _value('averageSpeedResetTooltip');

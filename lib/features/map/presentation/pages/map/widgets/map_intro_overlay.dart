@@ -8,15 +8,21 @@ class MapIntroOverlay extends StatelessWidget {
     super.key,
     required this.visible,
     required this.onDismiss,
+    required this.termsAccepted,
+    required this.onTermsConsentChanged,
+    required this.onViewTerms,
   });
 
   final bool visible;
   final VoidCallback onDismiss;
+  final bool termsAccepted;
+  final ValueChanged<bool> onTermsConsentChanged;
+  final VoidCallback onViewTerms;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final localizations = AppLocalizations.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
@@ -127,7 +133,7 @@ class MapIntroOverlay extends StatelessWidget {
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: onDismiss,
+                onTap: termsAccepted ? onDismiss : null,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -158,6 +164,16 @@ class MapIntroOverlay extends StatelessWidget {
                         metrics: metrics,
                         actions: actions,
                         dismissLabel: localizations.introDismiss,
+                        dismissEnabled: termsAccepted,
+                        dismissHelperText: localizations.termsConsentRequired,
+                        termsConsent: _TermsConsentData(
+                          title: localizations.termsAndConditions,
+                          consentLabel: localizations.termsConsentLabel,
+                          viewLabel: localizations.termsViewDetails,
+                          accepted: termsAccepted,
+                          onConsentChanged: onTermsConsentChanged,
+                          onViewTerms: onViewTerms,
+                        ),
                         onDismiss: onDismiss,
                       ),
                     ),
@@ -222,6 +238,9 @@ class _IntroContentCard extends StatelessWidget {
     required this.metrics,
     required this.actions,
     required this.dismissLabel,
+    this.dismissEnabled = true,
+    this.dismissHelperText,
+    this.termsConsent,
     required this.onDismiss,
   });
 
@@ -233,18 +252,17 @@ class _IntroContentCard extends StatelessWidget {
   final List<_IntroMetricData> metrics;
   final List<_IntroActionData> actions;
   final String dismissLabel;
+  final bool dismissEnabled;
+  final String? dismissHelperText;
+  final _TermsConsentData? termsConsent;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
     final bool hasSubtitle = subtitle.trim().isNotEmpty;
-    final Color cardColor =
-        theme.colorScheme.surface.withOpacity(isDark ? 0.96 : 0.94);
-    final Color borderColor =
-        palette.divider.withOpacity(isDark ? 0.7 : 0.45);
     final TextStyle? titleStyle =
         theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700);
     final TextStyle? subtitleStyle = theme.textTheme.bodyLarge
@@ -253,18 +271,7 @@ class _IntroContentCard extends StatelessWidget {
         theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600);
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: borderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.5 : 0.18),
-            blurRadius: 42,
-            offset: const Offset(0, 24),
-          ),
-        ],
-      ),
+      decoration: _introCardDecoration(theme, palette, isDark: isDark),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
         child: Column(
@@ -305,12 +312,53 @@ class _IntroContentCard extends StatelessWidget {
             Text(actionsTitle, style: sectionStyle),
             const SizedBox(height: 16),
             _IntroActionsPanel(actions: actions),
+            if (termsConsent != null) ...[
+              const SizedBox(height: 24),
+              Divider(color: palette.divider.withOpacity(isDark ? 0.6 : 0.35)),
+              const SizedBox(height: 16),
+              Text(
+                termsConsent!.title,
+                style: sectionStyle,
+              ),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                value: termsConsent!.accepted,
+                onChanged: (value) =>
+                    termsConsent!.onConsentChanged(value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: Text(termsConsent!.consentLabel),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: termsConsent!.onViewTerms,
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(termsConsent!.viewLabel),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: onDismiss,
-                child: Text(dismissLabel),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FilledButton(
+                    onPressed: dismissEnabled ? onDismiss : null,
+                    child: Text(dismissLabel),
+                  ),
+                  if (!dismissEnabled && dismissHelperText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      dismissHelperText!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.secondaryText,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
@@ -318,6 +366,47 @@ class _IntroContentCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TermsConsentData {
+  const _TermsConsentData({
+    required this.title,
+    required this.consentLabel,
+    required this.viewLabel,
+    required this.accepted,
+    required this.onConsentChanged,
+    required this.onViewTerms,
+  });
+
+  final String title;
+  final String consentLabel;
+  final String viewLabel;
+  final bool accepted;
+  final ValueChanged<bool> onConsentChanged;
+  final VoidCallback onViewTerms;
+}
+
+BoxDecoration _introCardDecoration(
+  ThemeData theme,
+  AppPalette palette, {
+  bool? isDark,
+}) {
+  final bool dark = isDark ?? theme.brightness == Brightness.dark;
+  final Color cardColor =
+      theme.colorScheme.surface.withOpacity(dark ? 0.96 : 0.94);
+  final Color borderColor = palette.divider.withOpacity(dark ? 0.7 : 0.45);
+  return BoxDecoration(
+    color: cardColor,
+    borderRadius: BorderRadius.circular(32),
+    border: Border.all(color: borderColor, width: 1),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(dark ? 0.5 : 0.18),
+        blurRadius: 42,
+        offset: const Offset(0, 24),
+      ),
+    ],
+  );
 }
 
 class _IntroMetricsPanel extends StatelessWidget {
@@ -328,10 +417,10 @@ class _IntroMetricsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
     final Color borderColor =
-        palette.divider.withOpacity(isDark ? 0.8 : 0.45);
+        theme.dividerColor.withOpacity(isDark ? 0.8 : 0.45);
     final Color backgroundColor =
         palette.surface.withOpacity(isDark ? 0.78 : 0.96);
 
@@ -351,7 +440,7 @@ class _IntroMetricsPanel extends StatelessWidget {
                 child: Divider(
                   height: 1,
                   thickness: 1,
-                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                  color: theme.dividerColor.withOpacity(isDark ? 0.65 : 0.35),
                 ),
               ),
           ],
@@ -369,7 +458,7 @@ class _IntroMetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
     return Padding(
@@ -419,12 +508,12 @@ class _IntroActionsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
     final Color borderColor =
-        palette.divider.withOpacity(isDark ? 0.8 : 0.45);
+        theme.dividerColor.withOpacity(isDark ? 0.8 : 0.45);
     final Color backgroundColor =
         palette.surface.withOpacity(isDark ? 0.78 : 0.96);
 
@@ -444,7 +533,7 @@ class _IntroActionsPanel extends StatelessWidget {
                 child: Divider(
                   height: 1,
                   thickness: 1,
-                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                  color: theme.dividerColor.withOpacity(isDark ? 0.65 : 0.35),
                 ),
               ),
           ],
@@ -462,7 +551,7 @@ class _IntroActionEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
     return Padding(
@@ -513,7 +602,7 @@ class _IntroInstructionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
     final bool showBody =
         data.showBody && data.body.trim().isNotEmpty;
@@ -571,7 +660,7 @@ class _IntroInstructionCard extends StatelessWidget {
                 Divider(
                   height: 1,
                   thickness: 1,
-                  color: palette.divider.withOpacity(isDark ? 0.65 : 0.35),
+                  color: theme.dividerColor.withOpacity(isDark ? 0.65 : 0.35),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -603,7 +692,7 @@ class _VoiceTimelineVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -613,19 +702,19 @@ class _VoiceTimelineVisual extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (int i = 0; i < steps.length; i++) ...[
-                Expanded(child: _VoiceTimelineStep(data: steps[i])),
-                if (i < steps.length - 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 32),
-                    child: SizedBox(
-                      width: 32,
-                      child: Divider(
-                        color: palette.divider.withOpacity(0.6),
-                        thickness: 2,
+                  Expanded(child: _VoiceTimelineStep(data: steps[i])),
+                  if (i < steps.length - 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 32),
+                      child: SizedBox(
+                        width: 32,
+                        child: Divider(
+                          color: Theme.of(context).dividerColor.withOpacity(0.6),
+                          thickness: 2,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
             ],
           );
         }
@@ -636,16 +725,16 @@ class _VoiceTimelineVisual extends StatelessWidget {
             for (int i = 0; i < steps.length; i++) ...[
               _VoiceTimelineStep(data: steps[i]),
               if (i < steps.length - 1)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: 2,
-                    height: 24,
-                    margin:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 28),
-                    color: palette.divider.withOpacity(0.6),
-                  ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 2,
+                  height: 24,
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 28),
+                  color: Theme.of(context).dividerColor.withOpacity(0.6),
                 ),
+              ),
             ],
           ],
         );
@@ -662,7 +751,7 @@ class _VoiceTimelineStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppColors.of(context);
+    final AppPalette palette = AppColors.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
     final Color bubbleColor =

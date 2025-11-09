@@ -87,6 +87,11 @@ extension _MapPageDrawer on _MapPageState {
                 });
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.gavel_outlined),
+              title: Text(localizations.termsAndConditions),
+              onTap: _onTermsSelected,
+            ),
           ],
         ),
       ),
@@ -264,6 +269,14 @@ extension _MapPageDrawer on _MapPageState {
         );
       },
     );
+  }
+
+  void _onTermsSelected() {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamed(AppRoutes.termsAndConditions);
+    });
   }
 
   void _onSyncSelected() {

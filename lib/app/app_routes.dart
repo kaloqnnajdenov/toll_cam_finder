@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/login_page.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/profile_page.dart';
 import 'package:toll_cam_finder/features/auth/presentation/pages/sign_up_page.dart';
+import 'package:toll_cam_finder/features/legal/presentation/pages/terms_and_conditions_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map_page.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/simple_mode_page.dart';
 import 'package:toll_cam_finder/features/segments/presentation/pages/create_segment_page.dart';
@@ -21,6 +22,7 @@ class AppRoutes {
   static const String weighStations = '/weigh-stations';
   static const String createWeighStation = '/weigh-stations/create';
   static const String simpleMode = '/simple';
+  static const String termsAndConditions = '/terms';
 
   static Map<String, WidgetBuilder> get routes => {
     map: (_) => const MapPage(),
@@ -33,5 +35,6 @@ class AppRoutes {
     weighStations: (_) => const WeighStationsPage(),
     createWeighStation: (_) => const CreateWeighStationPage(),
     simpleMode: (_) => const SimpleModePage(),
+    termsAndConditions: (_) => const TermsAndConditionsPage(),
   };
 }
