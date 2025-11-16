@@ -44,11 +44,6 @@ class ProfilePage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
-              _DangerZoneSection(
-                onDeleteAccount: () =>
-                    _handleDeleteAccountPressed(context, localizations),
-              ),
-              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
@@ -71,6 +66,11 @@ class ProfilePage extends StatelessWidget {
                   }
                 },
                 child: Text(localizations.logOut),
+              ),
+              const SizedBox(height: 16),
+              _DeleteAccountButton(
+                onDeleteAccount: () =>
+                    _handleDeleteAccountPressed(context, localizations),
               ),
             ],
           ),
@@ -200,47 +200,22 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-class _DangerZoneSection extends StatelessWidget {
-  const _DangerZoneSection({required this.onDeleteAccount});
+class _DeleteAccountButton extends StatelessWidget {
+  const _DeleteAccountButton({required this.onDeleteAccount});
 
   final VoidCallback onDeleteAccount;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context);
-    final colorScheme = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.error.withOpacity(0.4)),
+    final colorScheme = Theme.of(context).colorScheme;
+    return FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: colorScheme.errorContainer,
+        foregroundColor: colorScheme.onErrorContainer,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            localizations.profileDangerZoneTitle,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: colorScheme.error,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            localizations.profileDeleteAccountDescription,
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-            ),
-            onPressed: onDeleteAccount,
-            child: Text(localizations.profileDeleteAccountAction),
-          ),
-        ],
-      ),
+      onPressed: onDeleteAccount,
+      child: Text(localizations.profileDeleteAccountAction),
     );
   }
 }
