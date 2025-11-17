@@ -38,6 +38,7 @@ import 'package:toll_cam_finder/features/segments/domain/tracking/segment_tracke
 import 'package:toll_cam_finder/features/segments/services/segments_metadata_service.dart';
 import 'package:toll_cam_finder/features/segments/services/toll_segments_sync_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/domain/weigh_station_vote.dart';
+import 'package:toll_cam_finder/shared/services/background_location_consent_controller.dart';
 import 'package:toll_cam_finder/shared/services/language_controller.dart';
 import 'package:toll_cam_finder/shared/services/theme_controller.dart';
 import 'package:toll_cam_finder/shared/services/location_service.dart';
@@ -58,6 +59,7 @@ import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_a
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 import 'map/widgets/map_intro_overlay.dart';
 import 'map/widgets/map_welcome_overlays.dart';
+import 'map/widgets/background_location_consent_overlay.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -99,6 +101,8 @@ class _MapPageState extends State<MapPage>
   late final WeighStationPreferencesController
       _weighStationPreferencesController;
   late final SegmentsOnlyModeController _segmentsOnlyModeController;
+  late final BackgroundLocationConsentController
+      _backgroundConsentController;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
@@ -112,6 +116,7 @@ class _MapPageState extends State<MapPage>
   bool _followUser = false;
   bool _followHeading = false;
   double _currentZoom = AppConstants.initialZoom;
+  bool _locationPermissionGranted = false;
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
@@ -174,6 +179,9 @@ class _MapPageState extends State<MapPage>
   bool _showIntro = false;
   bool _showWelcomeOverlay = false;
   bool _showWeighStationsPrompt = false;
+  bool _showBackgroundConsent = false;
+  bool? _backgroundLocationAllowed;
+  BackgroundLocationConsentOption? _pendingBackgroundConsent;
   bool? _introCompleted;
   bool _introFlowPresented = true;
   bool _termsAccepted = false;
@@ -202,6 +210,11 @@ class _MapPageState extends State<MapPage>
     _weighStationPreferencesController =
         context.read<WeighStationPreferencesController>();
     _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
+    _backgroundConsentController =
+        context.read<BackgroundLocationConsentController>();
+    _backgroundLocationAllowed = _backgroundConsentController.allowed;
+    _backgroundConsentController.addListener(_handleBackgroundConsentChange);
+    unawaited(_backgroundConsentController.ensureLoaded());
     unawaited(_loadIntroCompletionStatus());
     unawaited(_initConnectivityMonitoring());
     _audioController.addListener(_updateAudioPolicy);
@@ -259,6 +272,8 @@ class _MapPageState extends State<MapPage>
     _languageController.removeListener(_handleLanguageChange);
     _weighStationPreferencesController
         .removeListener(_handleWeighStationPreferenceChange);
+    _backgroundConsentController
+        .removeListener(_handleBackgroundConsentChange);
     _offlineRedirectTimer?.cancel();
     _osmUnavailableRedirectTimer?.cancel();
     _segmentsOnlyModeController.exitMode();
@@ -271,8 +286,7 @@ class _MapPageState extends State<MapPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     _appLifecycleState = state;
-    final bool shouldEnableForeground = state != AppLifecycleState.resumed;
-    _setForegroundLocationMode(shouldEnableForeground);
+    _applyBackgroundLocationPreference();
     if (state == AppLifecycleState.resumed &&
         _didRequestNotificationPermission) {
       unawaited(_ensureNotificationPermission());
@@ -283,7 +297,12 @@ class _MapPageState extends State<MapPage>
 
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.ensureLocationPermission();
-    if (!hasPermission) return;
+    if (!hasPermission) {
+      _locationPermissionGranted = false;
+      return;
+    }
+    _locationPermissionGranted = true;
+    _maybeShowBackgroundLocationConsent();
     await _ensureNotificationPermission();
     if (_metadataLoadFuture != null) {
       await _metadataLoadFuture;
@@ -448,6 +467,35 @@ class _MapPageState extends State<MapPage>
     if (_posSub != null) {
       unawaited(_subscribeToPositionStream());
     }
+  }
+
+  void _applyBackgroundLocationPreference() {
+    final bool allowBackground = _backgroundLocationAllowed ?? false;
+    final bool isForeground = _appLifecycleState == AppLifecycleState.resumed;
+    final bool shouldEnableForeground =
+        !isForeground && allowBackground;
+    _setForegroundLocationMode(shouldEnableForeground);
+
+    if (!allowBackground && !isForeground) {
+      unawaited(_suspendLocationUpdates());
+      return;
+    }
+
+    if (!_locationPermissionGranted) {
+      return;
+    }
+
+    if (_posSub == null) {
+      unawaited(_subscribeToPositionStream());
+    }
+  }
+
+  Future<void> _suspendLocationUpdates() async {
+    if (_posSub == null) {
+      return;
+    }
+    await _posSub?.cancel();
+    _posSub = null;
   }
 
   Future<void> _ensureNotificationPermission() async {
@@ -1280,6 +1328,27 @@ class _MapPageState extends State<MapPage>
     );
   }
 
+  void _maybeShowBackgroundLocationConsent() {
+    if (!_backgroundConsentController.isLoaded ||
+        !_locationPermissionGranted) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (_backgroundLocationAllowed != null || _showBackgroundConsent) {
+      return;
+    }
+    _presentBackgroundConsentOverlay(prefillSelection: false);
+  }
+
+  void _openBackgroundConsentSettings() {
+    if (!_backgroundConsentController.isLoaded) {
+      return;
+    }
+    _presentBackgroundConsentOverlay(prefillSelection: true);
+  }
+
   void _onTermsConsentChanged(bool accepted) {
     if (!mounted) {
       return;
@@ -1302,6 +1371,18 @@ class _MapPageState extends State<MapPage>
       return;
     }
     _evaluateIntroFlow();
+  }
+
+  void _handleBackgroundConsentChange() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _backgroundLocationAllowed =
+          _backgroundConsentController.allowed;
+    });
+    _applyBackgroundLocationPreference();
+    _maybeShowBackgroundLocationConsent();
   }
 
   void _evaluateIntroFlow() {
@@ -1398,6 +1479,55 @@ class _MapPageState extends State<MapPage>
       _showWelcomeOverlay = false;
       _showWeighStationsPrompt = true;
     });
+  }
+
+  void _onBackgroundLocationConsentSelection(
+    BackgroundLocationConsentOption option,
+  ) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pendingBackgroundConsent = option;
+    });
+  }
+
+  void _presentBackgroundConsentOverlay({required bool prefillSelection}) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _showBackgroundConsent = true;
+      if (prefillSelection) {
+        final bool? allowed = _backgroundLocationAllowed;
+        _pendingBackgroundConsent = allowed == null
+            ? null
+            : (allowed
+                ? BackgroundLocationConsentOption.allow
+                : BackgroundLocationConsentOption.deny);
+      } else {
+        _pendingBackgroundConsent = null;
+      }
+    });
+  }
+
+  Future<void> _confirmBackgroundLocationConsent() async {
+    final choice = _pendingBackgroundConsent;
+    if (choice == null) {
+      return;
+    }
+    final bool allow =
+        choice == BackgroundLocationConsentOption.allow;
+    if (mounted) {
+      setState(() {
+        _showBackgroundConsent = false;
+        _pendingBackgroundConsent = null;
+      });
+    } else {
+      _showBackgroundConsent = false;
+      _pendingBackgroundConsent = null;
+    }
+    await _backgroundConsentController.setAllowed(allow);
   }
 
   void _completeWeighStationsPrompt(bool enabled) {
@@ -1614,6 +1744,14 @@ class _MapPageState extends State<MapPage>
         termsAccepted: _termsAccepted,
         onTermsConsentChanged: _onTermsConsentChanged,
         onViewTerms: _openTermsAndConditions,
+      ),
+      BackgroundLocationConsentOverlay(
+        visible: _showBackgroundConsent,
+        selection: _pendingBackgroundConsent,
+        onSelectionChanged: _onBackgroundLocationConsentSelection,
+        onContinue: () => unawaited(
+          _confirmBackgroundLocationConsent(),
+        ),
       ),
     ];
 

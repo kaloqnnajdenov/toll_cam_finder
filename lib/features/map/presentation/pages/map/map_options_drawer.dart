@@ -6,6 +6,10 @@ extension _MapPageDrawer on _MapPageState {
     final languageController = context.watch<LanguageController>();
     final audioController = context.watch<GuidanceAudioController>();
     final themeController = context.watch<ThemeController>();
+    final backgroundConsentController =
+        context.watch<BackgroundLocationConsentController>();
+    final bool backgroundConsentLoaded =
+        backgroundConsentController.isLoaded;
     final bool isDarkMode = themeController.isDarkMode;
     return Drawer(
       child: SafeArea(
@@ -22,6 +26,20 @@ extension _MapPageDrawer on _MapPageState {
                 onChanged: (value) => themeController.setDarkMode(value),
               ),
               onTap: themeController.toggle,
+            ),
+            ListTile(
+              leading: const Icon(Icons.my_location_outlined),
+              title: Text(localizations.backgroundLocationSettingTitle),
+              enabled: backgroundConsentLoaded,
+              onTap: backgroundConsentLoaded
+                  ? () {
+                      Navigator.of(context).pop();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _openBackgroundConsentSettings();
+                      });
+                    }
+                  : null,
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),

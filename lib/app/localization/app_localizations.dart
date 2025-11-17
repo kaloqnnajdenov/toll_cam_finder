@@ -417,6 +417,21 @@ class AppLocalizations {
       'mapWeighStationsPromptEnableButton': 'Show weigh stations',
       'mapWeighStationsPromptSkipButton': 'Not now',
       'mapWeighStationsEnableButton': 'Enable weigh stations on map',
+      'backgroundConsentTitle':
+          'Allow TollCam to use background location?',
+      'backgroundConsentBody':
+          'We only read your precise location even when the app is closed or not in use to check for nearby toll segments or weigh stations. We do not share precise location with third parties except to provide map tiles or routing needed for in-app navigation.',
+      'backgroundConsentAllowTitle': 'Allow',
+      'backgroundConsentAllowSubtitle':
+          'Recommended. Keeps alerts active in the background so you still receive notifications with the screen off.',
+      'backgroundConsentDenyTitle': 'Don\'t allow',
+      'backgroundConsentDenySubtitle':
+          'If you close the app we pause all background tracking, so no location is read and you will miss toll or weigh-station notifications.',
+      'backgroundConsentMenuHint':
+          'You can adjust this anytime from the side menu.',
+      'backgroundLocationSettingTitle': 'Allow background location',
+      'backgroundLocationSettingDescription':
+          'Keeps precise alerts active when TollCam runs in the background. Turn this off to stop all background location use after you leave the app.',
       'introDismiss': 'Continue',
       'introMenuLabel': 'Show introduction',
       'segmentMetricsStatusTracking': 'Tracking segment',
@@ -824,6 +839,19 @@ class AppLocalizations {
 'mapWeighStationsPromptEnableButton': 'Показвай кантари',
 'mapWeighStationsPromptSkipButton': 'Не сега',
 'mapWeighStationsEnableButton': 'Активирай кантари на картата',
+'backgroundConsentTitle': 'Да позволим TollCam да използва локацията във фонов режим?',
+'backgroundConsentBody':
+'Използваме точната ви локация дори когато приложението е затворено или не се използва, за да засечем близки тол сегменти или кантари. Не я споделяме с трети страни, освен за картни плочки или маршрути, нужни за навигацията в приложението.',
+'backgroundConsentAllowTitle': 'Позволи',
+'backgroundConsentAllowSubtitle':
+'Препоръчително. Поддържа известията активни във фона, за да получавате предупреждения дори когато екранът е изключен.',
+'backgroundConsentDenyTitle': 'Не позволявай',
+'backgroundConsentDenySubtitle':
+'Когато затворите приложението ще спрем всякакво фоново проследяване, няма да четем местоположението и ще изпускате тол или кантар известия.',
+'backgroundConsentMenuHint': 'Можете да промените избора си по всяко време от страничното меню.',
+'backgroundLocationSettingTitle': 'Фонова локация',
+'backgroundLocationSettingDescription':
+'Поддържа точните известия активни, докато TollCam работи във фона. Изключете го, ако искате напълно да спрем достъпа до локация, когато напуснете приложението.',
 'introDismiss': 'Започни',
 'introMenuLabel': 'Въведение',
 'segmentMetricsStatusTracking': 'Следене на сегмента',
@@ -1145,6 +1173,24 @@ class AppLocalizations {
       _value('mapWeighStationsPromptSkipButton');
   String get mapWeighStationsEnableButton =>
       _value('mapWeighStationsEnableButton');
+  String get backgroundConsentTitle =>
+      _value('backgroundConsentTitle');
+  String get backgroundConsentBody =>
+      _value('backgroundConsentBody');
+  String get backgroundConsentAllowTitle =>
+      _value('backgroundConsentAllowTitle');
+  String get backgroundConsentAllowSubtitle =>
+      _value('backgroundConsentAllowSubtitle');
+  String get backgroundConsentDenyTitle =>
+      _value('backgroundConsentDenyTitle');
+  String get backgroundConsentDenySubtitle =>
+      _value('backgroundConsentDenySubtitle');
+  String get backgroundConsentMenuHint =>
+      _value('backgroundConsentMenuHint');
+  String get backgroundLocationSettingTitle =>
+      _value('backgroundLocationSettingTitle');
+  String get backgroundLocationSettingDescription =>
+      _value('backgroundLocationSettingDescription');
   String get introDismiss => _value('introDismiss');
   String get introMenuLabel => _value('introMenuLabel');
 }
