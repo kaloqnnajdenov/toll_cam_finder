@@ -175,6 +175,8 @@ class AppLocalizations {
           'Mute all voice guidance?',
       'audioModeAbsoluteMuteConfirmationBody':
           'If you mute all voice guidance, you will not receive alerts while driving when the app is in the foreground or background. Do you want to continue?',
+      'audioModeBackgroundDisabledHelper':
+          'Background location is off, so these options are unavailable.',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
       'logOut': 'Log out',
@@ -429,6 +431,17 @@ class AppLocalizations {
           'If you close the app we pause all background tracking, so no location is read and you will miss toll or weigh-station notifications.',
       'backgroundConsentMenuHint':
           'You can adjust this anytime from the side menu.',
+      'locationDisclosureAgree': 'Agree',
+      'locationDisclosureNotNow': 'Not now',
+      'locationDisclosureSkip': 'Continue without background',
+      'locationPermissionInfoTitle': 'Location access needed',
+      'locationPermissionRequiredBody':
+          'TollCam needs your precise location while the app is open to find toll segments or weigh stations nearby. Allow Android location access so alerts can start.',
+      'locationPermissionOptOutBody':
+          'Background alerts stay off until you change this choice. Enable them from the side menu whenever you want TollCam to keep monitoring in the background.',
+      'locationPermissionSettingsButton': 'Open app settings',
+      'locationPermissionReviewDisclosure': 'Review in-app disclosure',
+      'locationPermissionPromptButton': 'Allow location access',
       'backgroundLocationSettingTitle': 'Allow background location',
       'backgroundLocationSettingDescription':
           'Keeps precise alerts active when TollCam runs in the background. Turn this off to stop all background location use after you leave the app.',
@@ -849,6 +862,17 @@ class AppLocalizations {
 'backgroundConsentDenySubtitle':
 'Когато затворите приложението ще спрем всякакво фоново проследяване, няма да четем местоположението и ще изпускате тол или кантар известия.',
 'backgroundConsentMenuHint': 'Можете да промените избора си по всяко време от страничното меню.',
+'locationDisclosureAgree': 'Съгласен съм',
+'locationDisclosureNotNow': 'Не сега',
+'locationDisclosureSkip': 'Продължи без фонова локация',
+'locationPermissionInfoTitle': 'Необходим е достъп до местоположението',
+'locationPermissionRequiredBody':
+    'TollCam се нуждае от точната Ви локация, докато приложението е отворено, за да открива тол сегменти и кантари наблизо. Разрешете достъп до местоположението в Android, за да започнат предупрежденията.',
+'locationPermissionOptOutBody':
+    'Фоновите известия са изключени според Вашия избор. Можете да ги активирате от страничното меню, когато сте готови TollCam да следи позицията Ви във фонов режим.',
+'locationPermissionSettingsButton': 'Отвори настройките на приложението',
+'locationPermissionReviewDisclosure': 'Преглед на изискването за локация',
+'locationPermissionPromptButton': 'Разреши достъп до локацията',
 'backgroundLocationSettingTitle': 'Фонова локация',
 'backgroundLocationSettingDescription':
 'Поддържа точните известия активни, докато TollCam работи във фона. Изключете го, ако искате напълно да спрем достъпа до локация, когато напуснете приложението.',
@@ -897,6 +921,8 @@ class AppLocalizations {
           'Изключване на всички гласови предупреждения?',
       'audioModeAbsoluteMuteConfirmationBody':
           'Ако изключиш всички гласови предупреждения, няма да получаваш известия нито когато приложението е на преден план, нито във фонов режим. Искаш ли да продължиш?',
+      'audioModeBackgroundDisabledHelper':
+          'Фоновата локация е изключена, затова тези опции не са налични.',
 'savingLocalSegmentsNotSupportedOnWeb':
 'Запазването на локални сегменти не се поддържа в уеб версията.',
 'loadingLocalSegmentsNotSupportedOnWeb':
@@ -1027,6 +1053,8 @@ class AppLocalizations {
       _value('audioModeAbsoluteMuteConfirmationTitle');
   String get audioModeAbsoluteMuteConfirmationBody =>
       _value('audioModeAbsoluteMuteConfirmationBody');
+  String get audioModeBackgroundDisabledHelper =>
+      _value('audioModeBackgroundDisabledHelper');
   String get welcomeTitle => _value('welcomeTitle');
   String get joinTollCam => _value('joinTollCam');
   String get emailLabel => _value('emailLabel');
@@ -1187,6 +1215,24 @@ class AppLocalizations {
       _value('backgroundConsentDenySubtitle');
   String get backgroundConsentMenuHint =>
       _value('backgroundConsentMenuHint');
+  String get locationDisclosureAgree =>
+      _value('locationDisclosureAgree');
+  String get locationDisclosureNotNow =>
+      _value('locationDisclosureNotNow');
+  String get locationDisclosureSkip =>
+      _value('locationDisclosureSkip');
+  String get locationPermissionInfoTitle =>
+      _value('locationPermissionInfoTitle');
+  String get locationPermissionRequiredBody =>
+      _value('locationPermissionRequiredBody');
+  String get locationPermissionOptOutBody =>
+      _value('locationPermissionOptOutBody');
+  String get locationPermissionSettingsButton =>
+      _value('locationPermissionSettingsButton');
+  String get locationPermissionReviewDisclosure =>
+      _value('locationPermissionReviewDisclosure');
+  String get locationPermissionPromptButton =>
+      _value('locationPermissionPromptButton');
   String get backgroundLocationSettingTitle =>
       _value('backgroundLocationSettingTitle');
   String get backgroundLocationSettingDescription =>

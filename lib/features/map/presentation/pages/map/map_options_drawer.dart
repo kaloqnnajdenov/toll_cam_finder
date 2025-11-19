@@ -134,6 +134,8 @@ extension _MapPageDrawer on _MapPageState {
 
   void _onAudioModeSelected() {
     final localizations = AppLocalizations.of(context);
+    final bool backgroundAllowed =
+        _backgroundLocationAllowed ?? false;
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -143,34 +145,49 @@ extension _MapPageDrawer on _MapPageState {
           return SafeArea(
             child: Consumer<GuidanceAudioController>(
               builder: (context, controller, _) {
+                final Set<GuidanceAudioMode> disabledModes = {
+                  if (!backgroundAllowed) GuidanceAudioMode.fullGuidance,
+                  if (!backgroundAllowed) GuidanceAudioMode.muteForeground,
+                };
                 return ListView(
                   shrinkWrap: true,
                   children: [
                     ListTile(
                       title: Text(localizations.audioModeTitle),
+                      subtitle: !backgroundAllowed
+                          ? Text(
+                              localizations.audioModeBackgroundDisabledHelper,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Colors.orangeAccent),
+                            )
+                          : null,
                     ),
                     for (final mode in GuidanceAudioMode.values)
                       RadioListTile<GuidanceAudioMode>(
                         title: Text(_audioModeLabel(mode, localizations)),
                         value: mode,
                         groupValue: controller.mode,
-                        onChanged: (value) async {
-                          if (value == null) {
-                            return;
-                          }
-                          if (value == GuidanceAudioMode.absoluteMute) {
-                            final confirmed =
-                                await _confirmAbsoluteMute(sheetContext);
-                            if (!confirmed) {
-                              return;
-                            }
-                          }
-                          controller.setMode(value);
-                          if (!sheetContext.mounted) {
-                            return;
-                          }
-                          Navigator.of(sheetContext).pop();
-                        },
+                        onChanged: disabledModes.contains(mode)
+                            ? null
+                            : (value) async {
+                                if (value == null) {
+                                  return;
+                                }
+                                if (value == GuidanceAudioMode.absoluteMute) {
+                                  final confirmed =
+                                      await _confirmAbsoluteMute(sheetContext);
+                                  if (!confirmed) {
+                                    return;
+                                  }
+                                }
+                                controller.setMode(value);
+                                if (!sheetContext.mounted) {
+                                  return;
+                                }
+                                Navigator.of(sheetContext).pop();
+                              },
                       ),
                   ],
                 );

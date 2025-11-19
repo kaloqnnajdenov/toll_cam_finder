@@ -183,9 +183,7 @@ class _MapPageState extends State<MapPage>
   bool _showBackgroundConsent = false;
   bool _showLocationPermissionInfo = false;
   bool _isRequestingForegroundPermission = false;
-  bool _isRequestingBackgroundPermission = false;
   bool? _backgroundLocationAllowed;
-  bool _hasBackgroundPermission = false;
   BackgroundLocationConsentOption? _pendingBackgroundConsent;
   bool? _introCompleted;
   bool _introFlowPresented = true;
@@ -484,8 +482,7 @@ class _MapPageState extends State<MapPage>
   }
 
   void _applyBackgroundLocationPreference() {
-    final bool allowBackground =
-        (_backgroundLocationAllowed ?? false) && _hasBackgroundPermission;
+    final bool allowBackground = _backgroundLocationAllowed ?? false;
     final bool isForeground = _appLifecycleState == AppLifecycleState.resumed;
     final bool shouldEnableForeground =
         !isForeground && allowBackground;
@@ -506,9 +503,7 @@ class _MapPageState extends State<MapPage>
   }
 
   void _enforceAudioModeBackgroundSafety() {
-    final bool allowBackgroundAudio =
-        (_backgroundLocationAllowed ?? false) && _hasBackgroundPermission;
-    if (allowBackgroundAudio) {
+    if (_backgroundLocationAllowed != false) {
       return;
     }
     final GuidanceAudioMode mode = _audioController.mode;
@@ -1430,8 +1425,7 @@ class _MapPageState extends State<MapPage>
     if (!_termsAccepted ||
         _showIntro ||
         !_locationPermissionGranted ||
-        _showBackgroundConsent ||
-        _isRequestingBackgroundPermission) {
+        _showBackgroundConsent) {
       return;
     }
     if (!_backgroundConsentController.isLoaded) {
@@ -1458,27 +1452,12 @@ class _MapPageState extends State<MapPage>
       _handleBackgroundPermissionDeclined();
       return;
     }
-    final bool hasBackground =
-        await _permissionService.hasBackgroundPermission();
-    _hasBackgroundPermission = hasBackground;
-    if (hasBackground) {
-      if (mounted) {
-        setState(() {
-          _showLocationPermissionInfo = false;
-        });
-      } else {
-        _showLocationPermissionInfo = false;
-      }
-      _applyBackgroundLocationPreference();
-      return;
-    }
-
     if (mounted) {
       setState(() {
-        _showLocationPermissionInfo = true;
+        _showLocationPermissionInfo = false;
       });
     } else {
-      _showLocationPermissionInfo = true;
+      _showLocationPermissionInfo = false;
     }
     _applyBackgroundLocationPreference();
   }
@@ -1522,30 +1501,6 @@ class _MapPageState extends State<MapPage>
     _handleForegroundPermissionDeclined();
   }
 
-  Future<bool> _requestBackgroundPermission() async {
-    if (_isRequestingBackgroundPermission) {
-      return false;
-    }
-    if (mounted) {
-      setState(() {
-        _isRequestingBackgroundPermission = true;
-      });
-    } else {
-      _isRequestingBackgroundPermission = true;
-    }
-    final bool granted =
-        await _permissionService.ensureBackgroundPermission();
-    _hasBackgroundPermission = granted;
-    if (mounted) {
-      setState(() {
-        _isRequestingBackgroundPermission = false;
-      });
-    } else {
-      _isRequestingBackgroundPermission = false;
-    }
-    return granted;
-  }
-
   void _handleForegroundPermissionDeclined() {
     _locationPermissionGranted = false;
     if (!mounted) {
@@ -1559,7 +1514,6 @@ class _MapPageState extends State<MapPage>
 
   void _handleBackgroundPermissionDeclined() {
     _backgroundLocationAllowed = false;
-    _hasBackgroundPermission = false;
     _applyBackgroundLocationPreference();
     _enforceAudioModeBackgroundSafety();
     if (mounted) {
@@ -1770,30 +1724,18 @@ class _MapPageState extends State<MapPage>
       await _backgroundConsentController.setAllowed(true);
       _backgroundLocationAllowed = true;
       _enforceAudioModeBackgroundSafety();
-      final bool granted = await _requestBackgroundPermission();
-      if (granted) {
-        if (mounted) {
-          setState(() {
-            _showLocationPermissionInfo = false;
-          });
-        } else {
-          _showLocationPermissionInfo = false;
-        }
-        _applyBackgroundLocationPreference();
-        return;
-      }
       if (mounted) {
         setState(() {
-          _showLocationPermissionInfo = true;
+          _showLocationPermissionInfo = false;
         });
       } else {
-        _showLocationPermissionInfo = true;
+        _showLocationPermissionInfo = false;
       }
+      _applyBackgroundLocationPreference();
       return;
     }
     await _backgroundConsentController.setAllowed(false);
     _backgroundLocationAllowed = false;
-    _hasBackgroundPermission = false;
     _handleBackgroundPermissionDeclined();
   }
 
@@ -1996,9 +1938,7 @@ class _MapPageState extends State<MapPage>
       mapFab,
       if (_showLocationPermissionInfo)
         LocationPermissionBanner(
-          userOptedOut:
-              (_backgroundLocationAllowed ?? false) == false ||
-                  !_hasBackgroundPermission,
+          userOptedOut: _backgroundLocationAllowed == false,
           isRequestingPermission: _isRequestingForegroundPermission,
           onRequestPermission: () => unawaited(
             _requestForegroundPermission(),
@@ -2035,7 +1975,6 @@ class _MapPageState extends State<MapPage>
         onNotNow: () => unawaited(
           _handleLocationDisclosureNotNow(),
         ),
-        isProcessing: _isRequestingBackgroundPermission,
       ),
     ];
 

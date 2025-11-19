@@ -14,13 +14,17 @@ class BackgroundLocationConsentOverlay extends StatelessWidget {
     required this.visible,
     required this.selection,
     required this.onSelectionChanged,
-    required this.onContinue,
+    required this.onAgree,
+    required this.onNotNow,
+    this.isProcessing = false,
   });
 
   final bool visible;
   final BackgroundLocationConsentOption? selection;
   final ValueChanged<BackgroundLocationConsentOption> onSelectionChanged;
-  final VoidCallback onContinue;
+  final VoidCallback onAgree;
+  final VoidCallback onNotNow;
+  final bool isProcessing;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +32,14 @@ class BackgroundLocationConsentOverlay extends StatelessWidget {
     final palette = AppColors.of(context);
     final localizations = AppLocalizations.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-    final bool canContinue = selection != null;
+    final bool allowSelected =
+        selection == BackgroundLocationConsentOption.allow;
+    final bool denySelected =
+        selection == BackgroundLocationConsentOption.deny;
+    final bool canAgree = allowSelected && !isProcessing;
+    final bool canSkip = denySelected && !isProcessing;
+    final bool showAgreeProgress =
+        isProcessing && allowSelected;
 
     final List<_ConsentOptionData> options = [
       _ConsentOptionData(
@@ -179,8 +190,39 @@ class BackgroundLocationConsentOverlay extends StatelessWidget {
                               SizedBox(
                                 width: double.infinity,
                                 child: FilledButton(
-                                  onPressed: canContinue ? onContinue : null,
-                                  child: Text(localizations.continueLabel),
+                                  onPressed: canAgree ? onAgree : null,
+                                  child: showAgreeProgress
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              localizations
+                                                  .locationDisclosureAgree,
+                                            ),
+                                          ],
+                                        )
+                                      : Text(
+                                          localizations.locationDisclosureAgree,
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: canSkip ? onNotNow : null,
+                                  child: Text(
+                                    localizations.locationDisclosureSkip,
+                                  ),
                                 ),
                               ),
                             ],
