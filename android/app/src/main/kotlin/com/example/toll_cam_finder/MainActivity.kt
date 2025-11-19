@@ -1,6 +1,7 @@
 package com.kalka.toll_cam_finder
 
 import android.Manifest
+import android.app.Activity
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -15,6 +16,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.platform.PlatformPlugin
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -42,6 +44,18 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleNotificationAction(intent)
+    }
+
+    override fun providePlatformPlugin(
+        activity: Activity?,
+        flutterEngine: FlutterEngine,
+    ): PlatformPlugin {
+        val hostActivity = activity ?: this
+        return EdgeToEdgePlatformPlugin(
+            hostActivity,
+            flutterEngine.platformChannel,
+            this,
+        )
     }
 
     private fun handleMethodCall(call: MethodCall, result: MethodChannel.Result) {
