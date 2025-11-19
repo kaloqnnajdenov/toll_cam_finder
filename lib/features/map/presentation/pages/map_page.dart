@@ -57,6 +57,7 @@ import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_stations
 import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_station_feedback_sheet.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
+import 'map/widgets/location_permission_banner.dart';
 import 'map/widgets/map_intro_overlay.dart';
 import 'map/widgets/map_welcome_overlays.dart';
 import 'map/widgets/background_location_consent_overlay.dart';
@@ -180,7 +181,11 @@ class _MapPageState extends State<MapPage>
   bool _showWelcomeOverlay = false;
   bool _showWeighStationsPrompt = false;
   bool _showBackgroundConsent = false;
+  bool _showLocationPermissionInfo = false;
+  bool _isRequestingForegroundPermission = false;
+  bool _isRequestingBackgroundPermission = false;
   bool? _backgroundLocationAllowed;
+  bool _hasBackgroundPermission = false;
   BackgroundLocationConsentOption? _pendingBackgroundConsent;
   bool? _introCompleted;
   bool _introFlowPresented = true;
@@ -213,6 +218,7 @@ class _MapPageState extends State<MapPage>
     _backgroundConsentController =
         context.read<BackgroundLocationConsentController>();
     _backgroundLocationAllowed = _backgroundConsentController.allowed;
+    _enforceAudioModeBackgroundSafety();
     _backgroundConsentController.addListener(_handleBackgroundConsentChange);
     unawaited(_backgroundConsentController.ensureLoaded());
     unawaited(_loadIntroCompletionStatus());
@@ -287,22 +293,30 @@ class _MapPageState extends State<MapPage>
     super.didChangeAppLifecycleState(state);
     _appLifecycleState = state;
     _applyBackgroundLocationPreference();
-    if (state == AppLifecycleState.resumed &&
-        _didRequestNotificationPermission) {
-      unawaited(_ensureNotificationPermission());
+    if (state == AppLifecycleState.resumed) {
+      unawaited(showLocationDisclosureIfNeeded());
+      if (_didRequestNotificationPermission) {
+        unawaited(_ensureNotificationPermission());
+      }
     }
     _updateAudioPolicy();
     _updateSpeedLimitPollingForVisibility();
   }
 
   Future<void> _initLocation() async {
-    final hasPermission = await _permissionService.ensureLocationPermission();
+    final hasPermission = await _permissionService.hasLocationPermission();
     if (!hasPermission) {
       _locationPermissionGranted = false;
+      if (mounted) {
+        setState(() {
+          _showLocationPermissionInfo = true;
+        });
+      } else {
+        _showLocationPermissionInfo = true;
+      }
       return;
     }
     _locationPermissionGranted = true;
-    _maybeShowBackgroundLocationConsent();
     await _ensureNotificationPermission();
     if (_metadataLoadFuture != null) {
       await _metadataLoadFuture;
@@ -470,7 +484,8 @@ class _MapPageState extends State<MapPage>
   }
 
   void _applyBackgroundLocationPreference() {
-    final bool allowBackground = _backgroundLocationAllowed ?? false;
+    final bool allowBackground =
+        (_backgroundLocationAllowed ?? false) && _hasBackgroundPermission;
     final bool isForeground = _appLifecycleState == AppLifecycleState.resumed;
     final bool shouldEnableForeground =
         !isForeground && allowBackground;
@@ -487,6 +502,21 @@ class _MapPageState extends State<MapPage>
 
     if (_posSub == null) {
       unawaited(_subscribeToPositionStream());
+    }
+  }
+
+  void _enforceAudioModeBackgroundSafety() {
+    final bool allowBackgroundAudio =
+        (_backgroundLocationAllowed ?? false) && _hasBackgroundPermission;
+    if (allowBackgroundAudio) {
+      return;
+    }
+    final GuidanceAudioMode mode = _audioController.mode;
+    final bool requiresBackground =
+        mode == GuidanceAudioMode.fullGuidance ||
+        mode == GuidanceAudioMode.muteForeground;
+    if (requiresBackground) {
+      _audioController.setMode(GuidanceAudioMode.muteBackground);
     }
   }
 
@@ -1323,23 +1353,7 @@ class _MapPageState extends State<MapPage>
     if (!alreadyCompleted) {
       unawaited(_persistIntroCompletion());
     }
-    _scheduleInitialLocationInit(
-      delay: const Duration(milliseconds: 2500),
-    );
-  }
-
-  void _maybeShowBackgroundLocationConsent() {
-    if (!_backgroundConsentController.isLoaded ||
-        !_locationPermissionGranted) {
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-    if (_backgroundLocationAllowed != null || _showBackgroundConsent) {
-      return;
-    }
-    _presentBackgroundConsentOverlay(prefillSelection: false);
+    unawaited(showLocationDisclosureIfNeeded());
   }
 
   void _openBackgroundConsentSettings() {
@@ -1355,8 +1369,19 @@ class _MapPageState extends State<MapPage>
     }
     setState(() {
       _termsAccepted = accepted;
+      if (accepted && !_locationPermissionGranted) {
+        _showLocationPermissionInfo = true;
+      }
     });
     unawaited(_persistTermsAcceptance(accepted));
+    if (!accepted) {
+      return;
+    }
+    if (_showIntro) {
+      _dismissIntro();
+    } else {
+      unawaited(showLocationDisclosureIfNeeded());
+    }
   }
 
   void _openTermsAndConditions() {
@@ -1365,6 +1390,198 @@ class _MapPageState extends State<MapPage>
     }
     Navigator.of(context).pushNamed(AppRoutes.termsAndConditions);
   }
+
+  Future<void> showLocationDisclosureIfNeeded() async {
+    if (!_termsAccepted || _showIntro) {
+      return;
+    }
+    final bool hasForeground =
+        await _permissionService.hasLocationPermission();
+    if (!mounted) {
+      _locationPermissionGranted = hasForeground;
+      _showLocationPermissionInfo = !hasForeground;
+      if (hasForeground) {
+        _scheduleInitialLocationInit();
+      }
+      return;
+    }
+
+    if (!hasForeground) {
+      setState(() {
+        _locationPermissionGranted = false;
+        _showLocationPermissionInfo = true;
+      });
+      return;
+    }
+
+    final bool wasGranted = _locationPermissionGranted;
+    _locationPermissionGranted = true;
+
+    if (!wasGranted || _showLocationPermissionInfo) {
+      setState(() {
+        _showLocationPermissionInfo = false;
+      });
+    }
+    _scheduleInitialLocationInit();
+    await _maybeShowBackgroundLocationDisclosure();
+  }
+
+  Future<void> _maybeShowBackgroundLocationDisclosure() async {
+    if (!_termsAccepted ||
+        _showIntro ||
+        !_locationPermissionGranted ||
+        _showBackgroundConsent ||
+        _isRequestingBackgroundPermission) {
+      return;
+    }
+    if (!_backgroundConsentController.isLoaded) {
+      await _backgroundConsentController.ensureLoaded();
+      if (!mounted) {
+        return;
+      }
+    }
+    final bool? consent = _backgroundConsentController.allowed;
+    if (mounted) {
+      setState(() {
+        _backgroundLocationAllowed = consent;
+      });
+    } else {
+      _backgroundLocationAllowed = consent;
+    }
+    _enforceAudioModeBackgroundSafety();
+
+    if (consent == null) {
+      _presentBackgroundConsentOverlay(prefillSelection: false);
+      return;
+    }
+    if (!consent) {
+      _handleBackgroundPermissionDeclined();
+      return;
+    }
+    final bool hasBackground =
+        await _permissionService.hasBackgroundPermission();
+    _hasBackgroundPermission = hasBackground;
+    if (hasBackground) {
+      if (mounted) {
+        setState(() {
+          _showLocationPermissionInfo = false;
+        });
+      } else {
+        _showLocationPermissionInfo = false;
+      }
+      _applyBackgroundLocationPreference();
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _showLocationPermissionInfo = true;
+      });
+    } else {
+      _showLocationPermissionInfo = true;
+    }
+    _applyBackgroundLocationPreference();
+  }
+
+  Future<void> _requestForegroundPermission() async {
+    if (_isRequestingForegroundPermission) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _isRequestingForegroundPermission = true;
+      });
+    } else {
+      _isRequestingForegroundPermission = true;
+    }
+    final bool granted =
+        await _permissionService.ensureForegroundPermission();
+    if (mounted) {
+      setState(() {
+        _isRequestingForegroundPermission = false;
+      });
+    } else {
+      _isRequestingForegroundPermission = false;
+    }
+    if (!mounted) {
+      _locationPermissionGranted = granted;
+      if (!granted) {
+        _showLocationPermissionInfo = true;
+      }
+      return;
+    }
+    if (granted) {
+      _locationPermissionGranted = true;
+      setState(() {
+        _showLocationPermissionInfo = false;
+      });
+      _scheduleInitialLocationInit();
+      await _maybeShowBackgroundLocationDisclosure();
+      return;
+    }
+    _handleForegroundPermissionDeclined();
+  }
+
+  Future<bool> _requestBackgroundPermission() async {
+    if (_isRequestingBackgroundPermission) {
+      return false;
+    }
+    if (mounted) {
+      setState(() {
+        _isRequestingBackgroundPermission = true;
+      });
+    } else {
+      _isRequestingBackgroundPermission = true;
+    }
+    final bool granted =
+        await _permissionService.ensureBackgroundPermission();
+    _hasBackgroundPermission = granted;
+    if (mounted) {
+      setState(() {
+        _isRequestingBackgroundPermission = false;
+      });
+    } else {
+      _isRequestingBackgroundPermission = false;
+    }
+    return granted;
+  }
+
+  void _handleForegroundPermissionDeclined() {
+    _locationPermissionGranted = false;
+    if (!mounted) {
+      _showLocationPermissionInfo = true;
+      return;
+    }
+    setState(() {
+      _showLocationPermissionInfo = true;
+    });
+  }
+
+  void _handleBackgroundPermissionDeclined() {
+    _backgroundLocationAllowed = false;
+    _hasBackgroundPermission = false;
+    _applyBackgroundLocationPreference();
+    _enforceAudioModeBackgroundSafety();
+    if (mounted) {
+      setState(() {
+        _showLocationPermissionInfo = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      final localizations = AppLocalizations.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(localizations.backgroundConsentMenuHint),
+        ),
+      );
+    } else {
+      _showLocationPermissionInfo = false;
+    }
+  }
+
+  Future<void> _openAppSettings() async {
+    await Geolocator.openAppSettings();
+  }
+
 
   void _handleWeighStationPreferenceChange() {
     if (!mounted) {
@@ -1377,12 +1594,24 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       return;
     }
+    final bool? allowed = _backgroundConsentController.allowed;
     setState(() {
-      _backgroundLocationAllowed =
-          _backgroundConsentController.allowed;
+      _backgroundLocationAllowed = allowed;
+      if (allowed == true) {
+        _showLocationPermissionInfo = false;
+      }
     });
+    _enforceAudioModeBackgroundSafety();
     _applyBackgroundLocationPreference();
-    _maybeShowBackgroundLocationConsent();
+    if (allowed == true) {
+      if (_termsAccepted && _locationPermissionGranted) {
+        unawaited(_maybeShowBackgroundLocationDisclosure());
+      }
+      return;
+    }
+    if (allowed == false) {
+      _handleBackgroundPermissionDeclined();
+    }
   }
 
   void _evaluateIntroFlow() {
@@ -1438,7 +1667,7 @@ class _MapPageState extends State<MapPage>
       _termsAccepted = termsAccepted;
     });
     if (introReady) {
-      _scheduleInitialLocationInit();
+      unawaited(showLocationDisclosureIfNeeded());
     }
     _evaluateIntroFlow();
   }
@@ -1492,6 +1721,16 @@ class _MapPageState extends State<MapPage>
     });
   }
 
+  Future<void> _handleLocationDisclosureNotNow() async {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pendingBackgroundConsent = BackgroundLocationConsentOption.deny;
+    });
+    await _confirmBackgroundLocationConsent();
+  }
+
   void _presentBackgroundConsentOverlay({required bool prefillSelection}) {
     if (!mounted) {
       return;
@@ -1527,7 +1766,35 @@ class _MapPageState extends State<MapPage>
       _showBackgroundConsent = false;
       _pendingBackgroundConsent = null;
     }
-    await _backgroundConsentController.setAllowed(allow);
+    if (allow) {
+      await _backgroundConsentController.setAllowed(true);
+      _backgroundLocationAllowed = true;
+      _enforceAudioModeBackgroundSafety();
+      final bool granted = await _requestBackgroundPermission();
+      if (granted) {
+        if (mounted) {
+          setState(() {
+            _showLocationPermissionInfo = false;
+          });
+        } else {
+          _showLocationPermissionInfo = false;
+        }
+        _applyBackgroundLocationPreference();
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _showLocationPermissionInfo = true;
+        });
+      } else {
+        _showLocationPermissionInfo = true;
+      }
+      return;
+    }
+    await _backgroundConsentController.setAllowed(false);
+    _backgroundLocationAllowed = false;
+    _hasBackgroundPermission = false;
+    _handleBackgroundPermissionDeclined();
   }
 
   void _completeWeighStationsPrompt(bool enabled) {
@@ -1554,6 +1821,7 @@ class _MapPageState extends State<MapPage>
   @override
   Widget build(BuildContext context) {
     final currentSegment = context.watch<CurrentSegmentController>();
+    final localizations = AppLocalizations.of(context);
     final markerPoint = _blueDotAnimator.position ?? _userLatLng;
     final cameraState = _cameraController.state;
     final weighStationsState = _segmentsService.weighStationsState;
@@ -1726,6 +1994,18 @@ class _MapPageState extends State<MapPage>
       else
         Positioned(left: 0, right: 0, bottom: 0, child: controlsPanel),
       mapFab,
+      if (_showLocationPermissionInfo)
+        LocationPermissionBanner(
+          userOptedOut:
+              (_backgroundLocationAllowed ?? false) == false ||
+                  !_hasBackgroundPermission,
+          isRequestingPermission: _isRequestingForegroundPermission,
+          onRequestPermission: () => unawaited(
+            _requestForegroundPermission(),
+          ),
+          onOpenSettings: () => unawaited(_openAppSettings()),
+          onReviewDisclosure: _openBackgroundConsentSettings,
+        ),
       MapWelcomeOverlay(
         visible: _showWelcomeOverlay,
         languageOptions: _languageController.languageOptions,
@@ -1749,15 +2029,19 @@ class _MapPageState extends State<MapPage>
         visible: _showBackgroundConsent,
         selection: _pendingBackgroundConsent,
         onSelectionChanged: _onBackgroundLocationConsentSelection,
-        onContinue: () => unawaited(
+        onAgree: () => unawaited(
           _confirmBackgroundLocationConsent(),
         ),
+        onNotNow: () => unawaited(
+          _handleLocationDisclosureNotNow(),
+        ),
+        isProcessing: _isRequestingBackgroundPermission,
       ),
     ];
 
-    return Scaffold(
-      endDrawer: _buildOptionsDrawer(),
-      body: Stack(fit: StackFit.expand, children: stackChildren),
-    );
+      return Scaffold(
+        endDrawer: _buildOptionsDrawer(),
+        body: Stack(fit: StackFit.expand, children: stackChildren),
+      );
+    }
   }
-}
