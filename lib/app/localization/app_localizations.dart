@@ -177,6 +177,8 @@ class AppLocalizations {
           'If you mute all voice guidance, you will not receive alerts while driving when the app is in the foreground or background. Do you want to continue?',
       'audioModeBackgroundDisabledHelper':
           'Background location is off, so these options are unavailable.',
+      'audioModeNotificationsDisabledHelper':
+          'Notifications are blocked, so background alerts cannot play.',
       'localSegments': 'Local segments',
       'logIn': 'Log in',
       'logOut': 'Log out',
@@ -442,6 +444,11 @@ class AppLocalizations {
       'locationPermissionSettingsButton': 'Open app settings',
       'locationPermissionReviewDisclosure': 'Review in-app disclosure',
       'locationPermissionPromptButton': 'Allow location access',
+      'notificationPermissionInfoTitle': 'Keep alert notifications on',
+      'notificationPermissionRequiredBody':
+          'We send heads-up alerts while TollCam runs in the background. Enable Android notifications so you don’t miss toll or weigh-station warnings.',
+      'notificationPermissionSettingsButton': 'Open notification settings',
+      'notificationPermissionPromptButton': 'Allow notifications',
       'backgroundLocationSettingTitle': 'Allow background location',
       'backgroundLocationSettingDescription':
           'Keeps precise alerts active when TollCam runs in the background. Turn this off to stop all background location use after you leave the app.',
@@ -873,6 +880,11 @@ class AppLocalizations {
 'locationPermissionSettingsButton': 'Отвори настройките на приложението',
 'locationPermissionReviewDisclosure': 'Преглед на изискването за локация',
 'locationPermissionPromptButton': 'Разреши достъп до локацията',
+'notificationPermissionInfoTitle': 'Разрешете известията',
+'notificationPermissionRequiredBody':
+    'Изпращаме предупреждения, когато приложението работи във фонов режим. Разрешете уведомленията в Android, за да не пропускате тол или кантар сигнали.',
+'notificationPermissionSettingsButton': 'Отвори настройките за известия',
+'notificationPermissionPromptButton': 'Разреши известията',
 'backgroundLocationSettingTitle': 'Фонова локация',
 'backgroundLocationSettingDescription':
 'Поддържа точните известия активни, докато TollCam работи във фона. Изключете го, ако искате напълно да спрем достъпа до локация, когато напуснете приложението.',
@@ -923,6 +935,8 @@ class AppLocalizations {
           'Ако изключиш всички гласови предупреждения, няма да получаваш известия нито когато приложението е на преден план, нито във фонов режим. Искаш ли да продължиш?',
       'audioModeBackgroundDisabledHelper':
           'Фоновата локация е изключена, затова тези опции не са налични.',
+      'audioModeNotificationsDisabledHelper':
+          'Известията са блокирани, затова фоновите предупреждения не могат да звучат.',
 'savingLocalSegmentsNotSupportedOnWeb':
 'Запазването на локални сегменти не се поддържа в уеб версията.',
 'loadingLocalSegmentsNotSupportedOnWeb':
@@ -1055,6 +1069,8 @@ class AppLocalizations {
       _value('audioModeAbsoluteMuteConfirmationBody');
   String get audioModeBackgroundDisabledHelper =>
       _value('audioModeBackgroundDisabledHelper');
+  String get audioModeNotificationsDisabledHelper =>
+      _value('audioModeNotificationsDisabledHelper');
   String get welcomeTitle => _value('welcomeTitle');
   String get joinTollCam => _value('joinTollCam');
   String get emailLabel => _value('emailLabel');
@@ -1233,6 +1249,14 @@ class AppLocalizations {
       _value('locationPermissionReviewDisclosure');
   String get locationPermissionPromptButton =>
       _value('locationPermissionPromptButton');
+  String get notificationPermissionInfoTitle =>
+      _value('notificationPermissionInfoTitle');
+  String get notificationPermissionRequiredBody =>
+      _value('notificationPermissionRequiredBody');
+  String get notificationPermissionSettingsButton =>
+      _value('notificationPermissionSettingsButton');
+  String get notificationPermissionPromptButton =>
+      _value('notificationPermissionPromptButton');
   String get backgroundLocationSettingTitle =>
       _value('backgroundLocationSettingTitle');
   String get backgroundLocationSettingDescription =>

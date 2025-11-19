@@ -136,6 +136,9 @@ extension _MapPageDrawer on _MapPageState {
     final localizations = AppLocalizations.of(context);
     final bool backgroundAllowed =
         _backgroundLocationAllowed ?? false;
+    final bool notificationsAllowed = _notificationsEnabled;
+    final bool canUseBackgroundAudio =
+        backgroundAllowed && notificationsAllowed;
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -146,17 +149,23 @@ extension _MapPageDrawer on _MapPageState {
             child: Consumer<GuidanceAudioController>(
               builder: (context, controller, _) {
                 final Set<GuidanceAudioMode> disabledModes = {
-                  if (!backgroundAllowed) GuidanceAudioMode.fullGuidance,
-                  if (!backgroundAllowed) GuidanceAudioMode.muteForeground,
+                  if (!canUseBackgroundAudio)
+                    GuidanceAudioMode.fullGuidance,
+                  if (!canUseBackgroundAudio)
+                    GuidanceAudioMode.muteForeground,
                 };
                 return ListView(
                   shrinkWrap: true,
                   children: [
                     ListTile(
                       title: Text(localizations.audioModeTitle),
-                      subtitle: !backgroundAllowed
+                      subtitle: !canUseBackgroundAudio
                           ? Text(
-                              localizations.audioModeBackgroundDisabledHelper,
+                              backgroundAllowed
+                                  ? localizations
+                                      .audioModeNotificationsDisabledHelper
+                                  : localizations
+                                      .audioModeBackgroundDisabledHelper,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall

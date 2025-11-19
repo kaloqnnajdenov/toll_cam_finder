@@ -58,6 +58,7 @@ import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_station_
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
 import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 import 'map/widgets/location_permission_banner.dart';
+import 'map/widgets/notification_permission_banner.dart';
 import 'map/widgets/map_intro_overlay.dart';
 import 'map/widgets/map_welcome_overlays.dart';
 import 'map/widgets/background_location_consent_overlay.dart';
@@ -182,8 +183,11 @@ class _MapPageState extends State<MapPage>
   bool _showWeighStationsPrompt = false;
   bool _showBackgroundConsent = false;
   bool _showLocationPermissionInfo = false;
+  bool _showNotificationPermissionInfo = false;
   bool _isRequestingForegroundPermission = false;
+  bool _isRequestingNotificationPermission = false;
   bool? _backgroundLocationAllowed;
+  bool _notificationsEnabled = true;
   BackgroundLocationConsentOption? _pendingBackgroundConsent;
   bool? _introCompleted;
   bool _introFlowPresented = true;
@@ -221,6 +225,7 @@ class _MapPageState extends State<MapPage>
     unawaited(_backgroundConsentController.ensureLoaded());
     unawaited(_loadIntroCompletionStatus());
     unawaited(_initConnectivityMonitoring());
+    unawaited(_ensureNotificationPermission());
     _audioController.addListener(_updateAudioPolicy);
     _languageController.addListener(_handleLanguageChange);
     _weighStationPreferencesController
@@ -293,9 +298,8 @@ class _MapPageState extends State<MapPage>
     _applyBackgroundLocationPreference();
     if (state == AppLifecycleState.resumed) {
       unawaited(showLocationDisclosureIfNeeded());
-      if (_didRequestNotificationPermission) {
-        unawaited(_ensureNotificationPermission());
-      }
+      unawaited(_ensureNotificationPermission());
+      _didRequestNotificationPermission = false;
     }
     _updateAudioPolicy();
     _updateSpeedLimitPollingForVisibility();
@@ -482,7 +486,8 @@ class _MapPageState extends State<MapPage>
   }
 
   void _applyBackgroundLocationPreference() {
-    final bool allowBackground = _backgroundLocationAllowed ?? false;
+    final bool allowBackground =
+        (_backgroundLocationAllowed ?? false) && _notificationsEnabled;
     final bool isForeground = _appLifecycleState == AppLifecycleState.resumed;
     final bool shouldEnableForeground =
         !isForeground && allowBackground;
@@ -503,7 +508,9 @@ class _MapPageState extends State<MapPage>
   }
 
   void _enforceAudioModeBackgroundSafety() {
-    if (_backgroundLocationAllowed != false) {
+    final bool backgroundAllowed = _backgroundLocationAllowed != false;
+    final bool notificationsAllowed = _notificationsEnabled;
+    if (backgroundAllowed && notificationsAllowed) {
       return;
     }
     final GuidanceAudioMode mode = _audioController.mode;
@@ -524,40 +531,46 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _ensureNotificationPermission() async {
-    if (_didRequestNotificationPermission) {
-      final bool enabled = await _notificationPermissionService
-          .areNotificationsEnabled();
-      if (enabled || !mounted) {
-        return;
-      }
-
-      _showNotificationSettingsPrompt();
+    final bool enabled =
+        await _notificationPermissionService.areNotificationsEnabled();
+    if (!mounted) {
+      _notificationsEnabled = enabled;
       return;
     }
-
-    _didRequestNotificationPermission = true;
-    final bool granted = await _notificationPermissionService
-        .ensurePermissionGranted();
-    if (granted || !mounted) {
-      return;
-    }
-
-    _showNotificationSettingsPrompt();
+    setState(() {
+      _notificationsEnabled = enabled;
+      _showNotificationPermissionInfo =
+          _backgroundLocationAllowed == true && !enabled;
+    });
+    _enforceAudioModeBackgroundSafety();
   }
 
-  void _showNotificationSettingsPrompt() {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(AppMessages.backgroundTrackingNotificationRationale),
-        action: SnackBarAction(
-          label: AppMessages.openNotificationSettingsAction,
-          onPressed: () {
-            unawaited(_notificationPermissionService.openSettings());
-          },
-        ),
-      ),
-    );
+  Future<void> _requestNotificationPermission() async {
+    if (_isRequestingNotificationPermission) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _isRequestingNotificationPermission = true;
+      });
+    } else {
+      _isRequestingNotificationPermission = true;
+    }
+    final bool granted =
+        await _notificationPermissionService.ensurePermissionGranted();
+    _didRequestNotificationPermission = true;
+    if (!mounted) {
+      _isRequestingNotificationPermission = false;
+      _notificationsEnabled = granted;
+      return;
+    }
+    setState(() {
+      _isRequestingNotificationPermission = false;
+      _notificationsEnabled = granted;
+      _showNotificationPermissionInfo =
+          _backgroundLocationAllowed == true && !granted;
+    });
+    _enforceAudioModeBackgroundSafety();
   }
 
   void _handlePositionUpdate(Position position) {
@@ -1372,9 +1385,7 @@ class _MapPageState extends State<MapPage>
     if (!accepted) {
       return;
     }
-    if (_showIntro) {
-      _dismissIntro();
-    } else {
+    if (!_showIntro) {
       unawaited(showLocationDisclosureIfNeeded());
     }
   }
@@ -1419,6 +1430,7 @@ class _MapPageState extends State<MapPage>
     }
     _scheduleInitialLocationInit();
     await _maybeShowBackgroundLocationDisclosure();
+    await _ensureNotificationPermission();
   }
 
   Future<void> _maybeShowBackgroundLocationDisclosure() async {
@@ -1519,6 +1531,7 @@ class _MapPageState extends State<MapPage>
     if (mounted) {
       setState(() {
         _showLocationPermissionInfo = false;
+        _showNotificationPermissionInfo = false;
       });
       final messenger = ScaffoldMessenger.of(context);
       final localizations = AppLocalizations.of(context);
@@ -1529,6 +1542,7 @@ class _MapPageState extends State<MapPage>
       );
     } else {
       _showLocationPermissionInfo = false;
+      _showNotificationPermissionInfo = false;
     }
   }
 
@@ -1553,6 +1567,8 @@ class _MapPageState extends State<MapPage>
       _backgroundLocationAllowed = allowed;
       if (allowed == true) {
         _showLocationPermissionInfo = false;
+      } else {
+        _showNotificationPermissionInfo = false;
       }
     });
     _enforceAudioModeBackgroundSafety();
@@ -1561,6 +1577,7 @@ class _MapPageState extends State<MapPage>
       if (_termsAccepted && _locationPermissionGranted) {
         unawaited(_maybeShowBackgroundLocationDisclosure());
       }
+      unawaited(_ensureNotificationPermission());
       return;
     }
     if (allowed == false) {
@@ -1732,6 +1749,7 @@ class _MapPageState extends State<MapPage>
         _showLocationPermissionInfo = false;
       }
       _applyBackgroundLocationPreference();
+      await _ensureNotificationPermission();
       return;
     }
     await _backgroundConsentController.setAllowed(false);
@@ -1945,6 +1963,17 @@ class _MapPageState extends State<MapPage>
           ),
           onOpenSettings: () => unawaited(_openAppSettings()),
           onReviewDisclosure: _openBackgroundConsentSettings,
+        ),
+      if (_showNotificationPermissionInfo)
+        NotificationPermissionBanner(
+          isRequesting: _isRequestingNotificationPermission,
+          onRequestPermission: () => unawaited(
+            _requestNotificationPermission(),
+          ),
+          onOpenSettings: () {
+            _didRequestNotificationPermission = true;
+            unawaited(_notificationPermissionService.openSettings());
+          },
         ),
       MapWelcomeOverlay(
         visible: _showWelcomeOverlay,
