@@ -9,11 +9,13 @@ class NotificationPermissionBanner extends StatelessWidget {
     required this.isRequesting,
     required this.onRequestPermission,
     required this.onOpenSettings,
+    required this.onNotNow,
   });
 
   final bool isRequesting;
   final VoidCallback onRequestPermission;
   final VoidCallback onOpenSettings;
+  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +107,10 @@ class NotificationPermissionBanner extends StatelessWidget {
                         child: Text(localizations
                             .notificationPermissionSettingsButton),
                       );
+                      final Widget notNowButton = TextButton(
+                        onPressed: onNotNow,
+                        child: Text(localizations.locationDisclosureNotNow),
+                      );
                       if (vertical) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -115,6 +121,10 @@ class NotificationPermissionBanner extends StatelessWidget {
                               alignment: Alignment.centerRight,
                               child: secondaryButton,
                             ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: notNowButton,
+                            ),
                           ],
                         );
                       }
@@ -123,6 +133,8 @@ class NotificationPermissionBanner extends StatelessWidget {
                           Expanded(child: primaryButton),
                           const SizedBox(width: 12),
                           secondaryButton,
+                          const SizedBox(width: 8),
+                          notNowButton,
                         ],
                       );
                     },

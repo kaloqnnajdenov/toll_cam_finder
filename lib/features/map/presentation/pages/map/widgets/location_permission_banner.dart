@@ -11,6 +11,7 @@ class LocationPermissionBanner extends StatelessWidget {
     required this.onRequestPermission,
     required this.onOpenSettings,
     required this.onReviewDisclosure,
+    required this.onNotNow,
   });
 
   final bool userOptedOut;
@@ -18,6 +19,7 @@ class LocationPermissionBanner extends StatelessWidget {
   final VoidCallback onRequestPermission;
   final VoidCallback onOpenSettings;
   final VoidCallback onReviewDisclosure;
+  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +98,7 @@ class LocationPermissionBanner extends StatelessWidget {
                     onRequestPermission: onRequestPermission,
                     onOpenSettings: onOpenSettings,
                     onReviewDisclosure: onReviewDisclosure,
+                    onNotNow: onNotNow,
                   ),
                 ],
               ),
@@ -114,6 +117,7 @@ class _LocationPermissionActions extends StatelessWidget {
     required this.onRequestPermission,
     required this.onOpenSettings,
     required this.onReviewDisclosure,
+    required this.onNotNow,
   });
 
   final bool userOptedOut;
@@ -121,6 +125,7 @@ class _LocationPermissionActions extends StatelessWidget {
   final VoidCallback onRequestPermission;
   final VoidCallback onOpenSettings;
   final VoidCallback onReviewDisclosure;
+  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +167,10 @@ class _LocationPermissionActions extends StatelessWidget {
             onPressed: onOpenSettings,
             child: Text(localizations.locationPermissionSettingsButton),
           );
+    final Widget notNowButton = TextButton(
+      onPressed: onNotNow,
+      child: Text(localizations.locationDisclosureNotNow),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -176,6 +185,10 @@ class _LocationPermissionActions extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: secondaryButton,
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: notNowButton,
+              ),
             ],
           );
         }
@@ -185,6 +198,8 @@ class _LocationPermissionActions extends StatelessWidget {
             Expanded(child: primaryButton),
             const SizedBox(width: 12),
             secondaryButton,
+            const SizedBox(width: 8),
+            notNowButton,
           ],
         );
       },

@@ -184,6 +184,8 @@ class _MapPageState extends State<MapPage>
   bool _showBackgroundConsent = false;
   bool _showLocationPermissionInfo = false;
   bool _showNotificationPermissionInfo = false;
+  bool _locationPermissionTemporarilyDenied = false;
+  bool _notificationPermissionTemporarilyDenied = false;
   bool _isRequestingForegroundPermission = false;
   bool _isRequestingNotificationPermission = false;
   bool? _backgroundLocationAllowed;
@@ -311,10 +313,10 @@ class _MapPageState extends State<MapPage>
       _locationPermissionGranted = false;
       if (mounted) {
         setState(() {
-          _showLocationPermissionInfo = true;
+          _setLocationPermissionBannerVisible(true);
         });
       } else {
-        _showLocationPermissionInfo = true;
+        _setLocationPermissionBannerVisible(true);
       }
       return;
     }
@@ -535,12 +537,16 @@ class _MapPageState extends State<MapPage>
         await _notificationPermissionService.areNotificationsEnabled();
     if (!mounted) {
       _notificationsEnabled = enabled;
+      _setNotificationPermissionBannerVisible(
+        _backgroundLocationAllowed == true && !enabled,
+      );
       return;
     }
     setState(() {
       _notificationsEnabled = enabled;
-      _showNotificationPermissionInfo =
-          _backgroundLocationAllowed == true && !enabled;
+      _setNotificationPermissionBannerVisible(
+        _backgroundLocationAllowed == true && !enabled,
+      );
     });
     _enforceAudioModeBackgroundSafety();
   }
@@ -567,10 +573,81 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _isRequestingNotificationPermission = false;
       _notificationsEnabled = granted;
-      _showNotificationPermissionInfo =
-          _backgroundLocationAllowed == true && !granted;
+      _setNotificationPermissionBannerVisible(
+        _backgroundLocationAllowed == true && !granted,
+      );
     });
     _enforceAudioModeBackgroundSafety();
+  }
+
+  void _setLocationPermissionBannerVisible(
+    bool visible, {
+    bool resetTemporaryDismissal = true,
+  }) {
+    if (visible) {
+      if (_locationPermissionTemporarilyDenied) {
+        return;
+      }
+      _showLocationPermissionInfo = true;
+      return;
+    }
+    if (resetTemporaryDismissal) {
+      _locationPermissionTemporarilyDenied = false;
+    }
+    _showLocationPermissionInfo = false;
+  }
+
+  void _setNotificationPermissionBannerVisible(
+    bool visible, {
+    bool resetTemporaryDismissal = true,
+  }) {
+    if (visible) {
+      if (_notificationPermissionTemporarilyDenied) {
+        return;
+      }
+      _showNotificationPermissionInfo = true;
+      return;
+    }
+    if (resetTemporaryDismissal) {
+      _notificationPermissionTemporarilyDenied = false;
+    }
+    _showNotificationPermissionInfo = false;
+  }
+
+  void _temporarilyDismissLocationPermissionPrompt() {
+    if (!mounted) {
+      _locationPermissionTemporarilyDenied = true;
+      _setLocationPermissionBannerVisible(
+        false,
+        resetTemporaryDismissal: false,
+      );
+      return;
+    }
+    setState(() {
+      _locationPermissionTemporarilyDenied = true;
+      _setLocationPermissionBannerVisible(
+        false,
+        resetTemporaryDismissal: false,
+      );
+    });
+  }
+
+  void _temporarilyDismissNotificationPermissionPrompt() {
+    if (!mounted) {
+      _notificationPermissionTemporarilyDenied = true;
+      _setNotificationPermissionBannerVisible(
+        false,
+        resetTemporaryDismissal: false,
+      );
+      return;
+    }
+    setState(() {
+      _notificationPermissionTemporarilyDenied = true;
+      _setNotificationPermissionBannerVisible(
+        false,
+        resetTemporaryDismissal: false,
+      );
+    });
   }
 
   void _handlePositionUpdate(Position position) {
@@ -1378,7 +1455,7 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _termsAccepted = accepted;
       if (accepted && !_locationPermissionGranted) {
-        _showLocationPermissionInfo = true;
+        _setLocationPermissionBannerVisible(true);
       }
     });
     unawaited(_persistTermsAcceptance(accepted));
@@ -1405,7 +1482,7 @@ class _MapPageState extends State<MapPage>
         await _permissionService.hasLocationPermission();
     if (!mounted) {
       _locationPermissionGranted = hasForeground;
-      _showLocationPermissionInfo = !hasForeground;
+      _setLocationPermissionBannerVisible(!hasForeground);
       if (hasForeground) {
         _scheduleInitialLocationInit();
       }
@@ -1415,7 +1492,7 @@ class _MapPageState extends State<MapPage>
     if (!hasForeground) {
       setState(() {
         _locationPermissionGranted = false;
-        _showLocationPermissionInfo = true;
+        _setLocationPermissionBannerVisible(true);
       });
       return;
     }
@@ -1425,7 +1502,7 @@ class _MapPageState extends State<MapPage>
 
     if (!wasGranted || _showLocationPermissionInfo) {
       setState(() {
-        _showLocationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
       });
     }
     _scheduleInitialLocationInit();
@@ -1466,10 +1543,10 @@ class _MapPageState extends State<MapPage>
     }
     if (mounted) {
       setState(() {
-        _showLocationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
       });
     } else {
-      _showLocationPermissionInfo = false;
+      _setLocationPermissionBannerVisible(false);
     }
     _applyBackgroundLocationPreference();
   }
@@ -1497,14 +1574,14 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       _locationPermissionGranted = granted;
       if (!granted) {
-        _showLocationPermissionInfo = true;
+        _setLocationPermissionBannerVisible(true);
       }
       return;
     }
     if (granted) {
       _locationPermissionGranted = true;
       setState(() {
-        _showLocationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
       });
       _scheduleInitialLocationInit();
       await _maybeShowBackgroundLocationDisclosure();
@@ -1516,11 +1593,11 @@ class _MapPageState extends State<MapPage>
   void _handleForegroundPermissionDeclined() {
     _locationPermissionGranted = false;
     if (!mounted) {
-      _showLocationPermissionInfo = true;
+      _setLocationPermissionBannerVisible(true);
       return;
     }
     setState(() {
-      _showLocationPermissionInfo = true;
+      _setLocationPermissionBannerVisible(true);
     });
   }
 
@@ -1530,8 +1607,8 @@ class _MapPageState extends State<MapPage>
     _enforceAudioModeBackgroundSafety();
     if (mounted) {
       setState(() {
-        _showLocationPermissionInfo = false;
-        _showNotificationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
+        _setNotificationPermissionBannerVisible(false);
       });
       final messenger = ScaffoldMessenger.of(context);
       final localizations = AppLocalizations.of(context);
@@ -1541,8 +1618,8 @@ class _MapPageState extends State<MapPage>
         ),
       );
     } else {
-      _showLocationPermissionInfo = false;
-      _showNotificationPermissionInfo = false;
+      _setLocationPermissionBannerVisible(false);
+      _setNotificationPermissionBannerVisible(false);
     }
   }
 
@@ -1566,9 +1643,9 @@ class _MapPageState extends State<MapPage>
     setState(() {
       _backgroundLocationAllowed = allowed;
       if (allowed == true) {
-        _showLocationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
       } else {
-        _showNotificationPermissionInfo = false;
+        _setNotificationPermissionBannerVisible(false);
       }
     });
     _enforceAudioModeBackgroundSafety();
@@ -1743,10 +1820,10 @@ class _MapPageState extends State<MapPage>
       _enforceAudioModeBackgroundSafety();
       if (mounted) {
         setState(() {
-          _showLocationPermissionInfo = false;
+          _setLocationPermissionBannerVisible(false);
         });
       } else {
-        _showLocationPermissionInfo = false;
+        _setLocationPermissionBannerVisible(false);
       }
       _applyBackgroundLocationPreference();
       await _ensureNotificationPermission();
@@ -1954,7 +2031,7 @@ class _MapPageState extends State<MapPage>
       else
         Positioned(left: 0, right: 0, bottom: 0, child: controlsPanel),
       mapFab,
-      if (_showLocationPermissionInfo)
+      if (_showLocationPermissionInfo && !_locationPermissionTemporarilyDenied)
         LocationPermissionBanner(
           userOptedOut: _backgroundLocationAllowed == false,
           isRequestingPermission: _isRequestingForegroundPermission,
@@ -1963,8 +2040,10 @@ class _MapPageState extends State<MapPage>
           ),
           onOpenSettings: () => unawaited(_openAppSettings()),
           onReviewDisclosure: _openBackgroundConsentSettings,
+          onNotNow: _temporarilyDismissLocationPermissionPrompt,
         ),
-      if (_showNotificationPermissionInfo)
+      if (_showNotificationPermissionInfo &&
+          !_notificationPermissionTemporarilyDenied)
         NotificationPermissionBanner(
           isRequesting: _isRequestingNotificationPermission,
           onRequestPermission: () => unawaited(
@@ -1974,6 +2053,7 @@ class _MapPageState extends State<MapPage>
             _didRequestNotificationPermission = true;
             unawaited(_notificationPermissionService.openSettings());
           },
+          onNotNow: _temporarilyDismissNotificationPermissionPrompt,
         ),
       MapWelcomeOverlay(
         visible: _showWelcomeOverlay,
