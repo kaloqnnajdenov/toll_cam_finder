@@ -245,10 +245,6 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
                             }
                           }
                           controller.setMode(value);
-                          if (!sheetContext.mounted) {
-                            return;
-                          }
-                          Navigator.of(sheetContext).pop();
                         },
                       ),
                   ],
@@ -278,9 +274,6 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
                 return ListView(
                   shrinkWrap: true,
                   children: [
-                    ListTile(
-                      title: Text(localizations.selectLanguage),
-                    ),
                     for (final option in options)
                       ListTile(
                         title: Text(option.label),
@@ -294,7 +287,6 @@ class _SimpleModeOptionsDrawer extends StatelessWidget {
                         onTap: option.available
                             ? () {
                                 controller.setLocale(option.locale);
-                                Navigator.of(sheetContext).pop();
                               }
                             : null,
                       ),

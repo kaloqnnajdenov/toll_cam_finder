@@ -164,13 +164,10 @@ class AppLocalizations {
       'languageButton': 'Change language',
       'darkMode': 'Dark mode',
       'audioModeTitle': 'Guidance audio mode',
-      'audioModeFullGuidance':
-          'Play all guidance sounds (foreground and background)',
-      'audioModeForegroundMuted':
-          'Mute in app (background guidance, start/end dings only)',
-      'audioModeBackgroundMuted':
-          'Mute in background (in-app guidance, start/end dings only)',
-      'audioModeAbsoluteMute': 'Absolute mute (no sounds)',
+      'audioModeFullGuidance': 'Play all the time',
+      'audioModeForegroundMuted': 'Mute in app',
+      'audioModeBackgroundMuted': 'Mute in background mode',
+      'audioModeAbsoluteMute': 'Mute all the time',
       'audioModeAbsoluteMuteConfirmationTitle':
           'Mute all voice guidance?',
       'audioModeAbsoluteMuteConfirmationBody':
@@ -649,7 +646,7 @@ class AppLocalizations {
 'fullNameLabel': 'Пълно име',
 'joinTollCam': 'Присъедини се към TollCam',
 'language': 'Език',
-      'languageLabelEnglish': 'Английски',
+      'languageLabelEnglish': 'English',
       'languageLabelBulgarian': 'Български',
 'languageButton': 'Смени езика',
 'darkMode': 'Тъмен режим',
@@ -926,13 +923,10 @@ class AppLocalizations {
       'userRequiredForWeighStationPublishing':
           'Необходим е влязъл потребител, за да публикува кантар.',
       'audioModeTitle': 'Режим на аудио насоките',
-      'audioModeFullGuidance':
-          'Всички аудио насоки (в приложението и на заден план)',
-      'audioModeForegroundMuted':
-          'Заглушено в приложението (активно на заден план, само сигнал при старт/край)',
-      'audioModeBackgroundMuted':
-          'Заглушено на заден план (активно в приложението, само сигнал при старт/край)',
-      'audioModeAbsoluteMute': 'Пълно заглушаване (без звук)',
+      'audioModeFullGuidance': 'Възпроизвеждане през цялото време',
+      'audioModeForegroundMuted': 'Заглушено в приложението',
+      'audioModeBackgroundMuted': 'Заглушено във фонов режим',
+      'audioModeAbsoluteMute': 'Заглушено през цялото време',
       'audioModeAbsoluteMuteConfirmationTitle':
           'Изключване на всички гласови предупреждения?',
       'audioModeAbsoluteMuteConfirmationBody':

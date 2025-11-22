@@ -56,12 +56,6 @@ class GuidanceAudioController extends ChangeNotifier {
     allowBoundaryTones: true,
   );
 
-  static const GuidanceAudioPolicy _mutedWithBoundaryPolicy = GuidanceAudioPolicy(
-    allowSpeech: false,
-    allowAlertTones: false,
-    allowBoundaryTones: true,
-  );
-
   static const GuidanceAudioPolicy _absoluteMutePolicy = GuidanceAudioPolicy(
     allowSpeech: false,
     allowAlertTones: false,
@@ -81,9 +75,9 @@ class GuidanceAudioController extends ChangeNotifier {
       case GuidanceAudioMode.fullGuidance:
         return _fullAccessPolicy;
       case GuidanceAudioMode.muteForeground:
-        return isForeground ? _mutedWithBoundaryPolicy : _fullAccessPolicy;
+        return isForeground ? _absoluteMutePolicy : _fullAccessPolicy;
       case GuidanceAudioMode.muteBackground:
-        return isForeground ? _fullAccessPolicy : _mutedWithBoundaryPolicy;
+        return isForeground ? _fullAccessPolicy : _absoluteMutePolicy;
       case GuidanceAudioMode.absoluteMute:
         return _absoluteMutePolicy;
     }

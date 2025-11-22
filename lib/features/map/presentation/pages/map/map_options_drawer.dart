@@ -192,10 +192,6 @@ extension _MapPageDrawer on _MapPageState {
                                   }
                                 }
                                 controller.setMode(value);
-                                if (!sheetContext.mounted) {
-                                  return;
-                                }
-                                Navigator.of(sheetContext).pop();
                               },
                       ),
                   ],
@@ -248,9 +244,6 @@ extension _MapPageDrawer on _MapPageState {
                 return ListView(
                   shrinkWrap: true,
                   children: [
-                    ListTile(
-                      title: Text(localizations.selectLanguage),
-                    ),
                     for (final option in options)
                       ListTile(
                         title: Text(option.label),
@@ -264,7 +257,6 @@ extension _MapPageDrawer on _MapPageState {
                         onTap: option.available
                             ? () {
                                 controller.setLocale(option.locale);
-                                Navigator.of(sheetContext).pop();
                               }
                             : null,
                       ),
