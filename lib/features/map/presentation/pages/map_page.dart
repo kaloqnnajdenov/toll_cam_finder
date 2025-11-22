@@ -190,6 +190,8 @@ class _MapPageState extends State<MapPage>
   bool _isRequestingNotificationPermission = false;
   bool? _backgroundLocationAllowed;
   bool _notificationsEnabled = true;
+  bool _hasSystemBackgroundPermission = false;
+  bool _isRequestingBackgroundPermission = false;
   BackgroundLocationConsentOption? _pendingBackgroundConsent;
   bool? _introCompleted;
   bool _introFlowPresented = true;
@@ -489,7 +491,9 @@ class _MapPageState extends State<MapPage>
 
   void _applyBackgroundLocationPreference() {
     final bool allowBackground =
-        (_backgroundLocationAllowed ?? false) && _notificationsEnabled;
+        (_backgroundLocationAllowed ?? false) &&
+        _notificationsEnabled &&
+        _hasSystemBackgroundPermission;
     final bool isForeground = _appLifecycleState == AppLifecycleState.resumed;
     final bool shouldEnableForeground =
         !isForeground && allowBackground;
@@ -510,7 +514,8 @@ class _MapPageState extends State<MapPage>
   }
 
   void _enforceAudioModeBackgroundSafety() {
-    final bool backgroundAllowed = _backgroundLocationAllowed != false;
+    final bool backgroundAllowed =
+        _backgroundLocationAllowed != false && _hasSystemBackgroundPermission;
     final bool notificationsAllowed = _notificationsEnabled;
     if (backgroundAllowed && notificationsAllowed) {
       return;
@@ -522,6 +527,66 @@ class _MapPageState extends State<MapPage>
     if (requiresBackground) {
       _audioController.setMode(GuidanceAudioMode.muteBackground);
     }
+  }
+
+  void _setBackgroundPermissionRequestInFlight(bool inFlight) {
+    if (_isRequestingBackgroundPermission == inFlight) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _isRequestingBackgroundPermission = inFlight;
+      });
+    } else {
+      _isRequestingBackgroundPermission = inFlight;
+    }
+  }
+
+  void _setSystemBackgroundPermission(bool granted) {
+    if (_hasSystemBackgroundPermission == granted) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _hasSystemBackgroundPermission = granted;
+      });
+    } else {
+      _hasSystemBackgroundPermission = granted;
+    }
+  }
+
+  Future<bool> _requestSystemBackgroundPermission({
+    bool showDeniedMessage = true,
+  }) async {
+    if (_isRequestingBackgroundPermission) {
+      return false;
+    }
+
+    final bool alreadyGranted =
+        await _permissionService.hasBackgroundPermission();
+    if (alreadyGranted) {
+      _setSystemBackgroundPermission(true);
+      return true;
+    }
+
+    _setBackgroundPermissionRequestInFlight(true);
+    bool granted = false;
+    try {
+      granted = await _permissionService.ensureBackgroundPermission();
+    } finally {
+      _setBackgroundPermissionRequestInFlight(false);
+    }
+    _setSystemBackgroundPermission(granted);
+    if (!granted && showDeniedMessage && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final localizations = AppLocalizations.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(localizations.backgroundPermissionDeniedMessage),
+        ),
+      );
+    }
+    return granted;
   }
 
   Future<void> _suspendLocationUpdates() async {
@@ -1524,12 +1589,16 @@ class _MapPageState extends State<MapPage>
       }
     }
     final bool? consent = _backgroundConsentController.allowed;
+    final bool hasSystemPermission =
+        await _permissionService.hasBackgroundPermission();
     if (mounted) {
       setState(() {
         _backgroundLocationAllowed = consent;
+        _hasSystemBackgroundPermission = hasSystemPermission;
       });
     } else {
       _backgroundLocationAllowed = consent;
+      _hasSystemBackgroundPermission = hasSystemPermission;
     }
     _enforceAudioModeBackgroundSafety();
 
@@ -1539,6 +1608,10 @@ class _MapPageState extends State<MapPage>
     }
     if (!consent) {
       _handleBackgroundPermissionDeclined();
+      return;
+    }
+    if (!hasSystemPermission) {
+      _presentBackgroundConsentOverlay(prefillSelection: true);
       return;
     }
     if (mounted) {
@@ -1603,6 +1676,7 @@ class _MapPageState extends State<MapPage>
 
   void _handleBackgroundPermissionDeclined() {
     _backgroundLocationAllowed = false;
+    _hasSystemBackgroundPermission = false;
     _applyBackgroundLocationPreference();
     _enforceAudioModeBackgroundSafety();
     if (mounted) {
@@ -1805,6 +1879,13 @@ class _MapPageState extends State<MapPage>
     }
     final bool allow =
         choice == BackgroundLocationConsentOption.allow;
+    if (allow) {
+      final bool granted =
+          await _requestSystemBackgroundPermission();
+      if (!granted) {
+        return;
+      }
+    }
     if (mounted) {
       setState(() {
         _showBackgroundConsent = false;
@@ -2078,6 +2159,7 @@ class _MapPageState extends State<MapPage>
         visible: _showBackgroundConsent,
         selection: _pendingBackgroundConsent,
         onSelectionChanged: _onBackgroundLocationConsentSelection,
+        isProcessing: _isRequestingBackgroundPermission,
         onAgree: () => unawaited(
           _confirmBackgroundLocationConsent(),
         ),

@@ -422,17 +422,19 @@ class AppLocalizations {
       'mapWeighStationsPromptSkipButton': 'Not now',
       'mapWeighStationsEnableButton': 'Enable weigh stations on map',
       'backgroundConsentTitle':
-          'Allow TollCam to use background location?',
+          'Keep TollCam running in the background?',
       'backgroundConsentBody':
-          'We only read your precise location even when the app is closed or not in use to check for nearby toll segments or weigh stations. We do not share precise location with third parties except to provide map tiles or routing needed for in-app navigation.',
+          'We keep a small notification alive when you close the app so TollCam can continue monitoring nearby toll segments or weigh stations. We only read your precise location while alerts are active and do not share it except for the map tiles or routing needed for in-app navigation.',
       'backgroundConsentAllowTitle': 'Allow',
       'backgroundConsentAllowSubtitle':
-          'Recommended. Keeps alerts active in the background so you still receive notifications with the screen off.',
+          'Recommended. Runs a persistent notification so alerts keep working when the screen is off.',
       'backgroundConsentDenyTitle': 'Don\'t allow',
       'backgroundConsentDenySubtitle':
-          'If you close the app we pause all background tracking, so no location is read and you will miss toll or weigh-station notifications.',
+          'If you close the app we remove the notification and pause tracking, so no location is read and you will miss toll or weigh-station notifications until you reopen TollCam.',
       'backgroundConsentMenuHint':
           'You can adjust this anytime from the side menu.',
+      'backgroundPermissionDeniedMessage':
+          'Enable location access for TollCam in Android settings so we can keep working with the screen off. We only require the "While using the app" permission.',
       'locationDisclosureAgree': 'Agree',
       'locationDisclosureNotNow': 'Not now',
       'locationDisclosureSkip': 'Continue without background',
@@ -440,7 +442,7 @@ class AppLocalizations {
       'locationPermissionRequiredBody':
           'TollCam needs your precise location while the app is open to find toll segments or weigh stations nearby. Allow Android location access so alerts can start.',
       'locationPermissionOptOutBody':
-          'Background alerts stay off until you change this choice. Enable them from the side menu whenever you want TollCam to keep monitoring in the background.',
+          'Background alerts stay off until you change this choice. Enable them from the side menu whenever you want TollCam to keep a foreground notification running in the background.',
       'locationPermissionSettingsButton': 'Open app settings',
       'locationPermissionReviewDisclosure': 'Review in-app disclosure',
       'locationPermissionPromptButton': 'Allow location access',
@@ -449,9 +451,9 @@ class AppLocalizations {
           'We send heads-up alerts while TollCam runs in the background. Enable Android notifications so you don’t miss toll or weigh-station warnings.',
       'notificationPermissionSettingsButton': 'Open notification settings',
       'notificationPermissionPromptButton': 'Allow notifications',
-      'backgroundLocationSettingTitle': 'Allow background location',
+      'backgroundLocationSettingTitle': 'Keep background alerts on',
       'backgroundLocationSettingDescription':
-          'Keeps precise alerts active when TollCam runs in the background. Turn this off to stop all background location use after you leave the app.',
+          'Runs a small notification and keeps precise alerts active when TollCam is in the background. Turn this off to stop all monitoring once you leave the app.',
       'introDismiss': 'Continue',
       'introMenuLabel': 'Show introduction',
       'segmentMetricsStatusTracking': 'Tracking segment',
@@ -859,16 +861,18 @@ class AppLocalizations {
 'mapWeighStationsPromptEnableButton': 'Показвай кантари',
 'mapWeighStationsPromptSkipButton': 'Не сега',
 'mapWeighStationsEnableButton': 'Активирай кантари на картата',
-'backgroundConsentTitle': 'Да позволим TollCam да използва локацията във фонов режим?',
+'backgroundConsentTitle': 'Да поддържаме TollCam активен във фона?',
 'backgroundConsentBody':
-'Използваме точната ви локация дори когато приложението е затворено или не се използва, за да засечем близки тол сегменти или кантари. Не я споделяме с трети страни, освен за картни плочки или маршрути, нужни за навигацията в приложението.',
+'Показваме малко известие, когато затворите приложението, за да продължим да следим близките тол сегменти и кантари. Четем точната ви локация само докато предупрежденията са активни и не я споделяме, освен за картите и маршрутизацията в приложението.',
 'backgroundConsentAllowTitle': 'Позволи',
 'backgroundConsentAllowSubtitle':
-'Препоръчително. Поддържа известията активни във фона, за да получавате предупреждения дори когато екранът е изключен.',
+'Препоръчително. Поддържа постоянно известие, за да работят предупрежденията дори при изключен екран.',
 'backgroundConsentDenyTitle': 'Не позволявай',
 'backgroundConsentDenySubtitle':
-'Когато затворите приложението ще спрем всякакво фоново проследяване, няма да четем местоположението и ще изпускате тол или кантар известия.',
+'Когато затворите приложението, известието изчезва и спираме фоновото проследяване, така че няма да четем локация и ще изпускате тол или кантар известия, докато не отворите TollCam отново.',
 'backgroundConsentMenuHint': 'Можете да промените избора си по всяко време от страничното меню.',
+'backgroundPermissionDeniedMessage':
+'Разрешете достъп до локацията за TollCam в настройките на Android, за да продължим да работим с изключен екран. Нуждаем се само от разрешението „Докато използвате приложението“.',
 'locationDisclosureAgree': 'Съгласен съм',
 'locationDisclosureNotNow': 'Не сега',
 'locationDisclosureSkip': 'Продължи без фонова локация',
@@ -876,7 +880,7 @@ class AppLocalizations {
 'locationPermissionRequiredBody':
     'TollCam се нуждае от точната Ви локация, докато приложението е отворено, за да открива тол сегменти и кантари наблизо. Разрешете достъп до местоположението в Android, за да започнат предупрежденията.',
 'locationPermissionOptOutBody':
-    'Фоновите известия са изключени според Вашия избор. Можете да ги активирате от страничното меню, когато сте готови TollCam да следи позицията Ви във фонов режим.',
+    'Фоновите известия са изключени според Вашия избор. Можете да ги активирате от страничното меню, когато сте готови TollCam да поддържа известие и да следи във фона.',
 'locationPermissionSettingsButton': 'Отвори настройките на приложението',
 'locationPermissionReviewDisclosure': 'Преглед на изискването за локация',
 'locationPermissionPromptButton': 'Разреши достъп до локацията',
@@ -885,9 +889,9 @@ class AppLocalizations {
     'Изпращаме предупреждения, когато приложението работи във фонов режим. Разрешете уведомленията в Android, за да не пропускате тол или кантар сигнали.',
 'notificationPermissionSettingsButton': 'Отвори настройките за известия',
 'notificationPermissionPromptButton': 'Разреши известията',
-'backgroundLocationSettingTitle': 'Фонова локация',
+'backgroundLocationSettingTitle': 'Фонови предупреждения',
 'backgroundLocationSettingDescription':
-'Поддържа точните известия активни, докато TollCam работи във фона. Изключете го, ако искате напълно да спрем достъпа до локация, когато напуснете приложението.',
+'Показва малко известие и пази точните предупреждения активни, докато TollCam работи във фона. Изключете го, ако искате да спрем следенето, когато напуснете приложението.',
 'introDismiss': 'Започни',
 'introMenuLabel': 'Въведение',
 'segmentMetricsStatusTracking': 'Следене на сегмента',
@@ -1231,6 +1235,8 @@ class AppLocalizations {
       _value('backgroundConsentDenySubtitle');
   String get backgroundConsentMenuHint =>
       _value('backgroundConsentMenuHint');
+  String get backgroundPermissionDeniedMessage =>
+      _value('backgroundPermissionDeniedMessage');
   String get locationDisclosureAgree =>
       _value('locationDisclosureAgree');
   String get locationDisclosureNotNow =>

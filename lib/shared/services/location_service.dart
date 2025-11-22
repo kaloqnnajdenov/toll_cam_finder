@@ -46,6 +46,8 @@ class LocationService {
         distanceFilter: AppConstants.gpsDistanceFilterMeters,
         activityType: ActivityType.automotiveNavigation,
         pauseLocationUpdatesAutomatically: false,
+        allowBackgroundLocationUpdates: useForegroundNotification,
+        showBackgroundLocationIndicator: useForegroundNotification,
       );
     } else {
       settings = LocationSettings(
