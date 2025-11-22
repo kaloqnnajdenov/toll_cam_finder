@@ -168,6 +168,8 @@ class _MapPageState extends State<MapPage>
   DateTime? _nextCameraCheckAt;
 
   double? _userHeading;
+  LatLng? _lastPositionSample;
+  DateTime? _lastPositionTimestamp;
   DateTime? _lastUpcomingSegmentScanAt;
   double? _upcomingSegmentDistanceMeters;
   bool _upcomingSegmentDistanceIsCapped = false;
@@ -329,6 +331,7 @@ class _MapPageState extends State<MapPage>
     }
     _speedSmoother.reset();
     final pos = await _locationService.getCurrentPosition();
+    final DateTime firstTimestamp = pos.timestamp ?? DateTime.now();
 
     final firstKmh = _speedService.normalizeSpeed(pos.speed);
     _speedKmh = _speedSmoother.next(firstKmh);
@@ -336,6 +339,8 @@ class _MapPageState extends State<MapPage>
     _updateHeading(pos.heading);
     final firstFix = LatLng(pos.latitude, pos.longitude);
     _userLatLng = firstFix;
+    _lastPositionSample = firstFix;
+    _lastPositionTimestamp = firstTimestamp;
     _center = firstFix;
     final segEvent = _segmentTracker.handleLocationUpdate(
       current: firstFix,
@@ -717,12 +722,32 @@ class _MapPageState extends State<MapPage>
 
   void _handlePositionUpdate(Position position) {
     final DateTime now = DateTime.now();
+    final DateTime sampleTime = position.timestamp ?? now;
+    final LatLng next = LatLng(position.latitude, position.longitude);
+    final LatLng? previous = _lastPositionSample ?? _userLatLng;
+
     _scheduleSpeedIdleReset();
-    final shownKmh = _speedService.normalizeSpeed(position.speed);
-    final smoothedKmh = _speedSmoother.next(shownKmh);
-    final next = LatLng(position.latitude, position.longitude);
-    _updateHeading(position.heading);
-    _currentSegmentController.recordProgress(position: next, timestamp: now);
+
+    final double speedMps = _resolveSpeedMps(
+      position: position,
+      previous: previous,
+      next: next,
+      sampleTime: sampleTime,
+    );
+    final double shownKmh = _speedService.normalizeSpeed(speedMps);
+    final double smoothedKmh = _speedSmoother.next(shownKmh);
+
+    final double? heading = _resolveHeadingDegrees(
+      deviceHeading: position.heading,
+      previous: previous,
+      next: next,
+    );
+    _updateHeading(heading);
+
+    _currentSegmentController.recordProgress(
+      position: next,
+      timestamp: sampleTime,
+    );
     _moveBlueDot(next);
     _maybeFetchSpeedLimit(next);
     final bool showWeighStations =
@@ -749,6 +774,9 @@ class _MapPageState extends State<MapPage>
       );
     }
 
+    _lastPositionSample = next;
+    _lastPositionTimestamp = sampleTime;
+
     if (!mounted) return;
 
     setState(() {
@@ -758,8 +786,71 @@ class _MapPageState extends State<MapPage>
     _updateSegmentsOnlyMetrics();
   }
 
-  void _updateHeading(double heading) {
-    if (!heading.isFinite || heading < 0) {
+  double _resolveSpeedMps({
+    required Position position,
+    required LatLng? previous,
+    required LatLng next,
+    required DateTime sampleTime,
+  }) {
+    final double rawSpeed = position.speed;
+    final double? deviceSpeed =
+        rawSpeed.isFinite && rawSpeed >= 0 ? rawSpeed : null;
+
+    double? derivedSpeed;
+    if (previous != null && _lastPositionTimestamp != null) {
+      final double dtSeconds =
+          sampleTime.difference(_lastPositionTimestamp!).inMilliseconds /
+              1000.0;
+      if (dtSeconds > 0) {
+        final double distanceMeters =
+            _distanceCalculator.as(LengthUnit.Meter, previous, next);
+        if (distanceMeters.isFinite && distanceMeters >= 0) {
+          derivedSpeed = distanceMeters / dtSeconds;
+        }
+      }
+    }
+
+    if (deviceSpeed != null && deviceSpeed > 0) {
+      return deviceSpeed;
+    }
+    if (derivedSpeed != null && derivedSpeed.isFinite) {
+      return derivedSpeed;
+    }
+    return 0.0;
+  }
+
+  double? _resolveHeadingDegrees({
+    required double? deviceHeading,
+    required LatLng? previous,
+    required LatLng next,
+  }) {
+    if (deviceHeading != null &&
+        deviceHeading.isFinite &&
+        deviceHeading >= 0) {
+      return deviceHeading % 360;
+    }
+
+    if (previous == null) {
+      return null;
+    }
+
+    final double travelDistance =
+        _distanceCalculator.as(LengthUnit.Meter, previous, next);
+    if (!travelDistance.isFinite || travelDistance < 0.5) {
+      return null;
+    }
+
+    final double bearing = _distanceCalculator.bearing(previous, next);
+    if (!bearing.isFinite) {
+      return null;
+    }
+
+    final double normalized = bearing % 360;
+    return normalized.isNegative ? normalized + 360 : normalized;
+  }
+
+  void _updateHeading(double? heading) {
+    if (heading == null || !heading.isFinite || heading < 0) {
       return;
     }
 
