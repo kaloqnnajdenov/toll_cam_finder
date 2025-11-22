@@ -418,6 +418,7 @@ class AppLocalizations {
       'mapWeighStationsPromptEnableButton': 'Show weigh stations',
       'mapWeighStationsPromptSkipButton': 'Not now',
       'mapWeighStationsEnableButton': 'Enable weigh stations on map',
+      'weighStationsVisibilitySettingTitle': 'Weigh stations on the map',
       'backgroundConsentTitle':
           'Keep TollCam running in the background?',
       'backgroundConsentBody':
@@ -858,6 +859,7 @@ class AppLocalizations {
 'mapWeighStationsPromptEnableButton': 'Показвай кантари',
 'mapWeighStationsPromptSkipButton': 'Не сега',
 'mapWeighStationsEnableButton': 'Активирай кантари на картата',
+'weighStationsVisibilitySettingTitle': 'Кантари на картата',
 'backgroundConsentTitle': 'Да поддържаме TollCam активен във фона?',
 'backgroundConsentBody':
 'Показваме малко известие, когато затворите приложението, за да продължим да следим близките тол сегменти и кантари. Четем точната ви локация само докато предупрежденията са активни и не я споделяме, освен за картите и маршрутизацията в приложението.',
@@ -1215,6 +1217,8 @@ class AppLocalizations {
       _value('mapWeighStationsPromptSkipButton');
   String get mapWeighStationsEnableButton =>
       _value('mapWeighStationsEnableButton');
+  String get weighStationsVisibilitySettingTitle =>
+      _value('weighStationsVisibilitySettingTitle');
   String get backgroundConsentTitle =>
       _value('backgroundConsentTitle');
   String get backgroundConsentBody =>

@@ -116,16 +116,33 @@ class _WeighStationsPageState extends State<WeighStationsPage> {
           minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Consumer<WeighStationPreferencesController>(
             builder: (context, preferences, _) {
-              final bool hasPreference = preferences.hasPreference;
               final bool showWeighStations =
                   preferences.shouldShowWeighStations;
-              if (!hasPreference || showWeighStations) {
-                return const SizedBox.shrink();
-              }
-              return FilledButton.icon(
-                onPressed: () => preferences.setShowWeighStations(true),
-                icon: const Icon(Icons.visibility_outlined),
-                label: Text(localizations.mapWeighStationsEnableButton),
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 0,
+                clipBehavior: Clip.antiAlias,
+                child: SwitchListTile.adaptive(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  value: showWeighStations,
+                  onChanged: preferences.isLoaded
+                      ? (value) =>
+                          preferences.setShowWeighStations(value)
+                      : null,
+                  title: Text(
+                    localizations.weighStationsVisibilitySettingTitle,
+                  ),
+                  secondary: Icon(
+                    showWeighStations
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                ),
               );
             },
           ),
