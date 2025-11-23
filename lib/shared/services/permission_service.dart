@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:geolocator/geolocator.dart';
 
 class PermissionService {
@@ -6,42 +8,44 @@ class PermissionService {
   }
 
   Future<bool> ensureForegroundPermission() async {
-    var perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      perm = await Geolocator.requestPermission();
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.unableToDetermine) {
+      permission = await Geolocator.requestPermission();
     }
-    if (perm == LocationPermission.deniedForever) {
+
+    if (permission == LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
       return false;
     }
-    if (perm == LocationPermission.unableToDetermine) {
-      perm = await Geolocator.requestPermission();
-    }
+
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return false;
-    return perm == LocationPermission.always ||
-        perm == LocationPermission.whileInUse;
+    return _hasForegroundGrant(permission);
   }
 
   Future<bool> ensureBackgroundPermission() async {
-    // Background alerts now rely on the same foreground location grant that
-    // keeps the foreground service notification alive.
+    // Background alerts rely on the same foreground grant; we no longer
+    // require the iOS "Always" level to keep working while the screen is off.
     return ensureForegroundPermission();
   }
 
   Future<bool> hasLocationPermission() async {
-    final perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever ||
-        perm == LocationPermission.unableToDetermine) {
+    final permission = await Geolocator.checkPermission();
+    if (!_hasForegroundGrant(permission)) {
       return false;
     }
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return false;
-    return perm == LocationPermission.always ||
-        perm == LocationPermission.whileInUse;
+    return true;
   }
 
   Future<bool> hasBackgroundPermission() async {
     return hasLocationPermission();
+  }
+
+  bool _hasForegroundGrant(LocationPermission permission) {
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 }

@@ -432,13 +432,13 @@ class AppLocalizations {
       'backgroundConsentMenuHint':
           'You can adjust this anytime from the side menu.',
       'backgroundPermissionDeniedMessage':
-          'Enable location access for TollCam in Android settings so we can keep working with the screen off. We only require the "While using the app" permission.',
+          'Enable location access for TollCam in system settings so background alerts can keep working with the screen off.',
       'locationDisclosureAgree': 'Agree',
       'locationDisclosureNotNow': 'Not now',
       'locationDisclosureSkip': 'Continue without background',
       'locationPermissionInfoTitle': 'Location access needed',
       'locationPermissionRequiredBody':
-          'TollCam needs your precise location while the app is open to find toll segments or weigh stations nearby. Allow Android location access so alerts can start.',
+          'TollCam needs your precise location while the app is open to find toll segments or weigh stations nearby. Allow location access on your device so alerts can start.',
       'locationPermissionOptOutBody':
           'Background alerts stay off until you change this choice. Enable them from the side menu whenever you want TollCam to keep a foreground notification running in the background.',
       'locationPermissionSettingsButton': 'Open app settings',
@@ -446,7 +446,7 @@ class AppLocalizations {
       'locationPermissionPromptButton': 'Allow location access',
       'notificationPermissionInfoTitle': 'Keep alert notifications on',
       'notificationPermissionRequiredBody':
-          'We send heads-up alerts while TollCam runs in the background. Enable Android notifications so you don’t miss toll or weigh-station warnings.',
+          'We send heads-up alerts while TollCam runs in the background. Enable notifications in system settings so you don’t miss toll or weigh-station warnings.',
       'notificationPermissionSettingsButton': 'Open notification settings',
       'notificationPermissionPromptButton': 'Allow notifications',
       'backgroundLocationSettingTitle': 'Keep background alerts on',
@@ -871,13 +871,13 @@ class AppLocalizations {
 'Когато затворите приложението, известието изчезва и спираме фоновото проследяване, така че няма да четем локация и ще изпускате тол или кантар известия, докато не отворите TollCam отново.',
 'backgroundConsentMenuHint': 'Можете да промените избора си по всяко време от страничното меню.',
 'backgroundPermissionDeniedMessage':
-'Разрешете достъп до локацията за TollCam в настройките на Android, за да продължим да работим с изключен екран. Нуждаем се само от разрешението „Докато използвате приложението“.',
+'Разрешете достъп до локацията за TollCam в настройките на устройството, за да продължим да работим с изключен екран.',
 'locationDisclosureAgree': 'Съгласен съм',
 'locationDisclosureNotNow': 'Не сега',
 'locationDisclosureSkip': 'Продължи без фонова локация',
 'locationPermissionInfoTitle': 'Необходим е достъп до местоположението',
 'locationPermissionRequiredBody':
-    'TollCam се нуждае от точната Ви локация, докато приложението е отворено, за да открива тол сегменти и кантари наблизо. Разрешете достъп до местоположението в Android, за да започнат предупрежденията.',
+    'TollCam се нуждае от точната Ви локация, докато приложението е отворено, за да открива тол сегменти и кантари наблизо. Разрешете достъп до местоположението на устройството си, за да започнат предупрежденията.',
 'locationPermissionOptOutBody':
     'Фоновите известия са изключени според Вашия избор. Можете да ги активирате от страничното меню, когато сте готови TollCam да поддържа известие и да следи във фона.',
 'locationPermissionSettingsButton': 'Отвори настройките на приложението',
@@ -885,7 +885,7 @@ class AppLocalizations {
 'locationPermissionPromptButton': 'Разреши достъп до локацията',
 'notificationPermissionInfoTitle': 'Разрешете известията',
 'notificationPermissionRequiredBody':
-    'Изпращаме предупреждения, когато приложението работи във фонов режим. Разрешете уведомленията в Android, за да не пропускате тол или кантар сигнали.',
+    'Изпращаме предупреждения, когато приложението работи във фонов режим. Разрешете уведомленията в настройките на устройството, за да не пропускате тол или кантар сигнали.',
 'notificationPermissionSettingsButton': 'Отвори настройките за известия',
 'notificationPermissionPromptButton': 'Разреши известията',
 'backgroundLocationSettingTitle': 'Фонови предупреждения',

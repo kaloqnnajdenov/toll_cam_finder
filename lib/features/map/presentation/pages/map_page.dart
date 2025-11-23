@@ -166,6 +166,7 @@ class _MapPageState extends State<MapPage>
 
   bool _useForegroundLocationService = false;
   String? _lastNotificationStatus;
+  DateTime? _lastMetricsDebugLogAt;
 
   static const Duration _upcomingSegmentScanInterval = Duration(seconds: 5);
   static const double _upcomingSegmentScanRangeMeters = 5000;
@@ -501,16 +502,10 @@ class _MapPageState extends State<MapPage>
     final bool backgroundAllowed =
         _backgroundLocationAllowed != false && _hasSystemBackgroundPermission;
     final bool notificationsAllowed = _notificationsEnabled;
-    if (backgroundAllowed && notificationsAllowed) {
-      return;
-    }
-    final GuidanceAudioMode mode = _audioController.mode;
-    final bool requiresBackground =
-        mode == GuidanceAudioMode.fullGuidance ||
-        mode == GuidanceAudioMode.muteForeground;
-    if (requiresBackground) {
-      _audioController.setMode(GuidanceAudioMode.muteBackground);
-    }
+    _audioController.updatePermissions(
+      backgroundAudioAllowed: backgroundAllowed,
+      notificationsAllowed: notificationsAllowed,
+    );
   }
 
   Future<bool> _requestSystemBackgroundPermission({
@@ -1203,6 +1198,7 @@ class _MapPageState extends State<MapPage>
       distanceToSegmentStartIsCapped:
           _currentSegmentController.distanceToSegmentStartIsCapped,
     );
+    _logSegmentDebugInfo();
   }
 
   Future<void> _openSimpleModePage(SegmentsOnlyModeReason reason) async {
@@ -1216,6 +1212,48 @@ class _MapPageState extends State<MapPage>
     } finally {
       _updateSpeedLimitPollingForVisibility();
     }
+  }
+
+  void _logSegmentDebugInfo() {
+    if (!kDebugMode) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+    if (_lastMetricsDebugLogAt != null &&
+        now.difference(_lastMetricsDebugLogAt!) <
+            const Duration(seconds: 1)) {
+      return;
+    }
+    _lastMetricsDebugLogAt = now;
+
+    final bool hasActiveSegment = _currentSegmentController.hasActiveSegment;
+    final double? avgKph =
+        hasActiveSegment && _avgCtrl.isRunning ? _avgCtrl.average : null;
+
+    debugPrint(
+      '[MAP] speed=${_formatDebugSpeed(_speedKmh)} km/h | '
+      'avg=${_formatDebugSpeed(avgKph)} km/h | '
+      'to-start=${_formatDebugDistance(_currentSegmentController.distanceToSegmentStartMeters)} | '
+      'to-end=${_formatDebugDistance(_currentSegmentController.distanceToSegmentEndMeters)}',
+    );
+  }
+
+  String _formatDebugSpeed(double? speedKmh) {
+    if (speedKmh == null || !speedKmh.isFinite) {
+      return '--';
+    }
+    return speedKmh.toStringAsFixed(1);
+  }
+
+  String _formatDebugDistance(double? meters) {
+    if (meters == null || !meters.isFinite || meters < 0) {
+      return '--';
+    }
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(2)}km';
+    }
+    return '${meters.toStringAsFixed(0)}m';
   }
 
   Future<void> _closeSimpleModePageIfOpen() async {

@@ -9,8 +9,10 @@ class NotificationPermissionService {
     'com.kalka.toll_cam_finder/notifications',
   );
 
+  bool get _usesNativeChannel => Platform.isAndroid || Platform.isIOS;
+
   Future<bool> ensurePermissionGranted() async {
-    if (!Platform.isAndroid) {
+    if (!_usesNativeChannel) {
       return true;
     }
 
@@ -30,7 +32,7 @@ class NotificationPermissionService {
   }
 
   Future<bool> areNotificationsEnabled() async {
-    if (!Platform.isAndroid) {
+    if (!_usesNativeChannel) {
       return true;
     }
 
@@ -44,7 +46,7 @@ class NotificationPermissionService {
   }
 
   Future<void> openSettings() async {
-    if (!Platform.isAndroid) {
+    if (!_usesNativeChannel) {
       return;
     }
 
