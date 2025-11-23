@@ -345,15 +345,7 @@ extension _MapPageDrawer on _MapPageState {
       return;
     }
 
-    LatLngBounds? bounds;
-    if (_mapReady) {
-      try {
-        bounds = _mapController.camera.visibleBounds;
-      } catch (_) {
-        bounds = null;
-      }
-    }
-
+    final LatLngBounds? bounds = currentVisibleBounds;
     await _segmentsService.loadWeighStations(bounds: bounds);
     if (!mounted) return;
     _updateVisibleWeighStations();
@@ -363,7 +355,11 @@ extension _MapPageDrawer on _MapPageState {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(_openSimpleModePage(SegmentsOnlyModeReason.manual));
+      unawaited(
+        _segmentsOnlyRedirectCoordinator.openSimpleModePage(
+          SegmentsOnlyModeReason.manual,
+        ),
+      );
     });
   }
 

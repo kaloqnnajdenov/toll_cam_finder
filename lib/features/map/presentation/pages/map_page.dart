@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toll_cam_finder/core/app_messages.dart' show AppMessages;
 
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
@@ -22,6 +23,10 @@ import 'package:toll_cam_finder/features/map/services/map_sync_message_service.d
 import 'package:toll_cam_finder/features/map/services/osm_speed_limit_service.dart';
 import 'package:toll_cam_finder/features/map/services/segment_ui_service.dart';
 import 'package:toll_cam_finder/features/map/services/speed_service.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map/location_permission_flow.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map/intro_flow_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map/speed_limit_polling_controller.dart';
+import 'package:toll_cam_finder/features/map/presentation/pages/map/segments_only_redirect_coordinator.dart';
 import 'package:toll_cam_finder/features/segments/domain/index/segment_index_service.dart';
 import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/average_speed_controller.dart';
@@ -64,8 +69,6 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  static const String _introCompletedPreferenceKey = 'map_intro_completed';
-  static const String _termsAcceptedPreferenceKey = 'terms_and_conditions_accepted';
   static const double _mapFollowEpsilonDeg = 1e-6;
   static const Duration _osmUnavailableGracePeriod = Duration(seconds: 3);
 
@@ -95,6 +98,9 @@ class _MapPageState extends State<MapPage>
   late final SegmentsOnlyModeController _segmentsOnlyModeController;
   late final BackgroundLocationConsentController
       _backgroundConsentController;
+  late final SegmentsOnlyRedirectCoordinator _segmentsOnlyRedirectCoordinator;
+  late final IntroFlowController _introFlowController;
+  late final LocationPermissionFlow _permissionFlow;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   GuidanceAudioPolicy _audioPolicy = const GuidanceAudioPolicy(
     allowSpeech: true,
@@ -108,7 +114,6 @@ class _MapPageState extends State<MapPage>
   bool _followUser = false;
   bool _followHeading = false;
   double _currentZoom = AppConstants.initialZoom;
-  bool _locationPermissionGranted = false;
 
   StreamSubscription<Position>? _posSub;
   StreamSubscription<MapEvent>? _mapEvtSub;
@@ -131,24 +136,18 @@ class _MapPageState extends State<MapPage>
   late final SegmentVoiceGuidanceService _segmentGuidanceController;
   SegmentsMetadata _segmentsMetadata = const SegmentsMetadata();
   Future<void>? _metadataLoadFuture;
+  late final SpeedLimitPollingController _speedLimitPollingController;
 
   final OsmSpeedLimitService _osmSpeedLimitService = OsmSpeedLimitService();
   String? _osmSpeedLimitKph;
-  LatLng? _lastSpeedLimitQueryLocation;
-  Timer? _speedLimitPollTimer;
-  bool _isSpeedLimitRequestInFlight = false;
-  bool _simpleModePageOpen = false;
   bool get _isMapInForeground =>
       mounted &&
       _appLifecycleState == AppLifecycleState.resumed &&
-      !_simpleModePageOpen;
+      !_segmentsOnlyRedirectCoordinator.isSimpleModePageOpen;
   Timer? _initialLocationInitTimer;
   bool _initialLocationInitScheduled = false;
-  Timer? _offlineRedirectTimer;
-  Timer? _osmUnavailableRedirectTimer;
   bool _hasConnectivity = true;
   bool _isOsmServiceAvailable = true;
-  DateTime? _osmUnavailableSince;
 
   double? _speedKmh;
   bool _isSyncing = false;
@@ -166,26 +165,7 @@ class _MapPageState extends State<MapPage>
   double _controlsPanelHeight = 0;
 
   bool _useForegroundLocationService = false;
-  bool _didRequestNotificationPermission = false;
   String? _lastNotificationStatus;
-  bool _showIntro = false;
-  bool _showWelcomeOverlay = false;
-  bool _showWeighStationsPrompt = false;
-  bool _showBackgroundConsent = false;
-  bool _showLocationPermissionInfo = false;
-  bool _showNotificationPermissionInfo = false;
-  bool _locationPermissionTemporarilyDenied = false;
-  bool _notificationPermissionTemporarilyDenied = false;
-  bool _isRequestingForegroundPermission = false;
-  bool _isRequestingNotificationPermission = false;
-  bool? _backgroundLocationAllowed;
-  bool _notificationsEnabled = true;
-  bool _hasSystemBackgroundPermission = false;
-  bool _isRequestingBackgroundPermission = false;
-  BackgroundLocationConsentOption? _pendingBackgroundConsent;
-  bool? _introCompleted;
-  bool _introFlowPresented = true;
-  bool _termsAccepted = false;
 
   static const Duration _upcomingSegmentScanInterval = Duration(seconds: 5);
   static const double _upcomingSegmentScanRangeMeters = 5000;
@@ -193,6 +173,36 @@ class _MapPageState extends State<MapPage>
 
   AverageSpeedController get _avgCtrl =>
       _currentSegmentController.averageController;
+  LocationPermissionFlowState get _permissionState => _permissionFlow.state;
+  bool? get _backgroundLocationAllowed =>
+      _permissionState.backgroundLocationAllowed;
+  bool get _notificationsEnabled => _permissionState.notificationsEnabled;
+  bool get _hasSystemBackgroundPermission =>
+      _permissionState.hasSystemBackgroundPermission;
+  bool get _showBackgroundConsent => _permissionState.showBackgroundConsent;
+  BackgroundLocationConsentOption? get _pendingBackgroundConsent =>
+      _permissionState.pendingBackgroundConsent;
+  bool get _showLocationPermissionInfo =>
+      _permissionState.showLocationPermissionInfo;
+  bool get _showNotificationPermissionInfo =>
+      _permissionState.showNotificationPermissionInfo;
+  bool get _locationPermissionTemporarilyDenied =>
+      _permissionState.locationPermissionTemporarilyDenied;
+  bool get _notificationPermissionTemporarilyDenied =>
+      _permissionState.notificationPermissionTemporarilyDenied;
+  bool get _isRequestingForegroundPermission =>
+      _permissionState.isRequestingForegroundPermission;
+  bool get _isRequestingNotificationPermission =>
+      _permissionState.isRequestingNotificationPermission;
+  bool get _isRequestingBackgroundPermission =>
+      _permissionState.isRequestingBackgroundPermission;
+  bool get _locationPermissionGranted =>
+      _permissionState.locationPermissionGranted;
+  IntroFlowState get _introState => _introFlowController.state;
+  bool get _showIntro => _introState.showIntro;
+  bool get _showWelcomeOverlay => _introState.showWelcomeOverlay;
+  bool get _showWeighStationsPrompt => _introState.showWeighStationsPrompt;
+  bool get _termsAccepted => _introState.termsAccepted;
 
   @override
   void initState() {
@@ -211,17 +221,34 @@ class _MapPageState extends State<MapPage>
     _weighStationPreferencesController =
         context.read<WeighStationPreferencesController>();
     _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
+    _segmentsOnlyRedirectCoordinator = SegmentsOnlyRedirectCoordinator(
+      controller: _segmentsOnlyModeController,
+      onOpenSimpleModePage: _openSimpleModePage,
+      onCloseSimpleModePageIfOpen: _closeSimpleModePageIfOpen,
+      hasConnectivity: () => _hasConnectivity,
+      isOsmServiceAvailable: () => _isOsmServiceAvailable,
+    );
     _backgroundConsentController =
         context.read<BackgroundLocationConsentController>();
+    _introFlowController = IntroFlowController(
+      prefsFuture: SharedPreferences.getInstance(),
+      weighStationPreferencesController: _weighStationPreferencesController,
+    );
+    _introFlowController.addListener(_onIntroFlowChanged);
+    _permissionFlow = LocationPermissionFlow(
+      permissionService: _permissionService,
+      notificationPermissionService: _notificationPermissionService,
+      backgroundConsentController: _backgroundConsentController,
+      initialBackgroundConsentAllowed: _backgroundConsentController.allowed,
+    );
+    _permissionFlow.addListener(_onPermissionFlowChanged);
     _positionUpdateService = PositionUpdateService(
       distanceCalculator: _distanceCalculator,
       speedService: _speedService,
     );
-    _backgroundLocationAllowed = _backgroundConsentController.allowed;
     _enforceAudioModeBackgroundSafety();
     _backgroundConsentController.addListener(_handleBackgroundConsentChange);
     unawaited(_backgroundConsentController.ensureLoaded());
-    unawaited(_loadIntroCompletionStatus());
     unawaited(_initConnectivityMonitoring());
     unawaited(_ensureNotificationPermission());
     _audioController.addListener(_updateAudioPolicy);
@@ -229,6 +256,19 @@ class _MapPageState extends State<MapPage>
     _weighStationPreferencesController
         .addListener(_handleWeighStationPreferenceChange);
     _handleWeighStationPreferenceChange();
+    unawaited(
+      _introFlowController.load().then((_) {
+        if (!mounted) {
+          return;
+        }
+        if (_introFlowController.introReady) {
+          unawaited(showLocationDisclosureIfNeeded());
+        }
+        _introFlowController.evaluateFlow(
+          onWeighStationsDisabled: _weighStationAlertService.reset,
+        );
+      }),
+    );
     _segmentsService = MapSegmentsService(
       metadataService: _metadataService,
       segmentTracker: _segmentTracker,
@@ -238,6 +278,13 @@ class _MapPageState extends State<MapPage>
       weighStationsSyncService: _weighStationsSyncService,
       syncService: _syncService,
       syncMessageService: _syncMessageService,
+    );
+    _speedLimitPollingController = SpeedLimitPollingController(
+      osmSpeedLimitService: _osmSpeedLimitService,
+      onSpeedLimitChanged: _handleSpeedLimitChanged,
+      onAvailabilityChanged: _handleOsmAvailabilityChanged,
+      onUnavailableBeyondGrace: _handleOsmUnavailableBeyondGrace,
+      unavailableGracePeriod: _osmUnavailableGracePeriod,
     );
 
     _metadataLoadFuture = _loadSegmentsMetadata();
@@ -268,10 +315,15 @@ class _MapPageState extends State<MapPage>
     _mapEvtSub?.cancel();
     _connectivitySub?.cancel();
     _speedIdleResetTimer?.cancel();
-    _speedLimitPollTimer?.cancel();
     _initialLocationInitTimer?.cancel();
     _blueDotAnimator.dispose();
     _segmentTracker.dispose();
+    _speedLimitPollingController.dispose();
+    _segmentsOnlyRedirectCoordinator.dispose();
+    _introFlowController.removeListener(_onIntroFlowChanged);
+    _introFlowController.dispose();
+    _permissionFlow.removeListener(_onPermissionFlowChanged);
+    _permissionFlow.dispose();
     unawaited(_segmentGuidanceController.dispose());
     unawaited(_weighStationAlertService.dispose());
     _osmSpeedLimitService.dispose();
@@ -281,8 +333,6 @@ class _MapPageState extends State<MapPage>
         .removeListener(_handleWeighStationPreferenceChange);
     _backgroundConsentController
         .removeListener(_handleBackgroundConsentChange);
-    _offlineRedirectTimer?.cancel();
-    _osmUnavailableRedirectTimer?.cancel();
     _segmentsOnlyModeController.exitMode();
     _currentSegmentController.reset();
     WidgetsBinding.instance.removeObserver(this);
@@ -297,7 +347,6 @@ class _MapPageState extends State<MapPage>
     if (state == AppLifecycleState.resumed) {
       unawaited(showLocationDisclosureIfNeeded());
       unawaited(_ensureNotificationPermission());
-      _didRequestNotificationPermission = false;
     }
     _updateAudioPolicy();
     _updateSpeedLimitPollingForVisibility();
@@ -306,17 +355,11 @@ class _MapPageState extends State<MapPage>
   Future<void> _initLocation() async {
     final hasPermission = await _permissionService.hasLocationPermission();
     if (!hasPermission) {
-      _locationPermissionGranted = false;
-      if (mounted) {
-        setState(() {
-          _setLocationPermissionBannerVisible(true);
-        });
-      } else {
-        _setLocationPermissionBannerVisible(true);
-      }
+      _permissionFlow.setLocationPermissionGranted(false);
+      _setLocationPermissionBannerVisible(true);
       return;
     }
-    _locationPermissionGranted = true;
+    _permissionFlow.setLocationPermissionGranted(true);
     await _ensureNotificationPermission();
     if (_metadataLoadFuture != null) {
       await _metadataLoadFuture;
@@ -342,7 +385,7 @@ class _MapPageState extends State<MapPage>
       position: firstFix,
     );
 
-    _maybeFetchSpeedLimit(firstFix);
+    _speedLimitPollingController.updatePosition(firstFix);
 
     if (mounted) setState(() {});
 
@@ -372,20 +415,7 @@ class _MapPageState extends State<MapPage>
     }
 
     _hasConnectivity = isConnected;
-
-    if (!isConnected) {
-      _segmentsOnlyModeController.enterMode(SegmentsOnlyModeReason.offline);
-      _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.offline);
-    } else {
-      _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.offline);
-      if (_segmentsOnlyModeController.reason ==
-          SegmentsOnlyModeReason.offline) {
-        _segmentsOnlyModeController.exitMode();
-        if (_simpleModePageOpen) {
-          unawaited(_closeSimpleModePageIfOpen());
-        }
-      }
-    }
+    _segmentsOnlyRedirectCoordinator.handleConnectivityChanged(isConnected);
   }
 
   Future<void> _subscribeToPositionStream() async {
@@ -415,57 +445,15 @@ class _MapPageState extends State<MapPage>
     _weighStationAlertService.updateAudioPolicy(newPolicy);
   }
 
-  void _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason reason) {
-    if (reason == SegmentsOnlyModeReason.manual) {
-      return;
-    }
-
-    final Timer? existing = _redirectTimerFor(reason);
-    if (existing?.isActive ?? false) {
-      return;
-    }
-
-    final Timer timer = Timer(const Duration(seconds: 3), () {
-      _setRedirectTimer(reason, null);
-      if (!mounted) {
-        return;
-      }
-      if (_segmentsOnlyModeController.reason != reason) {
-        return;
-      }
-      unawaited(_openSimpleModePage(reason));
-    });
-
-    _setRedirectTimer(reason, timer);
-  }
-
-  void _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason reason) {
-    final Timer? existing = _redirectTimerFor(reason);
-    existing?.cancel();
-    _setRedirectTimer(reason, null);
-  }
-
-  Timer? _redirectTimerFor(SegmentsOnlyModeReason reason) {
-    switch (reason) {
-      case SegmentsOnlyModeReason.offline:
-        return _offlineRedirectTimer;
-      case SegmentsOnlyModeReason.osmUnavailable:
-        return _osmUnavailableRedirectTimer;
-      case SegmentsOnlyModeReason.manual:
-        return null;
+  void _onPermissionFlowChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  void _setRedirectTimer(SegmentsOnlyModeReason reason, Timer? timer) {
-    switch (reason) {
-      case SegmentsOnlyModeReason.offline:
-        _offlineRedirectTimer = timer;
-        break;
-      case SegmentsOnlyModeReason.osmUnavailable:
-        _osmUnavailableRedirectTimer = timer;
-        break;
-      case SegmentsOnlyModeReason.manual:
-        break;
+  void _onIntroFlowChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -525,63 +513,22 @@ class _MapPageState extends State<MapPage>
     }
   }
 
-  void _setBackgroundPermissionRequestInFlight(bool inFlight) {
-    if (_isRequestingBackgroundPermission == inFlight) {
-      return;
-    }
-    if (mounted) {
-      setState(() {
-        _isRequestingBackgroundPermission = inFlight;
-      });
-    } else {
-      _isRequestingBackgroundPermission = inFlight;
-    }
-  }
-
-  void _setSystemBackgroundPermission(bool granted) {
-    if (_hasSystemBackgroundPermission == granted) {
-      return;
-    }
-    if (mounted) {
-      setState(() {
-        _hasSystemBackgroundPermission = granted;
-      });
-    } else {
-      _hasSystemBackgroundPermission = granted;
-    }
-  }
-
   Future<bool> _requestSystemBackgroundPermission({
     bool showDeniedMessage = true,
   }) async {
-    if (_isRequestingBackgroundPermission) {
-      return false;
-    }
-
-    final bool alreadyGranted =
-        await _permissionService.hasBackgroundPermission();
-    if (alreadyGranted) {
-      _setSystemBackgroundPermission(true);
-      return true;
-    }
-
-    _setBackgroundPermissionRequestInFlight(true);
-    bool granted = false;
-    try {
-      granted = await _permissionService.ensureBackgroundPermission();
-    } finally {
-      _setBackgroundPermissionRequestInFlight(false);
-    }
-    _setSystemBackgroundPermission(granted);
-    if (!granted && showDeniedMessage && mounted) {
-      final messenger = ScaffoldMessenger.of(context);
-      final localizations = AppLocalizations.of(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(localizations.backgroundPermissionDeniedMessage),
-        ),
-      );
-    }
+    final localizations = AppLocalizations.of(context);
+    final bool granted = await _permissionFlow.requestSystemBackgroundPermission(
+      showDeniedMessage: showDeniedMessage,
+      deniedMessage: localizations.backgroundPermissionDeniedMessage,
+      showDeniedMessageCallback: (message) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+    );
     return granted;
   }
 
@@ -594,50 +541,16 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _ensureNotificationPermission() async {
-    final bool enabled =
-        await _notificationPermissionService.areNotificationsEnabled();
-    if (!mounted) {
-      _notificationsEnabled = enabled;
-      _setNotificationPermissionBannerVisible(
-        _backgroundLocationAllowed == true && !enabled,
-      );
-      return;
-    }
-    setState(() {
-      _notificationsEnabled = enabled;
-      _setNotificationPermissionBannerVisible(
-        _backgroundLocationAllowed == true && !enabled,
-      );
-    });
+    await _permissionFlow.ensureNotificationPermission(
+      backgroundAllowed: _backgroundLocationAllowed == true,
+    );
     _enforceAudioModeBackgroundSafety();
   }
 
   Future<void> _requestNotificationPermission() async {
-    if (_isRequestingNotificationPermission) {
-      return;
-    }
-    if (mounted) {
-      setState(() {
-        _isRequestingNotificationPermission = true;
-      });
-    } else {
-      _isRequestingNotificationPermission = true;
-    }
-    final bool granted =
-        await _notificationPermissionService.ensurePermissionGranted();
-    _didRequestNotificationPermission = true;
-    if (!mounted) {
-      _isRequestingNotificationPermission = false;
-      _notificationsEnabled = granted;
-      return;
-    }
-    setState(() {
-      _isRequestingNotificationPermission = false;
-      _notificationsEnabled = granted;
-      _setNotificationPermissionBannerVisible(
-        _backgroundLocationAllowed == true && !granted,
-      );
-    });
+    await _permissionFlow.requestNotificationPermission(
+      backgroundAllowed: _backgroundLocationAllowed == true,
+    );
     _enforceAudioModeBackgroundSafety();
   }
 
@@ -645,70 +558,28 @@ class _MapPageState extends State<MapPage>
     bool visible, {
     bool resetTemporaryDismissal = true,
   }) {
-    if (visible) {
-      if (_locationPermissionTemporarilyDenied) {
-        return;
-      }
-      _showLocationPermissionInfo = true;
-      return;
-    }
-    if (resetTemporaryDismissal) {
-      _locationPermissionTemporarilyDenied = false;
-    }
-    _showLocationPermissionInfo = false;
+    _permissionFlow.setLocationPermissionBannerVisible(
+      visible,
+      resetTemporaryDismissal: resetTemporaryDismissal,
+    );
   }
 
   void _setNotificationPermissionBannerVisible(
     bool visible, {
     bool resetTemporaryDismissal = true,
   }) {
-    if (visible) {
-      if (_notificationPermissionTemporarilyDenied) {
-        return;
-      }
-      _showNotificationPermissionInfo = true;
-      return;
-    }
-    if (resetTemporaryDismissal) {
-      _notificationPermissionTemporarilyDenied = false;
-    }
-    _showNotificationPermissionInfo = false;
+    _permissionFlow.setNotificationPermissionBannerVisible(
+      visible,
+      resetTemporaryDismissal: resetTemporaryDismissal,
+    );
   }
 
   void _temporarilyDismissLocationPermissionPrompt() {
-    if (!mounted) {
-      _locationPermissionTemporarilyDenied = true;
-      _setLocationPermissionBannerVisible(
-        false,
-        resetTemporaryDismissal: false,
-      );
-      return;
-    }
-    setState(() {
-      _locationPermissionTemporarilyDenied = true;
-      _setLocationPermissionBannerVisible(
-        false,
-        resetTemporaryDismissal: false,
-      );
-    });
+    _permissionFlow.temporarilyDismissLocationPermissionPrompt();
   }
 
   void _temporarilyDismissNotificationPermissionPrompt() {
-    if (!mounted) {
-      _notificationPermissionTemporarilyDenied = true;
-      _setNotificationPermissionBannerVisible(
-        false,
-        resetTemporaryDismissal: false,
-      );
-      return;
-    }
-    setState(() {
-      _notificationPermissionTemporarilyDenied = true;
-      _setNotificationPermissionBannerVisible(
-        false,
-        resetTemporaryDismissal: false,
-      );
-    });
+    _permissionFlow.temporarilyDismissNotificationPermissionPrompt();
   }
 
   void _handlePositionUpdate(Position position) {
@@ -725,7 +596,7 @@ class _MapPageState extends State<MapPage>
       timestamp: update.timestamp,
     );
     _moveBlueDot(update.position);
-    _maybeFetchSpeedLimit(update.position);
+    _speedLimitPollingController.updatePosition(update.position);
     final bool showWeighStations =
         _weighStationPreferencesController.shouldShowWeighStations;
     final nearestWeigh =
@@ -778,117 +649,34 @@ class _MapPageState extends State<MapPage>
     _blueDotAnimator.animate(from: from, to: next);
   }
 
-  Duration _currentSpeedLimitPollInterval() {
-    return _osmSpeedLimitKph == null
-        ? const Duration(seconds: 1)
-        : const Duration(seconds: 3);
-  }
-
-  void _cancelSpeedLimitPolling() {
-    _speedLimitPollTimer?.cancel();
-    _speedLimitPollTimer = null;
-  }
-
   void _updateSpeedLimitPollingForVisibility() {
-    if (!_isMapInForeground) {
-      _cancelSpeedLimitPolling();
+    _speedLimitPollingController.updateVisibility(
+      isForeground: _isMapInForeground,
+    );
+  }
+
+  void _handleSpeedLimitChanged(String? speedLimitKph) {
+    if (!mounted) {
+      _osmSpeedLimitKph = speedLimitKph;
       return;
     }
+    setState(() {
+      _osmSpeedLimitKph = speedLimitKph;
+    });
+  }
 
-    final LatLng? lastLocation = _lastSpeedLimitQueryLocation;
-    if (lastLocation != null) {
-      _maybeFetchSpeedLimit(lastLocation);
+  void _handleOsmAvailabilityChanged(bool isAvailable) {
+    _isOsmServiceAvailable = isAvailable;
+    if (isAvailable) {
+      _segmentsOnlyRedirectCoordinator.handleOsmServiceRecovered();
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  void _maybeFetchSpeedLimit(LatLng position) {
-    _lastSpeedLimitQueryLocation = position;
-    if (!_isMapInForeground) {
-      _cancelSpeedLimitPolling();
-      return;
-    }
-
-    final bool hasActiveTimer = _speedLimitPollTimer?.isActive ?? false;
-    if (_isSpeedLimitRequestInFlight || hasActiveTimer) {
-      return;
-    }
-    _speedLimitPollTimer = Timer(Duration.zero, _pollSpeedLimit);
-  }
-
-  void _scheduleNextSpeedLimitPoll() {
-    if (!mounted || !_isMapInForeground) {
-      _cancelSpeedLimitPolling();
-      return;
-    }
-    _speedLimitPollTimer?.cancel();
-    _speedLimitPollTimer =
-        Timer(_currentSpeedLimitPollInterval(), _pollSpeedLimit);
-  }
-
-  Future<void> _pollSpeedLimit() async {
-    _cancelSpeedLimitPolling();
-    if (_isSpeedLimitRequestInFlight) {
-      _scheduleNextSpeedLimitPoll();
-      return;
-    }
-
-    if (!_isMapInForeground) {
-      return;
-    }
-
-    final LatLng? location = _lastSpeedLimitQueryLocation;
-    if (location == null) {
-      return;
-    }
-
-    _isSpeedLimitRequestInFlight = true;
-    try {
-      final result = await _osmSpeedLimitService.fetchSpeedLimit(location);
-      if (!mounted) return;
-
-      _osmUnavailableSince = null;
-      final bool shouldUpdateLimit =
-          result != null && result != _osmSpeedLimitKph;
-      final bool shouldUpdateAvailability = !_isOsmServiceAvailable;
-      if (shouldUpdateLimit || shouldUpdateAvailability) {
-        setState(() {
-          _isOsmServiceAvailable = true;
-          if (shouldUpdateLimit) {
-            _osmSpeedLimitKph = result;
-          }
-        });
-      } else {
-        _isOsmServiceAvailable = true;
-      }
-      _cancelSegmentsOnlyRedirectTimer(SegmentsOnlyModeReason.osmUnavailable);
-      if (_segmentsOnlyModeController.reason ==
-          SegmentsOnlyModeReason.osmUnavailable) {
-        _segmentsOnlyModeController.exitMode();
-        if (_simpleModePageOpen) {
-          unawaited(_closeSimpleModePageIfOpen());
-        }
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      final DateTime now = DateTime.now();
-      _isOsmServiceAvailable = false;
-      _osmUnavailableSince ??= now;
-
-      if (now.difference(_osmUnavailableSince!) >=
-          _osmUnavailableGracePeriod) {
-        if (_segmentsOnlyModeController.reason !=
-            SegmentsOnlyModeReason.osmUnavailable) {
-          _segmentsOnlyModeController.enterMode(
-            SegmentsOnlyModeReason.osmUnavailable,
-          );
-        }
-        _scheduleSegmentsOnlyRedirect(SegmentsOnlyModeReason.osmUnavailable);
-      }
-    } finally {
-      _isSpeedLimitRequestInFlight = false;
-      _scheduleNextSpeedLimitPoll();
-    }
+  void _handleOsmUnavailableBeyondGrace() {
+    _segmentsOnlyRedirectCoordinator.handleOsmUnavailableBeyondGrace();
   }
 
   void _scheduleSpeedIdleReset() {
@@ -1189,14 +977,7 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _loadWeighStations() async {
-    LatLngBounds? bounds;
-    if (_mapReady) {
-      try {
-        bounds = _mapController.camera.visibleBounds;
-      } catch (_) {
-        bounds = null;
-      }
-    }
+    final LatLngBounds? bounds = _currentVisibleBounds();
     final auth = context.read<AuthController>();
     await _segmentsService.loadWeighStations(bounds: bounds);
     await _segmentsService.refreshWeighStationVotes(
@@ -1209,14 +990,7 @@ class _MapPageState extends State<MapPage>
   }
 
   void _updateVisibleCameras() {
-    LatLngBounds? bounds;
-    if (_mapReady) {
-      try {
-        bounds = _mapController.camera.visibleBounds;
-      } catch (_) {
-        bounds = null;
-      }
-    }
+    final LatLngBounds? bounds = _currentVisibleBounds();
     if (!mounted) return;
 
     setState(() {
@@ -1225,14 +999,7 @@ class _MapPageState extends State<MapPage>
   }
 
   void _updateVisibleWeighStations() {
-    LatLngBounds? bounds;
-    if (_mapReady) {
-      try {
-        bounds = _mapController.camera.visibleBounds;
-      } catch (_) {
-        bounds = null;
-      }
-    }
+    final LatLngBounds? bounds = _currentVisibleBounds();
     _segmentsService.updateVisibleWeighStations(bounds: bounds);
     if (!mounted) return;
     setState(() {});
@@ -1276,14 +1043,7 @@ class _MapPageState extends State<MapPage>
   }
 
   void _updateVisibleSegments() {
-    LatLngBounds? bounds;
-    if (_mapReady) {
-      try {
-        bounds = _mapController.camera.visibleBounds;
-      } catch (_) {
-        bounds = null;
-      }
-    }
+    final LatLngBounds? bounds = _currentVisibleBounds();
 
     final indexService = SegmentIndexService.instance;
     if (bounds == null || !indexService.isReady) {
@@ -1351,6 +1111,19 @@ class _MapPageState extends State<MapPage>
     }
     return buffer.toString();
   }
+
+  LatLngBounds? _currentVisibleBounds() {
+    if (!_mapReady) {
+      return null;
+    }
+    try {
+      return _mapController.camera.visibleBounds;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  LatLngBounds? get currentVisibleBounds => _currentVisibleBounds();
 
   Future<void> _initSegmentsIndex() async {
     await _runStartupSync();
@@ -1433,79 +1206,38 @@ class _MapPageState extends State<MapPage>
   }
 
   Future<void> _openSimpleModePage(SegmentsOnlyModeReason reason) async {
-    _segmentsOnlyModeController.enterMode(reason);
-    if (_simpleModePageOpen || !mounted) {
+    if (!mounted) {
       return;
     }
 
-    _simpleModePageOpen = true;
     _updateSpeedLimitPollingForVisibility();
     try {
       await Navigator.of(context).pushNamed(AppRoutes.simpleMode);
     } finally {
-      _simpleModePageOpen = false;
       _updateSpeedLimitPollingForVisibility();
-      if (_shouldExitSegmentsOnlyModeAfterNav(reason)) {
-        _segmentsOnlyModeController.exitMode();
-      }
     }
   }
 
   Future<void> _closeSimpleModePageIfOpen() async {
-    if (!_simpleModePageOpen || !mounted) {
+    if (!_segmentsOnlyRedirectCoordinator.isSimpleModePageOpen || !mounted) {
       return;
     }
 
     await Navigator.of(context).maybePop();
   }
 
-  bool _shouldExitSegmentsOnlyModeAfterNav(SegmentsOnlyModeReason reason) {
-    final SegmentsOnlyModeReason? currentReason =
-        _segmentsOnlyModeController.reason;
-
-    if (!_segmentsOnlyModeController.isActive || currentReason == null) {
-      return true;
-    }
-
-    if (currentReason != reason) {
-      return true;
-    }
-
-    switch (reason) {
-      case SegmentsOnlyModeReason.manual:
-        return true;
-      case SegmentsOnlyModeReason.offline:
-        return _hasConnectivity;
-      case SegmentsOnlyModeReason.osmUnavailable:
-        return _isOsmServiceAvailable;
-    }
-  }
-
   void _revealIntro() {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _showIntro = true;
-    });
+    _introFlowController.revealIntro();
   }
 
-  void _dismissIntro() {
+  void _dismissIntro() async {
     if (!mounted) {
       return;
     }
     if (!_termsAccepted) {
       return;
     }
-    final bool alreadyCompleted = _introCompleted == true;
-    setState(() {
-      _showIntro = false;
-      _introCompleted = true;
-      _introFlowPresented = true;
-    });
-    if (!alreadyCompleted) {
-      unawaited(_persistIntroCompletion());
-    }
+    await _introFlowController.dismissIntro();
     unawaited(showLocationDisclosureIfNeeded());
   }
 
@@ -1520,13 +1252,10 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       return;
     }
-    setState(() {
-      _termsAccepted = accepted;
-      if (accepted && !_locationPermissionGranted) {
-        _setLocationPermissionBannerVisible(true);
-      }
-    });
-    unawaited(_persistTermsAcceptance(accepted));
+    unawaited(_introFlowController.setTermsAccepted(accepted));
+    if (accepted && !_locationPermissionGranted) {
+      _setLocationPermissionBannerVisible(true);
+    }
     if (!accepted) {
       return;
     }
@@ -1548,30 +1277,15 @@ class _MapPageState extends State<MapPage>
     }
     final bool hasForeground =
         await _permissionService.hasLocationPermission();
-    if (!mounted) {
-      _locationPermissionGranted = hasForeground;
-      _setLocationPermissionBannerVisible(!hasForeground);
-      if (hasForeground) {
-        _scheduleInitialLocationInit();
-      }
-      return;
-    }
-
-    if (!hasForeground) {
-      setState(() {
-        _locationPermissionGranted = false;
-        _setLocationPermissionBannerVisible(true);
-      });
-      return;
-    }
-
     final bool wasGranted = _locationPermissionGranted;
-    _locationPermissionGranted = true;
+    _permissionFlow.setLocationPermissionGranted(hasForeground);
+    _setLocationPermissionBannerVisible(!hasForeground);
+    if (!hasForeground) {
+      return;
+    }
 
     if (!wasGranted || _showLocationPermissionInfo) {
-      setState(() {
-        _setLocationPermissionBannerVisible(false);
-      });
+      _setLocationPermissionBannerVisible(false);
     }
     _scheduleInitialLocationInit();
     await _maybeShowBackgroundLocationDisclosure();
@@ -1594,15 +1308,8 @@ class _MapPageState extends State<MapPage>
     final bool? consent = _backgroundConsentController.allowed;
     final bool hasSystemPermission =
         await _permissionService.hasBackgroundPermission();
-    if (mounted) {
-      setState(() {
-        _backgroundLocationAllowed = consent;
-        _hasSystemBackgroundPermission = hasSystemPermission;
-      });
-    } else {
-      _backgroundLocationAllowed = consent;
-      _hasSystemBackgroundPermission = hasSystemPermission;
-    }
+    _permissionFlow.setBackgroundConsentAllowed(consent);
+    _permissionFlow.setHasSystemBackgroundPermission(hasSystemPermission);
     _enforceAudioModeBackgroundSafety();
 
     if (consent == null) {
@@ -1617,76 +1324,27 @@ class _MapPageState extends State<MapPage>
       _presentBackgroundConsentOverlay(prefillSelection: true);
       return;
     }
-    if (mounted) {
-      setState(() {
-        _setLocationPermissionBannerVisible(false);
-      });
-    } else {
-      _setLocationPermissionBannerVisible(false);
-    }
+    _setLocationPermissionBannerVisible(false);
     _applyBackgroundLocationPreference();
   }
 
   Future<void> _requestForegroundPermission() async {
-    if (_isRequestingForegroundPermission) {
+    final bool granted = await _permissionFlow.requestForegroundPermission();
+    if (!granted) {
       return;
     }
-    if (mounted) {
-      setState(() {
-        _isRequestingForegroundPermission = true;
-      });
-    } else {
-      _isRequestingForegroundPermission = true;
-    }
-    final bool granted =
-        await _permissionService.ensureForegroundPermission();
-    if (mounted) {
-      setState(() {
-        _isRequestingForegroundPermission = false;
-      });
-    } else {
-      _isRequestingForegroundPermission = false;
-    }
-    if (!mounted) {
-      _locationPermissionGranted = granted;
-      if (!granted) {
-        _setLocationPermissionBannerVisible(true);
-      }
-      return;
-    }
-    if (granted) {
-      _locationPermissionGranted = true;
-      setState(() {
-        _setLocationPermissionBannerVisible(false);
-      });
-      _scheduleInitialLocationInit();
-      await _maybeShowBackgroundLocationDisclosure();
-      return;
-    }
-    _handleForegroundPermissionDeclined();
-  }
-
-  void _handleForegroundPermissionDeclined() {
-    _locationPermissionGranted = false;
-    if (!mounted) {
-      _setLocationPermissionBannerVisible(true);
-      return;
-    }
-    setState(() {
-      _setLocationPermissionBannerVisible(true);
-    });
+    _scheduleInitialLocationInit();
+    await _maybeShowBackgroundLocationDisclosure();
   }
 
   void _handleBackgroundPermissionDeclined() {
-    _backgroundLocationAllowed = false;
-    _hasSystemBackgroundPermission = false;
+    _permissionFlow.setBackgroundConsentAllowed(false);
+    _permissionFlow.setHasSystemBackgroundPermission(false);
+    _setLocationPermissionBannerVisible(false);
+    _setNotificationPermissionBannerVisible(false);
     _applyBackgroundLocationPreference();
     _enforceAudioModeBackgroundSafety();
     if (mounted) {
-      setState(() {
-        _setLocationPermissionBannerVisible(false);
-        _setNotificationPermissionBannerVisible(false);
-      });
       final messenger = ScaffoldMessenger.of(context);
       final localizations = AppLocalizations.of(context);
       messenger.showSnackBar(
@@ -1694,9 +1352,6 @@ class _MapPageState extends State<MapPage>
           content: Text(localizations.backgroundConsentMenuHint),
         ),
       );
-    } else {
-      _setLocationPermissionBannerVisible(false);
-      _setNotificationPermissionBannerVisible(false);
     }
   }
 
@@ -1717,14 +1372,7 @@ class _MapPageState extends State<MapPage>
       return;
     }
     final bool? allowed = _backgroundConsentController.allowed;
-    setState(() {
-      _backgroundLocationAllowed = allowed;
-      if (allowed == true) {
-        _setLocationPermissionBannerVisible(false);
-      } else {
-        _setNotificationPermissionBannerVisible(false);
-      }
-    });
+    _permissionFlow.setBackgroundConsentAllowed(allowed);
     _enforceAudioModeBackgroundSafety();
     _applyBackgroundLocationPreference();
     if (allowed == true) {
@@ -1740,61 +1388,9 @@ class _MapPageState extends State<MapPage>
   }
 
   void _evaluateIntroFlow() {
-    if (!_weighStationPreferencesController.isLoaded) {
-      return;
-    }
-
-    final bool hasPreference =
-        _weighStationPreferencesController.hasPreference;
-    final bool shouldShowWeighStations =
-        _weighStationPreferencesController.shouldShowWeighStations;
-
-    bool showWelcome = _showWelcomeOverlay;
-    bool showPrompt = _showWeighStationsPrompt;
-    bool showIntro = _showIntro;
-
-    if (!hasPreference) {
-      if (!showPrompt) {
-        showWelcome = true;
-      }
-      showIntro = false;
-    } else {
-      if (!shouldShowWeighStations) {
-        _weighStationAlertService.reset();
-      }
-      showWelcome = false;
-      showPrompt = false;
-      if (!_introFlowPresented) {
-        showIntro = true;
-        _introFlowPresented = true;
-      }
-    }
-
-    setState(() {
-      _showWelcomeOverlay = showWelcome;
-      _showWeighStationsPrompt = showPrompt;
-      _showIntro = showIntro;
-    });
-  }
-
-  Future<void> _loadIntroCompletionStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final completed = prefs.getBool(_introCompletedPreferenceKey) ?? false;
-    final termsAccepted =
-        prefs.getBool(_termsAcceptedPreferenceKey) ?? false;
-    final bool introReady = completed && termsAccepted;
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _introCompleted = completed;
-      _introFlowPresented = introReady;
-      _termsAccepted = termsAccepted;
-    });
-    if (introReady) {
-      unawaited(showLocationDisclosureIfNeeded());
-    }
-    _evaluateIntroFlow();
+    _introFlowController.evaluateFlow(
+      onWeighStationsDisabled: _weighStationAlertService.reset,
+    );
   }
 
   void _scheduleInitialLocationInit({Duration delay = Duration.zero}) {
@@ -1815,64 +1411,27 @@ class _MapPageState extends State<MapPage>
     });
   }
 
-  Future<void> _persistIntroCompletion() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_introCompletedPreferenceKey, true);
-  }
-
-  Future<void> _persistTermsAcceptance(bool accepted) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_termsAcceptedPreferenceKey, accepted);
-  }
-
   void _dismissWelcomeOverlay() {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _showWelcomeOverlay = false;
-      _showWeighStationsPrompt = true;
-    });
+    _introFlowController.dismissWelcomeOverlay();
   }
 
   void _onBackgroundLocationConsentSelection(
     BackgroundLocationConsentOption option,
   ) {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _pendingBackgroundConsent = option;
-    });
+    _permissionFlow.selectBackgroundConsent(option);
   }
 
   Future<void> _handleLocationDisclosureNotNow() async {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _pendingBackgroundConsent = BackgroundLocationConsentOption.deny;
-    });
+    _permissionFlow.selectBackgroundConsent(
+      BackgroundLocationConsentOption.deny,
+    );
     await _confirmBackgroundLocationConsent();
   }
 
   void _presentBackgroundConsentOverlay({required bool prefillSelection}) {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _showBackgroundConsent = true;
-      if (prefillSelection) {
-        final bool? allowed = _backgroundLocationAllowed;
-        _pendingBackgroundConsent = allowed == null
-            ? null
-            : (allowed
-                ? BackgroundLocationConsentOption.allow
-                : BackgroundLocationConsentOption.deny);
-      } else {
-        _pendingBackgroundConsent = null;
-      }
-    });
+    _permissionFlow.presentBackgroundConsentOverlay(
+      prefillSelection: prefillSelection,
+    );
   }
 
   Future<void> _confirmBackgroundLocationConsent() async {
@@ -1889,44 +1448,24 @@ class _MapPageState extends State<MapPage>
         return;
       }
     }
-    if (mounted) {
-      setState(() {
-        _showBackgroundConsent = false;
-        _pendingBackgroundConsent = null;
-      });
-    } else {
-      _showBackgroundConsent = false;
-      _pendingBackgroundConsent = null;
-    }
     if (allow) {
-      await _backgroundConsentController.setAllowed(true);
-      _backgroundLocationAllowed = true;
+      await _permissionFlow.persistBackgroundConsent(true);
       _enforceAudioModeBackgroundSafety();
-      if (mounted) {
-        setState(() {
-          _setLocationPermissionBannerVisible(false);
-        });
-      } else {
-        _setLocationPermissionBannerVisible(false);
-      }
+      _setLocationPermissionBannerVisible(false);
       _applyBackgroundLocationPreference();
       await _ensureNotificationPermission();
       return;
     }
-    await _backgroundConsentController.setAllowed(false);
-    _backgroundLocationAllowed = false;
+    await _permissionFlow.persistBackgroundConsent(false);
     _handleBackgroundPermissionDeclined();
   }
 
   void _completeWeighStationsPrompt(bool enabled) {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _showWeighStationsPrompt = false;
-    });
     unawaited(
-      _weighStationPreferencesController.setShowWeighStations(enabled),
+      _introFlowController.completeWeighStationsPrompt(
+        enabled,
+        onWeighStationsDisabled: _weighStationAlertService.reset,
+      ),
     );
   }
 
@@ -2028,7 +1567,6 @@ class _MapPageState extends State<MapPage>
             _requestNotificationPermission(),
           ),
           onOpenSettings: () {
-            _didRequestNotificationPermission = true;
             unawaited(_notificationPermissionService.openSettings());
           },
           onNotNow: _temporarilyDismissNotificationPermissionPrompt,
