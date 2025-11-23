@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +8,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:toll_cam_finder/core/app_colors.dart';
-import 'package:toll_cam_finder/core/app_messages.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/app/app_routes.dart';
 import 'package:toll_cam_finder/app/localization/app_localizations.dart';
@@ -19,10 +15,6 @@ import 'package:toll_cam_finder/core/spatial/geo.dart';
 import 'package:toll_cam_finder/features/auth/application/auth_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/guidance_audio_controller.dart';
 import 'package:toll_cam_finder/features/map/domain/controllers/segments_only_mode_controller.dart';
-import 'package:toll_cam_finder/features/map/domain/utils/speed_smoother.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/base_tile_layer.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/blue_dot_marker.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/toll_cameras_overlay.dart';
 import 'package:toll_cam_finder/features/map/services/camera_polling_service.dart';
 import 'package:toll_cam_finder/features/map/services/foreground_notification_service.dart';
 import 'package:toll_cam_finder/features/map/services/map_segments_service.dart';
@@ -45,23 +37,21 @@ import 'package:toll_cam_finder/shared/services/location_service.dart';
 import 'package:toll_cam_finder/shared/services/notification_permission_service.dart';
 import 'package:toll_cam_finder/shared/services/permission_service.dart';
 import 'package:toll_cam_finder/shared/services/weigh_station_preferences_controller.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
+import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_station_feedback_sheet.dart';
 import 'map/blue_dot_animator.dart';
 import 'map/toll_camera_controller.dart';
 import 'map/weigh_station_controller.dart';
 import 'map/widgets/map_controls_panel.dart';
 import 'map/widgets/map_fab_column.dart';
-import 'map/widgets/segment_handover_banner.dart';
-import 'map/widgets/segment_overlays.dart';
-import 'map/widgets/speed_limit_sign.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_stations_overlay.dart';
-import 'package:toll_cam_finder/features/map/presentation/widgets/weigh_station_feedback_sheet.dart';
-import 'package:toll_cam_finder/features/weigh_stations/services/weigh_station_alert_service.dart';
-import 'package:toll_cam_finder/features/weigh_stations/services/weigh_stations_sync_service.dart';
 import 'map/widgets/location_permission_banner.dart';
 import 'map/widgets/notification_permission_banner.dart';
 import 'map/widgets/map_intro_overlay.dart';
 import 'map/widgets/map_welcome_overlays.dart';
 import 'map/widgets/background_location_consent_overlay.dart';
+import 'package:toll_cam_finder/features/map/presentation/services/position_update_service.dart';
+import 'package:toll_cam_finder/features/map/presentation/widgets/map_canvas.dart';
 
 part 'map/map_options_drawer.dart';
 
@@ -128,8 +118,8 @@ class _MapPageState extends State<MapPage>
   // Helpers
   late final BlueDotAnimator _blueDotAnimator;
   late final CurrentSegmentController _currentSegmentController;
-  final SpeedSmoother _speedSmoother = SpeedSmoother();
   final Distance _distanceCalculator = const Distance();
+  late final PositionUpdateService _positionUpdateService;
   final TollCameraController _cameraController = TollCameraController();
   final WeighStationController _weighStationController =
       WeighStationController();
@@ -168,8 +158,6 @@ class _MapPageState extends State<MapPage>
   DateTime? _nextCameraCheckAt;
 
   double? _userHeading;
-  LatLng? _lastPositionSample;
-  DateTime? _lastPositionTimestamp;
   DateTime? _lastUpcomingSegmentScanAt;
   double? _upcomingSegmentDistanceMeters;
   bool _upcomingSegmentDistanceIsCapped = false;
@@ -225,6 +213,10 @@ class _MapPageState extends State<MapPage>
     _segmentsOnlyModeController = context.read<SegmentsOnlyModeController>();
     _backgroundConsentController =
         context.read<BackgroundLocationConsentController>();
+    _positionUpdateService = PositionUpdateService(
+      distanceCalculator: _distanceCalculator,
+      speedService: _speedService,
+    );
     _backgroundLocationAllowed = _backgroundConsentController.allowed;
     _enforceAudioModeBackgroundSafety();
     _backgroundConsentController.addListener(_handleBackgroundConsentChange);
@@ -329,18 +321,17 @@ class _MapPageState extends State<MapPage>
     if (_metadataLoadFuture != null) {
       await _metadataLoadFuture;
     }
-    _speedSmoother.reset();
+    _positionUpdateService.reset();
     final pos = await _locationService.getCurrentPosition();
-    final DateTime firstTimestamp = pos.timestamp ?? DateTime.now();
+    final PositionUpdateResult initialUpdate =
+        _positionUpdateService.handleInitialPosition(pos);
+    final DateTime firstTimestamp = initialUpdate.timestamp;
 
-    final firstKmh = _speedService.normalizeSpeed(pos.speed);
-    _speedKmh = _speedSmoother.next(firstKmh);
+    _speedKmh = initialUpdate.speedKmh;
     _scheduleSpeedIdleReset();
-    _updateHeading(pos.heading);
-    final firstFix = LatLng(pos.latitude, pos.longitude);
+    _updateHeading(initialUpdate.headingDegrees);
+    final LatLng firstFix = initialUpdate.position;
     _userLatLng = firstFix;
-    _lastPositionSample = firstFix;
-    _lastPositionTimestamp = firstTimestamp;
     _center = firstFix;
     final segEvent = _segmentTracker.handleLocationUpdate(
       current: firstFix,
@@ -722,38 +713,25 @@ class _MapPageState extends State<MapPage>
 
   void _handlePositionUpdate(Position position) {
     final DateTime now = DateTime.now();
-    final DateTime sampleTime = position.timestamp ?? now;
-    final LatLng next = LatLng(position.latitude, position.longitude);
-    final LatLng? previous = _lastPositionSample ?? _userLatLng;
+    final PositionUpdateResult update =
+        _positionUpdateService.handlePosition(position);
 
     _scheduleSpeedIdleReset();
 
-    final double speedMps = _resolveSpeedMps(
-      position: position,
-      previous: previous,
-      next: next,
-      sampleTime: sampleTime,
-    );
-    final double shownKmh = _speedService.normalizeSpeed(speedMps);
-    final double smoothedKmh = _speedSmoother.next(shownKmh);
-
-    final double? heading = _resolveHeadingDegrees(
-      deviceHeading: position.heading,
-      previous: previous,
-      next: next,
-    );
-    _updateHeading(heading);
+    _updateHeading(update.headingDegrees);
 
     _currentSegmentController.recordProgress(
-      position: next,
-      timestamp: sampleTime,
+      position: update.position,
+      timestamp: update.timestamp,
     );
-    _moveBlueDot(next);
-    _maybeFetchSpeedLimit(next);
+    _moveBlueDot(update.position);
+    _maybeFetchSpeedLimit(update.position);
     final bool showWeighStations =
         _weighStationPreferencesController.shouldShowWeighStations;
     final nearestWeigh =
-        showWeighStations ? _segmentsService.nearestWeighStation(next) : null;
+        showWeighStations
+            ? _segmentsService.nearestWeighStation(update.position)
+            : null;
     final localizations = AppLocalizations.of(context);
     _weighStationAlertService.updateDistance(
       stationId: nearestWeigh?.marker.id,
@@ -765,88 +743,22 @@ class _MapPageState extends State<MapPage>
       nextCameraCheckAt: _nextCameraCheckAt,
     )) {
       final segEvent = _segmentTracker.handleLocationUpdate(
-        current: next,
+        current: update.position,
         headingDegrees: _userHeading,
       );
       _applySegmentEvent(segEvent, now: now);
       _nextCameraCheckAt = _segmentsService.calculateNextCameraCheck(
-        position: next,
+        position: update.position,
       );
     }
-
-    _lastPositionSample = next;
-    _lastPositionTimestamp = sampleTime;
 
     if (!mounted) return;
 
     setState(() {
-      _speedKmh = smoothedKmh;
+      _speedKmh = update.speedKmh;
     });
 
     _updateSegmentsOnlyMetrics();
-  }
-
-  double _resolveSpeedMps({
-    required Position position,
-    required LatLng? previous,
-    required LatLng next,
-    required DateTime sampleTime,
-  }) {
-    final double rawSpeed = position.speed;
-    final double? deviceSpeed =
-        rawSpeed.isFinite && rawSpeed >= 0 ? rawSpeed : null;
-
-    double? derivedSpeed;
-    if (previous != null && _lastPositionTimestamp != null) {
-      final double dtSeconds =
-          sampleTime.difference(_lastPositionTimestamp!).inMilliseconds /
-              1000.0;
-      if (dtSeconds > 0) {
-        final double distanceMeters =
-            _distanceCalculator.as(LengthUnit.Meter, previous, next);
-        if (distanceMeters.isFinite && distanceMeters >= 0) {
-          derivedSpeed = distanceMeters / dtSeconds;
-        }
-      }
-    }
-
-    if (deviceSpeed != null && deviceSpeed > 0) {
-      return deviceSpeed;
-    }
-    if (derivedSpeed != null && derivedSpeed.isFinite) {
-      return derivedSpeed;
-    }
-    return 0.0;
-  }
-
-  double? _resolveHeadingDegrees({
-    required double? deviceHeading,
-    required LatLng? previous,
-    required LatLng next,
-  }) {
-    if (deviceHeading != null &&
-        deviceHeading.isFinite &&
-        deviceHeading >= 0) {
-      return deviceHeading % 360;
-    }
-
-    if (previous == null) {
-      return null;
-    }
-
-    final double travelDistance =
-        _distanceCalculator.as(LengthUnit.Meter, previous, next);
-    if (!travelDistance.isFinite || travelDistance < 0.5) {
-      return null;
-    }
-
-    final double bearing = _distanceCalculator.bearing(previous, next);
-    if (!bearing.isFinite) {
-      return null;
-    }
-
-    final double normalized = bearing % 360;
-    return normalized.isNegative ? normalized + 360 : normalized;
   }
 
   void _updateHeading(double? heading) {
@@ -992,7 +904,7 @@ class _MapPageState extends State<MapPage>
     if (!mounted) {
       return;
     }
-    _speedSmoother.reset();
+    _positionUpdateService.resetSmoothing();
     if ((_speedKmh ?? 0) <= 0) {
       return;
     }
@@ -2037,126 +1949,20 @@ class _MapPageState extends State<MapPage>
     final mediaQuery = MediaQuery.of(context);
     final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
 
-    final Widget mapContent = Stack(
-      children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: _center,
-            initialZoom: _currentZoom,
-            cameraConstraint: CameraConstraint.contain(
-              bounds: AppConstants.europeBounds,
-            ),
-            onMapReady: _onMapReady,
-          ),
-          children: [
-            const BaseTileLayer(),
-
-            BlueDotMarker(point: markerPoint),
-
-            if (_visibleSegmentPolylines.isNotEmpty)
-              PolylineLayer(polylines: _visibleSegmentPolylines),
-
-            if (kDebugMode && currentSegment.debugData.querySquare.isNotEmpty)
-              QuerySquareOverlay(points: currentSegment.debugData.querySquare),
-            if (kDebugMode &&
-                currentSegment.debugData.boundingCandidates.isNotEmpty)
-              CandidateBoundsOverlay(
-                candidates: currentSegment.debugData.boundingCandidates,
-              ),
-            if (kDebugMode &&
-                currentSegment.debugData.candidatePaths.isNotEmpty)
-              SegmentPolylineOverlay(
-                paths: currentSegment.debugData.candidatePaths,
-                startGeofenceRadius:
-                    currentSegment.debugData.startGeofenceRadius,
-                endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
-              ),
-            if (_weighStationPreferencesController.shouldShowWeighStations)
-              WeighStationsOverlay(
-                visibleStations: weighStationsState.visibleStations,
-                onMarkerLongPress: _onWeighStationLongPress,
-              ),
-            TollCamerasOverlay(cameras: cameraState),
-          ],
-        ),
-        if (currentSegment.handoverStatus != null)
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SegmentHandoverBanner(
-                status: currentSegment.handoverStatus!,
-                margin: const EdgeInsets.only(top: 16),
-              ),
-            ),
-          ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, left: 16),
-              child: SpeedLimitSign(
-                speedLimit: _osmSpeedLimitKph,
-                currentSpeedKmh: _speedKmh,
-              ),
-            ),
-          ),
-        ),
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, right: 16),
-              child: Builder(
-                builder: (context) {
-                  final ScaffoldState? scaffoldState = Scaffold.maybeOf(
-                    context,
-                  );
-                  final bool isDrawerOpen =
-                      scaffoldState?.isEndDrawerOpen ?? false;
-                  final theme = Theme.of(context);
-                  final palette = AppColors.of(context);
-                  final bool isDark = theme.brightness == Brightness.dark;
-                  final Color backgroundColor = isDrawerOpen
-                      ? palette.primary
-                      : palette.surface.withOpacity(isDark ? 0.7 : 0.92);
-                  final Color iconColor = isDrawerOpen
-                      ? Colors.white
-                      : palette.onSurface;
-                  final BorderSide borderSide = BorderSide(
-                    color: isDrawerOpen
-                        ? Colors.transparent
-                        : palette.divider.withOpacity(isDark ? 1 : 0.7),
-                    width: 1,
-                  );
-
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.35 : 0.14),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: backgroundColor,
-                      shape: CircleBorder(side: borderSide),
-                      child: IconButton(
-                        onPressed: () => Scaffold.of(context).openEndDrawer(),
-                        icon: Icon(Icons.menu, color: iconColor),
-                        tooltip: AppLocalizations.of(context).openMenu,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ],
+    final Widget mapContent = MapCanvas(
+      mapController: _mapController,
+      initialCenter: _center,
+      initialZoom: _currentZoom,
+      onMapReady: _onMapReady,
+      markerPoint: markerPoint,
+      visibleSegmentPolylines: _visibleSegmentPolylines,
+      currentSegment: currentSegment,
+      showWeighStations: _weighStationPreferencesController.shouldShowWeighStations,
+      weighStationsState: weighStationsState,
+      onWeighStationLongPress: _onWeighStationLongPress,
+      cameraState: cameraState,
+      osmSpeedLimitKph: _osmSpeedLimitKph,
+      speedKmh: _speedKmh,
     );
 
     final Widget mapFab = SafeArea(
