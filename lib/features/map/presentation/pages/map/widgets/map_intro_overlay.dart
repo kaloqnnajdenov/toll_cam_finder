@@ -399,13 +399,6 @@ BoxDecoration _introCardDecoration(
     color: cardColor,
     borderRadius: BorderRadius.circular(32),
     border: Border.all(color: borderColor, width: 1),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(dark ? 0.5 : 0.18),
-        blurRadius: 42,
-        offset: const Offset(0, 24),
-      ),
-    ],
   );
 }
 
@@ -692,53 +685,32 @@ class _VoiceTimelineVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppPalette palette = AppColors.of(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color connectorColor =
+        theme.dividerColor.withOpacity(isDark ? 0.7 : 0.5);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool horizontal = constraints.maxWidth >= 560;
-        if (horizontal) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (int i = 0; i < steps.length; i++) ...[
-                  Expanded(child: _VoiceTimelineStep(data: steps[i])),
-                  if (i < steps.length - 1)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 32),
-                      child: SizedBox(
-                        width: 32,
-                        child: Divider(
-                          color: Theme.of(context).dividerColor.withOpacity(0.6),
-                          thickness: 2,
-                        ),
-                      ),
-                    ),
-                ],
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (int i = 0; i < steps.length; i++) ...[
-              _VoiceTimelineStep(data: steps[i]),
-              if (i < steps.length - 1)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  width: 2,
-                  height: 24,
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 28),
-                  color: Theme.of(context).dividerColor.withOpacity(0.6),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < steps.length; i++) ...[
+          _VoiceTimelineStep(data: steps[i]),
+          if (i < steps.length - 1)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 2,
+                height: 28,
+                margin:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 28),
+                decoration: BoxDecoration(
+                  color: connectorColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ],
-          ],
-        );
-      },
+            ),
+        ],
+      ],
     );
   }
 }
