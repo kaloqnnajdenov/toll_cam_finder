@@ -9,7 +9,6 @@ class LocationPermissionBanner extends StatelessWidget {
     required this.userOptedOut,
     required this.isRequestingPermission,
     required this.onRequestPermission,
-    required this.onOpenSettings,
     required this.onReviewDisclosure,
     required this.onNotNow,
   });
@@ -17,7 +16,6 @@ class LocationPermissionBanner extends StatelessWidget {
   final bool userOptedOut;
   final bool isRequestingPermission;
   final VoidCallback onRequestPermission;
-  final VoidCallback onOpenSettings;
   final VoidCallback onReviewDisclosure;
   final VoidCallback onNotNow;
 
@@ -96,7 +94,6 @@ class LocationPermissionBanner extends StatelessWidget {
                     userOptedOut: userOptedOut,
                     isRequestingPermission: isRequestingPermission,
                     onRequestPermission: onRequestPermission,
-                    onOpenSettings: onOpenSettings,
                     onReviewDisclosure: onReviewDisclosure,
                     onNotNow: onNotNow,
                   ),
@@ -115,7 +112,6 @@ class _LocationPermissionActions extends StatelessWidget {
     required this.userOptedOut,
     required this.isRequestingPermission,
     required this.onRequestPermission,
-    required this.onOpenSettings,
     required this.onReviewDisclosure,
     required this.onNotNow,
   });
@@ -123,86 +119,59 @@ class _LocationPermissionActions extends StatelessWidget {
   final bool userOptedOut;
   final bool isRequestingPermission;
   final VoidCallback onRequestPermission;
-  final VoidCallback onOpenSettings;
   final VoidCallback onReviewDisclosure;
   final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
-    final Widget primaryButton = userOptedOut
-        ? FilledButton.icon(
-            onPressed: onOpenSettings,
-            icon: const Icon(Icons.settings),
-            label: Text(localizations.locationPermissionSettingsButton),
-          )
-        : FilledButton.icon(
-            onPressed: isRequestingPermission ? null : onRequestPermission,
-            icon: const Icon(Icons.my_location),
-            label: isRequestingPermission
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(localizations.locationPermissionPromptButton),
-                    ],
-                  )
-                : Text(localizations.locationPermissionPromptButton),
-          );
+    final Widget primaryButton = FilledButton.icon(
+      onPressed: isRequestingPermission ? null : onRequestPermission,
+      icon: const Icon(Icons.my_location),
+      label: isRequestingPermission
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(localizations.locationPermissionPromptButton),
+              ],
+            )
+          : Text(localizations.locationPermissionPromptButton),
+    );
 
-    final Widget secondaryButton = userOptedOut
+    final Widget? reviewButton = userOptedOut
         ? TextButton(
             onPressed: onReviewDisclosure,
             child: Text(localizations.locationPermissionReviewDisclosure),
           )
-        : TextButton(
-            onPressed: onOpenSettings,
-            child: Text(localizations.locationPermissionSettingsButton),
-          );
+        : null;
     final Widget notNowButton = TextButton(
       onPressed: onNotNow,
       child: Text(localizations.locationDisclosureNotNow),
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool vertical = constraints.maxWidth < 360;
-        if (vertical) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(width: double.infinity, child: primaryButton),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: secondaryButton,
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: notNowButton,
-              ),
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: primaryButton),
-            const SizedBox(width: 12),
-            secondaryButton,
-            const SizedBox(width: 8),
-            notNowButton,
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(width: double.infinity, child: primaryButton),
+        if (reviewButton != null) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: reviewButton,
+          ),
+        ],
+        const SizedBox(height: 12),
+        SizedBox(width: double.infinity, child: notNowButton),
+      ],
     );
   }
 }

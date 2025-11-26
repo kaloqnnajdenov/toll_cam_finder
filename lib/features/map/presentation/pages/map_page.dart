@@ -1593,7 +1593,6 @@ class _MapPageState extends State<MapPage>
           onRequestPermission: () => unawaited(
             _requestForegroundPermission(),
           ),
-          onOpenSettings: () => unawaited(_openAppSettings()),
           onReviewDisclosure: _openBackgroundConsentSettings,
           onNotNow: _temporarilyDismissLocationPermissionPrompt,
         ),
@@ -1604,9 +1603,6 @@ class _MapPageState extends State<MapPage>
           onRequestPermission: () => unawaited(
             _requestNotificationPermission(),
           ),
-          onOpenSettings: () {
-            unawaited(_notificationPermissionService.openSettings());
-          },
           onNotNow: _temporarilyDismissNotificationPermissionPrompt,
         ),
       MapWelcomeOverlay(

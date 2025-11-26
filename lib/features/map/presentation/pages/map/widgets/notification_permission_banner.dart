@@ -8,13 +8,11 @@ class NotificationPermissionBanner extends StatelessWidget {
     super.key,
     required this.isRequesting,
     required this.onRequestPermission,
-    required this.onOpenSettings,
     required this.onNotNow,
   });
 
   final bool isRequesting;
   final VoidCallback onRequestPermission;
-  final VoidCallback onOpenSettings;
   final VoidCallback onNotNow;
 
   @override
@@ -76,9 +74,8 @@ class NotificationPermissionBanner extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bool vertical = constraints.maxWidth < 360;
+                  Builder(
+                    builder: (_) {
                       final Widget primaryButton = FilledButton.icon(
                         onPressed: isRequesting ? null : onRequestPermission,
                         icon: const Icon(Icons.notifications),
@@ -102,39 +99,16 @@ class NotificationPermissionBanner extends StatelessWidget {
                             : Text(localizations
                                 .notificationPermissionPromptButton),
                       );
-                      final Widget secondaryButton = TextButton(
-                        onPressed: onOpenSettings,
-                        child: Text(localizations
-                            .notificationPermissionSettingsButton),
-                      );
                       final Widget notNowButton = TextButton(
                         onPressed: onNotNow,
                         child: Text(localizations.locationDisclosureNotNow),
                       );
-                      if (vertical) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(width: double.infinity, child: primaryButton),
-                            const SizedBox(height: 12),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: secondaryButton,
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: notNowButton,
-                            ),
-                          ],
-                        );
-                      }
-                      return Row(
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(child: primaryButton),
-                          const SizedBox(width: 12),
-                          secondaryButton,
-                          const SizedBox(width: 8),
-                          notNowButton,
+                          SizedBox(width: double.infinity, child: primaryButton),
+                          const SizedBox(height: 12),
+                          SizedBox(width: double.infinity, child: notNowButton),
                         ],
                       );
                     },
