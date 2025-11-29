@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,7 +6,6 @@ import 'package:toll_cam_finder/app/localization/app_localizations.dart';
 import 'package:toll_cam_finder/core/app_colors.dart';
 import 'package:toll_cam_finder/core/constants.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/widgets/segment_handover_banner.dart';
-import 'package:toll_cam_finder/features/map/presentation/pages/map/widgets/segment_overlays.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/widgets/speed_limit_sign.dart';
 import 'package:toll_cam_finder/features/segments/domain/controllers/current_segment_controller.dart';
 import 'package:toll_cam_finder/features/map/presentation/pages/map/weigh_station_controller.dart';
@@ -72,21 +70,6 @@ class MapCanvas extends StatelessWidget {
             if (marker != null) BlueDotMarker(point: marker),
             if (visibleSegmentPolylines.isNotEmpty)
               PolylineLayer(polylines: visibleSegmentPolylines),
-            if (kDebugMode && currentSegment.debugData.querySquare.isNotEmpty)
-              QuerySquareOverlay(points: currentSegment.debugData.querySquare),
-            if (kDebugMode &&
-                currentSegment.debugData.boundingCandidates.isNotEmpty)
-              CandidateBoundsOverlay(
-                candidates: currentSegment.debugData.boundingCandidates,
-              ),
-            if (kDebugMode &&
-                currentSegment.debugData.candidatePaths.isNotEmpty)
-              SegmentPolylineOverlay(
-                paths: currentSegment.debugData.candidatePaths,
-                startGeofenceRadius:
-                    currentSegment.debugData.startGeofenceRadius,
-                endGeofenceRadius: currentSegment.debugData.endGeofenceRadius,
-              ),
             if (showWeighStations)
               WeighStationsOverlay(
                 visibleStations: weighStationsState.visibleStations,
