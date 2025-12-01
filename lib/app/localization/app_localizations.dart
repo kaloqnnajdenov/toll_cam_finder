@@ -443,12 +443,12 @@ class AppLocalizations {
           'Background alerts stay off until you change this choice. Enable them from the side menu whenever you want TollCam to keep a foreground notification running in the background.',
       'locationPermissionSettingsButton': 'Open app settings',
       'locationPermissionReviewDisclosure': 'Review in-app disclosure',
-      'locationPermissionPromptButton': 'Allow location access',
+      'locationPermissionPromptButton': 'Continue',
       'notificationPermissionInfoTitle': 'Keep alert notifications on',
       'notificationPermissionRequiredBody':
           'We send heads-up alerts while TollCam runs in the background. Enable notifications in system settings so you don’t miss toll or weigh-station warnings.',
       'notificationPermissionSettingsButton': 'Open notification settings',
-      'notificationPermissionPromptButton': 'Allow notifications',
+      'notificationPermissionPromptButton': 'Continue',
       'backgroundLocationSettingTitle': 'Keep background alerts on',
       'backgroundLocationSettingDescription':
           'Runs a small notification and keeps precise alerts active when TollCam is in the background. Turn this off to stop all monitoring once you leave the app.',
@@ -882,12 +882,12 @@ class AppLocalizations {
     'Фоновите известия са изключени според Вашия избор. Можете да ги активирате от страничното меню, когато сте готови TollCam да поддържа известие и да следи във фона.',
 'locationPermissionSettingsButton': 'Отвори настройките на приложението',
 'locationPermissionReviewDisclosure': 'Преглед на изискването за локация',
-'locationPermissionPromptButton': 'Разреши достъп до локацията',
+'locationPermissionPromptButton': 'Продължи',
 'notificationPermissionInfoTitle': 'Разрешете известията',
 'notificationPermissionRequiredBody':
     'Изпращаме предупреждения, когато приложението работи във фонов режим. Разрешете уведомленията в настройките на устройството, за да не пропускате тол или кантар сигнали.',
 'notificationPermissionSettingsButton': 'Отвори настройките за известия',
-'notificationPermissionPromptButton': 'Разреши известията',
+'notificationPermissionPromptButton': 'Продължи',
 'backgroundLocationSettingTitle': 'Фонови предупреждения',
 'backgroundLocationSettingDescription':
 'Показва малко известие и пази точните предупреждения активни, докато TollCam работи във фона. Изключете го, ако искате да спрем следенето, когато напуснете приложението.',

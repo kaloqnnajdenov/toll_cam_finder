@@ -10,14 +10,12 @@ class LocationPermissionBanner extends StatelessWidget {
     required this.isRequestingPermission,
     required this.onRequestPermission,
     required this.onReviewDisclosure,
-    required this.onNotNow,
   });
 
   final bool userOptedOut;
   final bool isRequestingPermission;
   final VoidCallback onRequestPermission;
   final VoidCallback onReviewDisclosure;
-  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +93,6 @@ class LocationPermissionBanner extends StatelessWidget {
                     isRequestingPermission: isRequestingPermission,
                     onRequestPermission: onRequestPermission,
                     onReviewDisclosure: onReviewDisclosure,
-                    onNotNow: onNotNow,
                   ),
                 ],
               ),
@@ -113,14 +110,12 @@ class _LocationPermissionActions extends StatelessWidget {
     required this.isRequestingPermission,
     required this.onRequestPermission,
     required this.onReviewDisclosure,
-    required this.onNotNow,
   });
 
   final bool userOptedOut;
   final bool isRequestingPermission;
   final VoidCallback onRequestPermission;
   final VoidCallback onReviewDisclosure;
-  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -153,10 +148,6 @@ class _LocationPermissionActions extends StatelessWidget {
             child: Text(localizations.locationPermissionReviewDisclosure),
           )
         : null;
-    final Widget notNowButton = TextButton(
-      onPressed: onNotNow,
-      child: Text(localizations.locationDisclosureNotNow),
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,7 +161,6 @@ class _LocationPermissionActions extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 12),
-        SizedBox(width: double.infinity, child: notNowButton),
       ],
     );
   }

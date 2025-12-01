@@ -8,12 +8,10 @@ class NotificationPermissionBanner extends StatelessWidget {
     super.key,
     required this.isRequesting,
     required this.onRequestPermission,
-    required this.onNotNow,
   });
 
   final bool isRequesting;
   final VoidCallback onRequestPermission;
-  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -99,16 +97,10 @@ class NotificationPermissionBanner extends StatelessWidget {
                             : Text(localizations
                                 .notificationPermissionPromptButton),
                       );
-                      final Widget notNowButton = TextButton(
-                        onPressed: onNotNow,
-                        child: Text(localizations.locationDisclosureNotNow),
-                      );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SizedBox(width: double.infinity, child: primaryButton),
-                          const SizedBox(height: 12),
-                          SizedBox(width: double.infinity, child: notNowButton),
                         ],
                       );
                     },

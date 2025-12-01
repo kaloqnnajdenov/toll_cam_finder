@@ -187,10 +187,6 @@ class _MapPageState extends State<MapPage>
       _permissionState.showLocationPermissionInfo;
   bool get _showNotificationPermissionInfo =>
       _permissionState.showNotificationPermissionInfo;
-  bool get _locationPermissionTemporarilyDenied =>
-      _permissionState.locationPermissionTemporarilyDenied;
-  bool get _notificationPermissionTemporarilyDenied =>
-      _permissionState.notificationPermissionTemporarilyDenied;
   bool get _isRequestingForegroundPermission =>
       _permissionState.isRequestingForegroundPermission;
   bool get _isRequestingNotificationPermission =>
@@ -567,14 +563,6 @@ class _MapPageState extends State<MapPage>
       visible,
       resetTemporaryDismissal: resetTemporaryDismissal,
     );
-  }
-
-  void _temporarilyDismissLocationPermissionPrompt() {
-    _permissionFlow.temporarilyDismissLocationPermissionPrompt();
-  }
-
-  void _temporarilyDismissNotificationPermissionPrompt() {
-    _permissionFlow.temporarilyDismissNotificationPermissionPrompt();
   }
 
   void _handlePositionUpdate(Position position) {
@@ -1586,7 +1574,7 @@ class _MapPageState extends State<MapPage>
       else
         Positioned(left: 0, right: 0, bottom: 0, child: controlsPanel),
       mapFab,
-      if (_showLocationPermissionInfo && !_locationPermissionTemporarilyDenied)
+      if (_showLocationPermissionInfo)
         LocationPermissionBanner(
           userOptedOut: _backgroundLocationAllowed == false,
           isRequestingPermission: _isRequestingForegroundPermission,
@@ -1594,16 +1582,13 @@ class _MapPageState extends State<MapPage>
             _requestForegroundPermission(),
           ),
           onReviewDisclosure: _openBackgroundConsentSettings,
-          onNotNow: _temporarilyDismissLocationPermissionPrompt,
         ),
-      if (_showNotificationPermissionInfo &&
-          !_notificationPermissionTemporarilyDenied)
+      if (_showNotificationPermissionInfo)
         NotificationPermissionBanner(
           isRequesting: _isRequestingNotificationPermission,
           onRequestPermission: () => unawaited(
             _requestNotificationPermission(),
           ),
-          onNotNow: _temporarilyDismissNotificationPermissionPrompt,
         ),
       MapWelcomeOverlay(
         visible: _showWelcomeOverlay,
